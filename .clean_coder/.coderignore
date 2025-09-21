@@ -1,0 +1,16 @@
+.env
+.gitignore
+*.pyc
+*.log
+.coderrules
+.git/
+.idea/
+.clean_coder/
+.vscode
+node_modules/
+/.next/
+.ruff_cache/
+venv/
+.venv/
+__pycache__/
+build/
