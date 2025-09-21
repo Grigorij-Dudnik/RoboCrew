@@ -1,8 +1,6 @@
 from smolagents import CodeAgent, InferenceClientModel, ToolCallingAgent, LiteLLMModel, TransformersModel
-from langfuse import get_client
 from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 from phoenix.otel import register
-from tools import move_forward, turn
 
 from dotenv import find_dotenv
 from time import perf_counter
@@ -15,7 +13,7 @@ dotenv_time = perf_counter()
 # SmolagentsInstrumentor().instrument()
 
 
-tool_calling_agent_system_prompt = "You are mobile robot with two arms. Your task is to go forward and turn."
+tool_calling_agent_system_prompt = "You are mobile robot with two arms. Your task is to go forward and turn and stop."
 
 
 

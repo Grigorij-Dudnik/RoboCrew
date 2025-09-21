@@ -1,21 +1,9 @@
-"""
-Wheel steering helpers using the wheel section of dual_mapper_config.json.
 
-Minimal public API:
-- go_forward(sdk, wheel_cfg)
-- go_backward(sdk, wheel_cfg)
-- turn_left(sdk, wheel_cfg)
-- turn_right(sdk, wheel_cfg)
-- stop_wheels(sdk, wheel_cfg)
-- apply_wheel_modes(sdk, wheel_cfg)
+# Wheel steering helpers using the wheel section of dual_mapper_config.json.
+# Now wrapped in XLeRobotWheels class for easier usage.
 
-Role filtering is respected:
-- Up/Down affect role "drive" and "both"
-- Left/Right affect role "steer" and "both"
-"""
 
 from typing import Dict, List
-
 from sdk import ScsServoSDK, DEFAULT_BAUDRATE
 
 
@@ -62,69 +50,60 @@ def _compute_map(wheel_cfg: Dict, action: str) -> Dict[int, int]:
     return mp
 
 
-def _send(sdk: ScsServoSDK, mp: Dict[int, int]) -> Dict[int, int]:
-    if mp:
-        sdk.sync_write_wheel_speeds(mp)
-    return mp
+
+class XLeRobotWheels:
+    def __init__(self, sdk: ScsServoSDK, wheel_cfg: Dict):
+        self.sdk = sdk
+        self.wheel_cfg = wheel_cfg
+
+    @staticmethod
+    def _send(sdk: ScsServoSDK, mp: Dict[int, int]) -> Dict[int, int]:
+        if mp:
+            sdk.sync_write_wheel_speeds(mp)
+        return mp
+
+    def go_forward(self) -> Dict[int, int]:
+        """Drive forward using calibration['Up'] for drive/both wheels."""
+        return self._send(self.sdk, _compute_map(self.wheel_cfg, "Up"))
+
+    def go_backward(self) -> Dict[int, int]:
+        """Drive backward using calibration['Down'] for drive/both wheels."""
+        return self._send(self.sdk, _compute_map(self.wheel_cfg, "Down"))
+
+    def turn_left(self) -> Dict[int, int]:
+        """Turn left using calibration['Left'] for steer/both wheels."""
+        return self._send(self.sdk, _compute_map(self.wheel_cfg, "Left"))
+
+    def turn_right(self) -> Dict[int, int]:
+        """Turn right using calibration['Right'] for steer/both wheels."""
+        return self._send(self.sdk, _compute_map(self.wheel_cfg, "Right"))
+
+    def stop_wheels(self) -> Dict[int, int]:
+        """Stop all wheels listed in config by writing 0 speed."""
+        cfg = _normalize_wheel_cfg(self.wheel_cfg)
+        mp: Dict[int, int] = {int(w.get("id", 0)): 0 for w in cfg.get("wheels", []) if int(w.get("id", 0)) > 0}
+        if mp:
+            self.sdk.sync_write_wheel_speeds(mp)
+        return mp
+
+    def apply_wheel_modes(self) -> List[int]:
+        """Set wheel mode on all wheel IDs in config. Returns the list of IDs applied."""
+        cfg = _normalize_wheel_cfg(self.wheel_cfg)
+        ids: List[int] = []
+        for w in cfg.get("wheels", []):
+            wid = int(w.get("id", 0))
+            if wid <= 0:
+                continue
+            self.sdk.set_wheel_mode(wid)
+            ids.append(wid)
+        return ids
+
+    @staticmethod
+    def connect_serial(port: str, baudrate: int = DEFAULT_BAUDRATE, protocol_end: int = 0) -> ScsServoSDK:
+        """Create and connect an ScsServoSDK instance."""
+        sdk = ScsServoSDK()
+        if not sdk.connect(port, baudrate, protocol_end):
+            raise RuntimeError(f"Failed to open serial port {port} @ {baudrate}")
+        return sdk
 
 
-def go_forward(sdk: ScsServoSDK, wheel_cfg: Dict) -> Dict[int, int]:
-    """Drive forward using calibration['Up'] for drive/both wheels."""
-    return _send(sdk, _compute_map(wheel_cfg, "Up"))
-
-
-def go_backward(sdk: ScsServoSDK, wheel_cfg: Dict) -> Dict[int, int]:
-    """Drive backward using calibration['Down'] for drive/both wheels."""
-    return _send(sdk, _compute_map(wheel_cfg, "Down"))
-
-
-def turn_left(sdk: ScsServoSDK, wheel_cfg: Dict) -> Dict[int, int]:
-    """Turn left using calibration['Left'] for steer/both wheels."""
-    return _send(sdk, _compute_map(wheel_cfg, "Left"))
-
-
-def turn_right(sdk: ScsServoSDK, wheel_cfg: Dict) -> Dict[int, int]:
-    """Turn right using calibration['Right'] for steer/both wheels."""
-    return _send(sdk, _compute_map(wheel_cfg, "Right"))
-
-
-def stop_wheels(sdk: ScsServoSDK, wheel_cfg: Dict) -> Dict[int, int]:
-    """Stop all wheels listed in config by writing 0 speed."""
-    cfg = _normalize_wheel_cfg(wheel_cfg)
-    mp: Dict[int, int] = {int(w.get("id", 0)): 0 for w in cfg.get("wheels", []) if int(w.get("id", 0)) > 0}
-    if mp:
-        sdk.sync_write_wheel_speeds(mp)
-    return mp
-
-
-def apply_wheel_modes(sdk: ScsServoSDK, wheel_cfg: Dict) -> List[int]:
-    """Set wheel mode on all wheel IDs in config. Returns the list of IDs applied."""
-    cfg = _normalize_wheel_cfg(wheel_cfg)
-    ids: List[int] = []
-    for w in cfg.get("wheels", []):
-        wid = int(w.get("id", 0))
-        if wid <= 0:
-            continue
-        sdk.set_wheel_mode(wid)
-        ids.append(wid)
-    return ids
-
-
-def connect_serial(port: str, baudrate: int = DEFAULT_BAUDRATE, protocol_end: int = 0) -> ScsServoSDK:
-    """Create and connect an ScsServoSDK instance.
-
-    Args:
-        port: Serial device path (e.g. '/dev/ttyUSB0').
-        baudrate: Communication speed; defaults to DEFAULT_BAUDRATE.
-        protocol_end: Protocol endianness flag (0 for STS/SMS style, 1 for SCS style).
-
-    Returns:
-        A connected ScsServoSDK instance.
-
-    Raises:
-        RuntimeError if the port cannot be opened.
-    """
-    sdk = ScsServoSDK()
-    if not sdk.connect(port, baudrate, protocol_end):
-        raise RuntimeError(f"Failed to open serial port {port} @ {baudrate}")
-    return sdk
