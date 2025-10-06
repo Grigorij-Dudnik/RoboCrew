@@ -1,6 +1,6 @@
 from smolagents import ToolCallingAgent, LiteLLMModel, TransformersModel
-from phoenix.otel import register
-
+#from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+#from phoenix.otel import register
 from dotenv import find_dotenv
 from time import perf_counter
 
