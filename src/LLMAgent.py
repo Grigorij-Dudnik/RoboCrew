@@ -26,7 +26,7 @@ class LLMAgent(Agent):
 
     def go(self):
         while True:
-            response = self.run_sync("please do nothing")
+            response = self.run_sync("ok")
             print("Agent response:", response)
 
 if __name__ == "__main__":
