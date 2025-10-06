@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'c
 from wheel_controls import XLeRobotWheels
 
 
-sdk = XLeRobotWheels.connect_serial("COM4")
+sdk = XLeRobotWheels.connect_serial("/dev/ttyACM0")
 wheel_conf = json.load(open("../connectors/XLeRobot/dual_mapper_config.json", "r"))['portB']['wheel']
 wheel_controller = XLeRobotWheels(sdk, wheel_conf)
 
