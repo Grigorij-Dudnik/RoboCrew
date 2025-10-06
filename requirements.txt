@@ -1,1 +1,1 @@
-smolagents==1.22.0
+smolagents[litellm]==1.22.0
