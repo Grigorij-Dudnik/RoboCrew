@@ -1,11 +1,11 @@
 from smolagents import ToolCallingAgent, LiteLLMModel, TransformersModel
 #from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 #from phoenix.otel import register
-from dotenv import find_dotenv
+from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
 
 
-find_dotenv()
+load_dotenv(find_dotenv())
 dotenv_time = perf_counter()
 # langfuse or arize
 # register()
