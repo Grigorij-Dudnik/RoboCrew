@@ -9,7 +9,7 @@ print("Starting agent initialization...")
 
 prompt = "You are mobile household robot with two arms. Your task is to move forward, turn 270 degree, move again. Remember to stop after all."
 agent = LLMAgent(
-    model_id="openai:gpt-4.1-nano",
+    model="openai:gpt-4.1-nano",
     system_prompt=prompt,
     tools=[
         move_forward,

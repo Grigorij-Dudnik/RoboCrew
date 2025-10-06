@@ -1,1 +1,1 @@
-smolagents[litellm]==1.22.0
+pydantic_ai==
