@@ -29,8 +29,9 @@ class LLMAgent(Agent):
 
     def go(self):
         while True:
-            response = self.run_sync("ok")
-            print("Agent response:", response)
+            response = self.run_sync("ok", message_history=self.message_history)
+            self.message_history.extend(response.new_messages())
+            print(response.new_messages())
 
 if __name__ == "__main__":
 
