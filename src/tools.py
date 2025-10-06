@@ -2,10 +2,9 @@ from smolagents import tool
 import sys
 import os
 import json
+from pathlib import Path
 project_root = Path(__file__).parent.parent
 config_path = project_root / "connectors" / "XLeRobot" / "dual_mapper_config.json"
-
-# Dodaj do ścieżki Pythona i zaimportuj
 sys.path.append(str(project_root / "connectors" / "XLeRobot"))
 from wheel_controls import XLeRobotWheels
 
