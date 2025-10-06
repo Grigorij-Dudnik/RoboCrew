@@ -1,6 +1,6 @@
 from smolagents import tool
 import sys
-import os
+import time
 import json
 from pathlib import Path
 project_root = Path(__file__).parent.parent
@@ -21,6 +21,7 @@ def move_forward(distance: float) -> str:
         distance: distance in meters to move (currently not used for speed, just for API compatibility).
     """
     wheel_controller.go_forward()
+    time.sleep(2)  
     return f"Moved forward {distance} meters."
 
 
@@ -31,6 +32,7 @@ def turn_right(angle: float) -> str:
         angle: angle in degrees to turn right.
     """
     wheel_controller.turn_right()
+    time.sleep(2)  
     return f"Turned right by {angle} degrees."
 
 
@@ -41,10 +43,12 @@ def turn_left(angle: float) -> str:
         angle: angle in degrees to turn left.
     """
     wheel_controller.turn_left()
+    time.sleep(2)  
     return f"Turned left by {angle} degrees."
 
 
 def stop() -> str:
     """Stops all wheels."""
     wheel_controller.stop_wheels()
+    time.sleep(2)  
     return "Stopped all wheels."
