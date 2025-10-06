@@ -7,9 +7,9 @@ from LLMAgent import LLMAgent
 
 print("Starting agent initialization...")
 
-prompt = "You are mobile household robot with two arms. Your task is to move forwar, turn 270 degree, move again. Remember t stop afteral."
+prompt = "You are mobile household robot with two arms. Your task is to move forward, turn 270 degree, move again. Remember to stop after all."
 agent = LLMAgent(
-    model_id="gpt-4.1-nano",
+    model_id="openai:gpt-4.1-nano",
     system_prompt=prompt,
     tools=[
         move_forward,
@@ -20,5 +20,5 @@ agent = LLMAgent(
 )
 
 print("Agent initialized.")
-result = agent.run("Start!")
+result = agent.go("Start!")
 print(result)
