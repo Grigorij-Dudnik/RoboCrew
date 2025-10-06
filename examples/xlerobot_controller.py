@@ -10,6 +10,7 @@ print("Starting agent initialization...")
 prompt = "You are mobile household robot with two arms. Your task is to move forwar, turn 270 degree, move again. Remember t stop afteral."
 agent = LLMAgent(
     model_id="gpt-4.1-nano",
+    system_prompt=prompt,
     tools=[
         move_forward,
         turn_right,
