@@ -1,5 +1,4 @@
-from smolagents import InferenceClientModel, ToolCallingAgent, LiteLLMModel, TransformersModel
-from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+from smolagents import ToolCallingAgent, LiteLLMModel, TransformersModel
 from phoenix.otel import register
 
 from dotenv import find_dotenv
