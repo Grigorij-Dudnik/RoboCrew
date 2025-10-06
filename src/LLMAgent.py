@@ -1,16 +1,19 @@
 from smolagents import ToolCallingAgent, LiteLLMModel, TransformersModel
-#from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+
 #from phoenix.otel import register
 from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
 from pydantic_ai import Agent
+
+from langfuse import get_client
+langfuse = get_client()
 
 
 load_dotenv(find_dotenv())
 dotenv_time = perf_counter()
 # langfuse or arize
 # register()
-# SmolagentsInstrumentor().instrument()
+Agent.instrument_all()
 
 
 tool_calling_agent_system_prompt = "You are mobile robot with two arms."
