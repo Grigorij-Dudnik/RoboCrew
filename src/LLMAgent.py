@@ -1,4 +1,4 @@
-from smolagents import CodeAgent, InferenceClientModel, ToolCallingAgent, LiteLLMModel, TransformersModel
+from smolagents import InferenceClientModel, ToolCallingAgent, LiteLLMModel, TransformersModel
 from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 from phoenix.otel import register
 
@@ -22,7 +22,4 @@ class LLMAgent(ToolCallingAgent):
         model = LiteLLMModel(model_id=model_id)
         super().__init__(model=model, tools=tools)
         self.prompt_templates["system_prompt"] = system_prompt or tool_calling_agent_system_prompt
-
-
-
 
