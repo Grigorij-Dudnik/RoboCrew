@@ -26,17 +26,18 @@ class LLMAgent(Agent):
 
     def go(self):
         while True:
-            response = self.run_sync("go")
+            response = self.run_sync("please do nothing")
             print("Agent response:", response)
 
 if __name__ == "__main__":
+
+    def do_nothing():
+        print("Doing nothing...")
+        return "Doing nothing."
     agent = LLMAgent(
         model="openai:gpt-4.1-nano",
         tools=[
-            # move_forward,
-            # turn_right,
-            # turn_left,
-            # stop
+            do_nothing,
         ]
     )
     result = agent.go()
