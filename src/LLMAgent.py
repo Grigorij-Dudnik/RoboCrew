@@ -12,7 +12,7 @@ dotenv_time = perf_counter()
 # SmolagentsInstrumentor().instrument()
 
 
-tool_calling_agent_system_prompt = "You are mobile robot with two arms. Your task is to go forward and turn and stop."
+tool_calling_agent_system_prompt = "You are mobile robot with two arms."
 
 
 
