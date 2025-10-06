@@ -20,5 +20,5 @@ agent = LLMAgent(
 )
 
 print("Agent initialized.")
-result = agent.go("Start!")
+result = agent.go()
 print(result)
