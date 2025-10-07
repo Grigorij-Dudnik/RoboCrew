@@ -50,7 +50,8 @@ class LLMAgent():
                         {
                             "type": "image_url",
                             "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
-                        }
+                        },
+                        {"type": "text", "text": "Continue execute your task if it not done yet."}
                     ]
                 )
             else:
