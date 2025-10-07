@@ -4,6 +4,7 @@ from smolagents import ToolCallingAgent, LiteLLMModel, TransformersModel
 from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
 from pydantic_ai import Agent
+import cv2
 
 from langfuse import get_client
 langfuse = get_client()
@@ -21,13 +22,21 @@ tool_calling_agent_system_prompt = "You are mobile robot with two arms."
 
 
 class LLMAgent(Agent):
-    def __init__(self, model, tools, system_prompt=None):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None):
         system_prompt = system_prompt or tool_calling_agent_system_prompt
         super().__init__(model=model, tools=tools, system_prompt=system_prompt)
         self.message_history = []
+        # cameras
+        self.main_camera_usb_port = main_camera_usb_port
 
+    def capture_image(self, usb_port):
+        c = cv2.VideoCapture(usb_port)
+        _, image = c.read()
+        cv2.imwrite('img_test.jpg', image)
+        c.release()
 
     def go(self):
+        #self.capture_image(self.main_camera_usb_port)
         while True:
             response = self.run_sync("ok", message_history=self.message_history)
             self.message_history.extend(response.new_messages())

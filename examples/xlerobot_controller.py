@@ -7,13 +7,6 @@ from LLMAgent import LLMAgent
 
 print("Starting agent initialization...")
 
-import cv2
-
-# Use device path directly
-c = cv2.VideoCapture('/dev/video0')
-_, image = c.read()
-cv2.imwrite('img_test.jpg', image)
-c.release()
 
 prompt = "You are mobile household robot with two arms. Your task is to move forward, turn 270 degree, move again. Remember to stop after all."
 agent = LLMAgent(
