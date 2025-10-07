@@ -5,6 +5,7 @@ from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
 import cv2
 import base64
+from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
 
@@ -20,6 +21,7 @@ class LLMAgent():
         base_system_prompt = "You are mobile robot with two arms."
         system_prompt = system_prompt or base_system_prompt
         self.llm = init_chat_model(model)
+        self.llm.bind_tools(tools)
         self.tools = tools
         self.message_history = [SystemMessage(content=system_prompt)]
         # cameras
@@ -48,16 +50,19 @@ class LLMAgent():
             else:
                 message = HumanMessage(content="What is your next action?")
             self.message_history.append(message)
-            response = self.llm.invoke(self.message_history, tools=self.tools)
+            response = self.llm.invoke(self.message_history)
             self.message_history.append(response)
             print(response.content)
             
 
 if __name__ == "__main__":
 
-    def do_nothing():
+    @tool
+    def do_nothing() -> str:
+        """does nothing at all"""
         print("Doing nothing...")
         return "Doing nothing."
+    
     agent = LLMAgent(
         model="gpt-4.1-nano",
         tools=[
