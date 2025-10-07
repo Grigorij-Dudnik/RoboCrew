@@ -16,7 +16,7 @@ class LLMAgent():
         base_system_prompt = "You are mobile robot with two arms."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
-        self.llm = llm.bind_tools(tools)
+        self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
         self.tools = tools
         self.message_history = [SystemMessage(content=system_prompt)]
         # cameras

@@ -2,7 +2,7 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-from tools import move_forward, turn_right, turn_left
+from tools import move_forward, turn_right, turn_left, finish_task
 from LLMAgent import LLMAgent
 
 print("Starting agent initialization...")
@@ -16,6 +16,7 @@ agent = LLMAgent(
         move_forward,
         turn_right,
         turn_left,
+        finish_task,
     ],
     main_camera_usb_port="/dev/video2" 
 )
