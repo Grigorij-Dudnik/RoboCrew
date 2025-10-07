@@ -1,17 +1,15 @@
 #from smolagents import tool
 import sys
-import json
 from pathlib import Path
-from langchain_core.tools import tool
+from langchain_core.tools import tool  # type: ignore[import]
+
 project_root = Path(__file__).parent.parent
-config_path = project_root / "connectors" / "XLeRobot" / "dual_mapper_config.json"
 sys.path.append(str(project_root / "connectors" / "XLeRobot"))
-from wheel_controls import XLeRobotWheels
+from wheel_controls import XLeRobotWheels  # type: ignore[import]
 
 
 sdk = XLeRobotWheels.connect_serial("/dev/ttyACM0")
-wheel_conf = json.load(open(config_path, "r"))['portB']['wheel']
-wheel_controller = XLeRobotWheels(sdk, wheel_conf)
+wheel_controller = XLeRobotWheels(sdk)
 
 
 @tool
