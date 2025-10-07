@@ -20,7 +20,7 @@ def move_forward(distance: float) -> str:
     Args:
         distance: distance in meters to move (currently not used for speed, just for API compatibility).
     """
-    wheel_controller.go_forward()
+    #wheel_controller.go_forward()
     return f"Moved forward {distance} meters."
 
 
