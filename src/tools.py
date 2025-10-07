@@ -13,40 +13,39 @@ wheel_controller = XLeRobotWheels(sdk)
 
 
 @tool
-def move_forward(distance: float) -> str:
-    """Moves robot forward using wheel controls.
+def move_forward(duration_seconds: float) -> str:
+    """Drives the robot forward for a specified duration.
 
     Args:
-        distance: distance in meters to move (currently not used for speed, just for API compatibility).
+        duration_seconds: Number of seconds to keep the wheels in forward motion.
     """
-    wheel_controller.go_forward()
-    return f"Moved forward {distance} meters."
+
+    duration = max(0.0, float(duration_seconds))
+    wheel_controller.go_forward(duration)
+    return f"Moved forward for {duration:.2f} seconds."
 
 
 @tool
-def turn_right(angle: float) -> str:
-    """Turns robot right by provided angle using wheel controls.
+def turn_right(duration_seconds: float) -> str:
+    """Turns the robot right for a specified duration.
 
     Args:
-        angle: angle in degrees to turn right.
+        duration_seconds: Number of seconds to apply right turn motion.
     """
-    wheel_controller.turn_right()
-    return f"Turned right by {angle} degrees."
+
+    duration = max(0.0, float(duration_seconds))
+    wheel_controller.turn_right(duration)
+    return f"Turned right for {duration:.2f} seconds."
 
 
 @tool
-def turn_left(angle: float) -> str:
-    """Turns robot left by provided angle using wheel controls.
+def turn_left(duration_seconds: float) -> str:
+    """Turns the robot left for a specified duration.
 
     Args:
-        angle: angle in degrees to turn left.
+        duration_seconds: Number of seconds to apply left turn motion.
     """
-    wheel_controller.turn_left()
-    return f"Turned left by {angle} degrees."
 
-
-@tool
-def stop() -> str:
-    """Stops all wheels."""
-    wheel_controller.stop_wheels()
-    return "Stopped all wheels."
+    duration = max(0.0, float(duration_seconds))
+    wheel_controller.turn_left(duration)
+    return f"Turned left for {duration:.2f} seconds."

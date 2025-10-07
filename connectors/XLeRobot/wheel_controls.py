@@ -8,6 +8,7 @@ module so there is no external configuration file dependency.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
@@ -171,39 +172,46 @@ class XLeRobotWheels:
         if not self.config.wheels:
             raise ValueError("Wheel configuration must define at least one wheel.")
 
-    def _sync(self, action: str) -> Dict[int, int]:
+    def _apply_action(self, action: str) -> Dict[int, int]:
         payload = {wheel.id: wheel.speed_for(action, self.config.speed) for wheel in self.config.wheels}
         if payload:
             self.sdk.sync_write_wheel_speeds(payload)
         return payload
 
-    def go_forward(self) -> Dict[int, int]:
-        """Drive forward using ``Up`` calibration values."""
-
-        return self._sync("Up")
-
-    def go_backward(self) -> Dict[int, int]:
-        """Drive backward using ``Down`` calibration values."""
-
-        return self._sync("Down")
-
-    def turn_left(self) -> Dict[int, int]:
-        """Turn left using ``Left`` calibration values."""
-
-        return self._sync("Left")
-
-    def turn_right(self) -> Dict[int, int]:
-        """Turn right using ``Right`` calibration values."""
-
-        return self._sync("Right")
-
-    def stop_wheels(self) -> Dict[int, int]:
-        """Stop every configured wheel."""
-
+    def _stop_all(self) -> Dict[int, int]:
         payload = {wheel.id: 0 for wheel in self.config.wheels}
         if payload:
             self.sdk.sync_write_wheel_speeds(payload)
         return payload
+
+    def _run_for(self, action: str, duration_s: float) -> Dict[int, int]:
+        duration = max(0.0, float(duration_s))
+        payload = self._apply_action(action)
+        if payload:
+            if duration > 0.0:
+                time.sleep(duration)
+            self._stop_all()
+        return payload
+
+    def go_forward(self, duration_s: float) -> Dict[int, int]:
+        """Drive forward for the requested duration in seconds."""
+
+        return self._run_for("Up", duration_s)
+
+    def go_backward(self, duration_s: float) -> Dict[int, int]:
+        """Drive backward for the requested duration in seconds."""
+
+        return self._run_for("Down", duration_s)
+
+    def turn_left(self, duration_s: float) -> Dict[int, int]:
+        """Turn left for the requested duration in seconds."""
+
+        return self._run_for("Left", duration_s)
+
+    def turn_right(self, duration_s: float) -> Dict[int, int]:
+        """Turn right for the requested duration in seconds."""
+
+        return self._run_for("Right", duration_s)
 
     def apply_wheel_modes(self) -> List[int]:
         """Switch all configured motors to wheel mode."""
