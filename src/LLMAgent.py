@@ -37,7 +37,7 @@ class LLMAgent():
                 
                 message = HumanMessage(
                     content=[
-                        {"type": "text", "text": "Here is the current view from your main camera. Tell what you can see here"},
+                        {"type": "text", "text": "Here is the current view from your main camera. Use it to understand your current status."},
                         {
                             "type": "image_url",
                             "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
