@@ -39,10 +39,16 @@ def turn_right(angle_degrees: float) -> str:
 @tool
 def turn_left(angle_degrees: float) -> str:
     """Turns the robot left (or right if negative) by a specific angle in degrees."""
-
     angle = float(angle_degrees)
     if angle >= 0:
         wheel_controller.turn_left(angle)
     else:
         wheel_controller.turn_right(-angle)
     return f"Turned {'left' if angle >= 0 else 'right'} by {abs(angle):.2f} degrees."
+
+
+@tool
+def finish_task():
+    """claim that task is finished and go idle."""
+    return "Task finished"
+

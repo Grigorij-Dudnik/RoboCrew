@@ -69,6 +69,8 @@ class LLMAgent():
             for tool_call in response.tool_calls:
                 tool_response = self.invoke_tool(tool_call)
                 self.message_history.append(tool_response)
+                if tool_call["name"] == "finish_task":
+                    return "Task finished, going idle."
             
 
 if __name__ == "__main__":
