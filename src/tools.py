@@ -9,7 +9,7 @@ sys.path.append(str(project_root / "connectors" / "XLeRobot"))
 from wheel_controls import XLeRobotWheels
 
 
-sdk = XLeRobotWheels.connect_serial("/dev/ttyACM0")
+sdk = XLeRobotWheels.connect_serial("/dev/ttyACM1")
 wheel_conf = json.load(open(config_path, "r"))['portB']['wheel']
 wheel_controller = XLeRobotWheels(sdk, wheel_conf)
 
