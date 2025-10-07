@@ -8,7 +8,8 @@ import cv2
 
 from haystack import Pipeline
 from haystack.components.generators.chat import OpenAIChatGenerator
-from haystack.dataclasses import ChatMessage, Part
+from haystack.dataclasses import ChatMessage, ByteStream, ImageContent
+import base64
 
 
 load_dotenv(find_dotenv())
@@ -40,25 +41,32 @@ class LLMAgent():
     def capture_image(self):
         _, frame = self.main_camera.read()
         _, buffer = cv2.imencode('.jpg', frame)
-        return buffer.tobytes()
+        image_bytes = buffer.tobytes()
+        base64_image = base64.b64encode(image_bytes).decode("utf-8")
+        return base64_image
 
     def go(self):
-        """Starts the main agent loop."""
         while True:
-            image_bytes = self.capture_image()
-            
-            # Create a multimodal message with text and image parts
-            message = ChatMessage.from_user(content=[
-                Part.from_text("Here is the current view from your main camera. Describe what you see."),
-                Part.from_data(data=image_bytes, mime_type="image/jpeg")
-            ])
-            
+            if self.main_camera:
+                base64_image = self.capture_image()
+                image_content = ImageContent(
+                    base64_image=base64_image,
+                    mime_type="image/jpeg",
+                    detail="low"
+                )
+                message = ChatMessage.from_user(
+                    text="Here is the current view from your main camera. Tell what you can see here",
+                    meta={
+                        "images": [image_content]
+                    }
+                )
+            else:
+                message = ChatMessage.from_user("What is your next action?")
             self.message_history.append(message)
             response = self.generator.run(messages=self.message_history)
-            
             reply = response["replies"][0]
             self.message_history.append(reply)
-            print(f"Assistant: {reply.content}")
+            print(reply._content)
 
 if __name__ == "__main__":
 
