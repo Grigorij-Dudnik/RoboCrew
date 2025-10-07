@@ -60,7 +60,8 @@ class LLMAgent():
                 
             self.message_history.append(message)
             response = self.llm.invoke(self.message_history)
-            print(response)
+            print(response.content)
+            print(response.tool_calls)
             self.message_history.append(response)
 
             # execute tool
@@ -85,4 +86,3 @@ if __name__ == "__main__":
     )
     result = agent.go()
     print(result)
-    
