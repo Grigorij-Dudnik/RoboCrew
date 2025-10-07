@@ -3,7 +3,7 @@ from smolagents import ToolCallingAgent, LiteLLMModel, TransformersModel
 #from phoenix.otel import register
 from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
-from pydantic_ai import Agent
+from pydantic_ai import Agent, BinaryContent
 import cv2
 
 from langfuse import get_client
@@ -27,18 +27,24 @@ class LLMAgent(Agent):
         super().__init__(model=model, tools=tools, system_prompt=system_prompt)
         self.message_history = []
         # cameras
-        self.main_camera_usb_port = main_camera_usb_port
+        self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
 
-    def capture_image(self, usb_port):
-        c = cv2.VideoCapture(usb_port)
-        _, image = c.read()
-        cv2.imwrite('img_test.jpg', image)
-        c.release()
+    def capture_image(self):
+        _, frame = self.main_camera.read()
+        _, buffer = cv2.imencode('.jpg', frame)
+        return buffer.tobytes()
 
     def go(self):
-        self.capture_image(self.main_camera_usb_port)
         while True:
-            response = self.run_sync("ok", message_history=self.message_history)
+            if self.main_camera:
+                image_bytes = self.capture_image()
+                prompt = [
+                    "Here is the current view from your main camera. Analyze it and decide your next action.",
+                    BinaryContent(data=img, media_type='image/jpeg')
+                ]
+            else:
+                prompt = "What is your next action?"
+            response = self.run_sync(prompt, message_history=self.message_history)
             self.message_history.extend(response.new_messages())
 
 if __name__ == "__main__":
