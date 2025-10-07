@@ -49,3 +49,9 @@ def turn_left(duration_seconds: float) -> str:
     duration = max(0.0, float(duration_seconds))
     wheel_controller.turn_left(duration)
     return f"Turned left for {duration:.2f} seconds."
+    
+
+@tool
+def finish_task():
+    """claim that task is finished and go idle."""
+    return "Task finished"
