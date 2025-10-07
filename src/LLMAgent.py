@@ -40,7 +40,6 @@ class LLMAgent(Agent):
         while True:
             response = self.run_sync("ok", message_history=self.message_history)
             self.message_history.extend(response.new_messages())
-            print(response.new_messages())
 
 if __name__ == "__main__":
 
