@@ -51,8 +51,8 @@ class LLMAgent():
                 message = HumanMessage(content="What is your next action?")
             self.message_history.append(message)
             response = self.llm.invoke(self.message_history)
+            print(response.tool_calls)
             self.message_history.append(response)
-            print(response.content)
             
 
 if __name__ == "__main__":
