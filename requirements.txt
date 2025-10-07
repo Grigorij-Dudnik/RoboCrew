@@ -1,1 +1,2 @@
-pydantic_ai==
+pydantic_ai
+python_opencv
