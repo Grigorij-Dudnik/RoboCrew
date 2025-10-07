@@ -6,11 +6,13 @@ from time import perf_counter
 from pydantic_ai import Agent, BinaryContent
 import cv2
 
+
+load_dotenv(find_dotenv())
 from langfuse import get_client
 langfuse = get_client()
 
 
-load_dotenv(find_dotenv())
+
 dotenv_time = perf_counter()
 # langfuse or arize
 # register()
