@@ -6,6 +6,10 @@ from time import perf_counter
 from pydantic_ai import Agent, BinaryContent
 import cv2
 
+from haystack import Pipeline
+from haystack.components.generators.chat import OpenAIChatGenerator
+from haystack.dataclasses import ChatMessage, ByteStream
+
 
 load_dotenv(find_dotenv())
 from langfuse import get_client
@@ -23,13 +27,15 @@ tool_calling_agent_system_prompt = "You are mobile robot with two arms."
 
 
 
-class LLMAgent(Agent):
+class LLMAgent():
     def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None):
         system_prompt = system_prompt or tool_calling_agent_system_prompt
-        super().__init__(model=model, tools=tools, system_prompt=system_prompt)
+        #super().__init__(model=model, tools=tools, system_prompt=system_prompt)
         self.message_history = []
         # cameras
         self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
+
+        self.generator = OpenAIChatGenerator(model="gpt-4o-mini")
 
     def capture_image(self):
         _, frame = self.main_camera.read()
@@ -40,15 +46,22 @@ class LLMAgent(Agent):
         while True:
             if self.main_camera:
                 image_bytes = self.capture_image()
-                prompt = [
-                    "Here is the current view from your main camera. tell what you can see here",
-                    BinaryContent(data=image_bytes, media_type='image/jpeg')
-                ]
+                
+                message = ChatMessage.from_user(
+                    text="Here is the current view from your main camera. Tell what you can see here",
+                    meta={
+                        "images": [ByteStream(data=image_bytes, mime_type="image/jpeg")]
+                    }
+                )
             else:
-                prompt = "What is your next action?"
-            response = self.run_sync(prompt, message_history=self.message_history)
-            self.message_history.extend(response.new_messages())
-            print(response)
+                message = ChatMessage.from_user("What is your next action?")
+            
+            self.message_history.append(message)
+            response = self.generator.run(messages=self.message_history)
+            
+            reply = response["replies"][0]
+            self.message_history.append(reply)
+            print(reply._content)
 
 if __name__ == "__main__":
 
