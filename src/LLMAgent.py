@@ -20,6 +20,7 @@ class LLMAgent():
         base_system_prompt = "You are mobile robot with two arms."
         system_prompt = system_prompt or base_system_prompt
         self.llm = init_chat_model(model)
+        self.tools = tools
         self.message_history = [SystemMessage(content=system_prompt)]
         # cameras
         self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
@@ -47,7 +48,7 @@ class LLMAgent():
             else:
                 message = HumanMessage(content="What is your next action?")
             self.message_history.append(message)
-            response = self.llm.invoke(self.message_history)
+            response = self.llm.invoke(self.message_history, tools=self.tools)
             self.message_history.append(response)
             print(response.content)
             
