@@ -6,7 +6,7 @@ from time import perf_counter
 import cv2
 import base64
 from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 
 
@@ -23,12 +23,22 @@ class LLMAgent():
         self.message_history = [SystemMessage(content=system_prompt)]
         # cameras
         self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
-        self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        if self.main_camera:
+            self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     def capture_image(self):
         _, frame = self.main_camera.read()
         _, buffer = cv2.imencode('.jpg', frame)
         return buffer.tobytes()
+
+    def invoke_tool(self, tool_call):
+        # convert string to real function
+        tool_name_to_tool = {tool.name: tool for tool in self.tools}
+        name = tool_call["name"]
+        requested_tool = tool_name_to_tool[name]
+        args = tool_call["args"]
+        tool_output = requested_tool.invoke(args)
+        return ToolMessage(tool_output, tool_call_id=tool_call["id"])
 
     def go(self):
         while True:
@@ -57,7 +67,7 @@ class LLMAgent():
 
             # execute tool
             for tool_call in response.tool_calls:
-                tool_response = tool_call.tool.invoke(tool_call.args)
+                tool_response = self.invoke_tool(tool_call)
                 self.message_history.append(tool_response)
             
 
