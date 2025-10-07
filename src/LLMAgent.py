@@ -8,7 +8,7 @@ import cv2
 
 from haystack import Pipeline
 from haystack.components.generators.chat import OpenAIChatGenerator
-from haystack.dataclasses import ChatMessage, ByteStream
+from haystack.dataclasses import ChatMessage, Part
 
 
 load_dotenv(find_dotenv())
