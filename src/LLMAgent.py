@@ -47,10 +47,18 @@ class LLMAgent():
                 )
             else:
                 message = HumanMessage(content="What is your next action?")
+
+
+                
             self.message_history.append(message)
             response = self.llm.invoke(self.message_history)
-            print(response.tool_calls)
+            print(response)
             self.message_history.append(response)
+
+            # execute tool
+            for tool_call in response.tool_calls:
+                tool_response = tool_call.tool.invoke(tool_call.args)
+                self.message_history.append(tool_response)
             
 
 if __name__ == "__main__":
