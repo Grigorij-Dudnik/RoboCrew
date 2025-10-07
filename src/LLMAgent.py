@@ -1,5 +1,3 @@
-from smolagents import ToolCallingAgent, LiteLLMModel, TransformersModel
-
 #from phoenix.otel import register
 from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
@@ -87,3 +85,4 @@ if __name__ == "__main__":
     )
     result = agent.go()
     print(result)
+    
