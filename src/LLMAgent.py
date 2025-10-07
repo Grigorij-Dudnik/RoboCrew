@@ -36,7 +36,7 @@ class LLMAgent(Agent):
         c.release()
 
     def go(self):
-        #self.capture_image(self.main_camera_usb_port)
+        self.capture_image(self.main_camera_usb_port)
         while True:
             response = self.run_sync("ok", message_history=self.message_history)
             self.message_history.extend(response.new_messages())

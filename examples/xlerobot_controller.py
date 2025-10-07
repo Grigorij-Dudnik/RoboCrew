@@ -17,7 +17,8 @@ agent = LLMAgent(
         turn_right,
         turn_left,
         stop
-    ]
+    ],
+    main_camera_usb_port="/dev/video2" 
 )
 
 print("Agent initialized.")
