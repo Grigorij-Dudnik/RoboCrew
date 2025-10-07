@@ -9,19 +9,16 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
 
 
-dotenv_time = perf_counter()
-# langfuse or arize
-# register()
+load_dotenv(find_dotenv())
 
 
-
-tool_calling_agent_system_prompt = "You are mobile robot with two arms."
 
 
 
 class LLMAgent():
     def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None):
-        system_prompt = system_prompt or tool_calling_agent_system_prompt
+        base_system_prompt = "You are mobile robot with two arms."
+        system_prompt = system_prompt or base_system_prompt
         self.llm = init_chat_model(model)
         self.message_history = [SystemMessage(content=system_prompt)]
         # cameras
