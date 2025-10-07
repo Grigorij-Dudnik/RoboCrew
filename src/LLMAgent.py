@@ -39,13 +39,14 @@ class LLMAgent(Agent):
             if self.main_camera:
                 image_bytes = self.capture_image()
                 prompt = [
-                    "Here is the current view from your main camera. Analyze it and decide your next action.",
-                    BinaryContent(data=img, media_type='image/jpeg')
+                    "Here is the current view from your main camera. tell what you can see here",
+                    BinaryContent(data=image_bytes, media_type='image/jpeg')
                 ]
             else:
                 prompt = "What is your next action?"
             response = self.run_sync(prompt, message_history=self.message_history)
             self.message_history.extend(response.new_messages())
+            print(response)
 
 if __name__ == "__main__":
 
