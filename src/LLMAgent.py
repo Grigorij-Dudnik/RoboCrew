@@ -43,25 +43,22 @@ class LLMAgent():
         return buffer.tobytes()
 
     def go(self):
+        """Starts the main agent loop."""
         while True:
-            if self.main_camera:
-                image_bytes = self.capture_image()
-                
-                message = ChatMessage.from_user(
-                    text="Here is the current view from your main camera. Tell what you can see here",
-                    meta={
-                        "images": [ByteStream(data=image_bytes, mime_type="image/jpeg")]
-                    }
-                )
-            else:
-                message = ChatMessage.from_user("What is your next action?")
+            image_bytes = self.capture_image()
+            
+            # Create a multimodal message with text and image parts
+            message = ChatMessage.from_user(content=[
+                Part.from_text("Here is the current view from your main camera. Describe what you see."),
+                Part.from_data(data=image_bytes, mime_type="image/jpeg")
+            ])
             
             self.message_history.append(message)
             response = self.generator.run(messages=self.message_history)
             
             reply = response["replies"][0]
             self.message_history.append(reply)
-            print(reply._content)
+            print(f"Assistant: {reply.content}")
 
 if __name__ == "__main__":
 
