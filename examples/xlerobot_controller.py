@@ -10,7 +10,7 @@ print("Starting agent initialization...")
 
 prompt = "You are mobile household robot with two arms. Your task is to find and approach a human."
 agent = LLMAgent(
-    model="openai:gpt-4.1-nano",
+    model="google_genai:gemini-robotics-er-1.5-preview",
     system_prompt=prompt,
     tools=[
         move_forward,
