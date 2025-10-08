@@ -82,7 +82,7 @@ if __name__ == "__main__":
         return "Doing nothing."
     
     agent = LLMAgent(
-        model="gpt-4.1-nano",
+        model="google_genai:gemini-robotics-er-1.5-preview",
         tools=[
             do_nothing,
         ],
