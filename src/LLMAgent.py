@@ -12,7 +12,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, history_len=None):
         base_system_prompt = "You are mobile robot with two arms."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
@@ -21,6 +21,7 @@ class LLMAgent():
         self.message_history = [SystemMessage(content=system_prompt)]
         # cameras
         self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
+        self.hitory_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -37,6 +38,28 @@ class LLMAgent():
         args = tool_call["args"]
         tool_output = requested_tool.invoke(args)
         return ToolMessage(tool_output, tool_call_id=tool_call["id"])
+    
+    def cut_off_context(self, nr_of_messages):
+        """
+        Trims the message history in the state to keep only the most recent context for the agent.
+        """
+        if len(self.message_history) <= nr_of_messages:
+            return
+        
+        last_messages = self.message_history[-nr_of_messages:]
+        # Find the index of the first 'ai' message from the end in the last nr_of_messages messages
+        ai_message_index_in_last_msgs = next(
+            (i for i, message in enumerate(last_messages) if message.type == "ai"), None
+        )
+        # Calculate the actual index of the 'ai' message in the original list
+        ai_message_index = len(self.message_history) - nr_of_messages + ai_message_index_in_last_msgs
+        # Collect all messages starting from the 'ai' message
+        last_messages_excluding_system = [
+            msg for msg in self.message_history[ai_message_index:] if msg.type != "system"
+        ]
+        system_message = self.message_history[0]
+        self.message_history = [system_message] + last_messages_excluding_system
+
 
     def go(self):
         while True:
@@ -64,6 +87,8 @@ class LLMAgent():
             print(response.content)
             print(response.tool_calls)
             self.message_history.append(response)
+            if self.hitory_len:
+                self.cut_off_context(self.hitory_len)
 
             # execute tool
             for tool_call in response.tool_calls:
