@@ -8,7 +8,7 @@ from LLMAgent import LLMAgent
 print("Starting agent initialization...")
 
 
-prompt = "You are mobile household robot with two arms. Your task is to find and approach a human."
+prompt = "You are mobile household robot with two arms."
 agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
     system_prompt=prompt,
@@ -18,7 +18,8 @@ agent = LLMAgent(
         turn_left,
         finish_task,
     ],
-    main_camera_usb_port="/dev/video2" 
+    main_camera_usb_port="/dev/video2",
+    history_len=10,
 )
 
 print("Agent initialized.")

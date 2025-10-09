@@ -14,6 +14,7 @@ load_dotenv(find_dotenv())
 class LLMAgent():
     def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, history_len=None):
         base_system_prompt = "You are mobile robot with two arms."
+        self.task = "Find where is room exit and exit the room."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
@@ -74,7 +75,7 @@ class LLMAgent():
                             "type": "image_url",
                             "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
                         },
-                        {"type": "text", "text": "Continue execute your task if it not done yet."}
+                        {"type": "text", "text": f"Your task is: '{self.task}'"}
                     ]
                 )
             else:
