@@ -24,7 +24,7 @@ def horizontal_angle_grid(image, h_fov=120, center_angle=0):
         angle = start_angle + mark_number * mark_len_angle
         cv2.line(image, (x, y_pos - 10), (x, y_pos + 10), yellow, 2)
         cv2.putText(image, f"{angle}", (x - 15, y_pos + 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, yellow, 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, yellow, 1)
     return image
 
 if __name__ == "__main__":
