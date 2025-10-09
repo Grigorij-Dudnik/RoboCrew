@@ -116,7 +116,7 @@ class WheelConfig:
 DEFAULT_WHEEL_CONFIG = WheelConfig(
     speed=10000,
     meters_per_second=0.25,
-    degrees_per_second=60.0,
+    degrees_per_second=100.0,
     wheels=(
         WheelSpec(
             id=7,

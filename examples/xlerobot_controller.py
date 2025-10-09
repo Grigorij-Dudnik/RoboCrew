@@ -19,7 +19,7 @@ agent = LLMAgent(
         finish_task,
     ],
     main_camera_usb_port="/dev/video2",
-    history_len=10,
+    history_len=4,
 )
 
 print("Agent initialized.")

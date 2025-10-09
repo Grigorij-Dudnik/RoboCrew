@@ -13,23 +13,25 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, history_len=None):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, history_len=None, camera_fov=120):
         base_system_prompt = "You are mobile robot with two arms."
         self.task = "Find where is room exit and exit the room."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
         self.tools = tools
-        self.message_history = [SystemMessage(content=system_prompt)]
+        self.system_message = SystemMessage(content=system_prompt)
+        self.message_history = [self.system_message]
         # cameras
         self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
         self.hitory_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            self.camera_fov = camera_fov
 
     def capture_image(self):
         _, frame = self.main_camera.read()
-        frame = horizontal_angle_grid(frame, h_fov=118)
+        frame = horizontal_angle_grid(frame, h_fov=self.camera_fov)
         _, buffer = cv2.imencode('.jpg', frame)
         return buffer.tobytes()
 
@@ -42,26 +44,14 @@ class LLMAgent():
         tool_output = requested_tool.invoke(args)
         return ToolMessage(tool_output, tool_call_id=tool_call["id"])
     
-    def cut_off_context(self, nr_of_messages):
+    def cut_off_context(self, nr_of_loops):
         """
         Trims the message history in the state to keep only the most recent context for the agent.
-        """
-        if len(self.message_history) <= nr_of_messages:
-            return
-        
-        last_messages = self.message_history[-nr_of_messages:]
-        # Find the index of the first 'ai' message from the end in the last nr_of_messages messages
-        ai_message_index_in_last_msgs = next(
-            (i for i, message in enumerate(last_messages) if message.type == "ai"), None
-        )
-        # Calculate the actual index of the 'ai' message in the original list
-        ai_message_index = len(self.message_history) - nr_of_messages + ai_message_index_in_last_msgs
-        # Collect all messages starting from the 'ai' message
-        last_messages_excluding_system = [
-            msg for msg in self.message_history[ai_message_index:] if msg.type != "system"
-        ]
-        system_message = self.message_history[0]
-        self.message_history = [system_message] + last_messages_excluding_system
+        """        
+        ai_indices = [i for i, msg in enumerate(self.message_history) if msg.type == "ai"]
+        if len(ai_indices) >= nr_of_loops:
+            start_index = ai_indices[-nr_of_loops]
+            self.message_history = [self.system_message] + self.message_history[start_index:]
 
 
     def go(self):
