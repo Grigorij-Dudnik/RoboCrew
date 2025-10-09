@@ -8,7 +8,7 @@ from LLMAgent import LLMAgent
 print("Starting agent initialization...")
 
 
-prompt = "You are mobile household robot with two arms."
+prompt = "You are mobile household robot with two arms. Remember to write your reasoning before using tools to justify your actions."
 agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
     system_prompt=prompt,

@@ -48,7 +48,7 @@ class LLMAgent():
         """
         Trims the message history in the state to keep only the most recent context for the agent.
         """        
-        ai_indices = [i for i, msg in enumerate(self.message_history) if msg.type == "ai"]
+        ai_indices = [i for i, msg in enumerate(self.message_history) if msg.type == "human"]
         if len(ai_indices) >= nr_of_loops:
             start_index = ai_indices[-nr_of_loops]
             self.message_history = [self.system_message] + self.message_history[start_index:]
