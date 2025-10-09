@@ -1,4 +1,5 @@
 #from phoenix.otel import register
+from utils import horizontal_angle_grid
 from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
 import cv2
@@ -28,6 +29,7 @@ class LLMAgent():
 
     def capture_image(self):
         _, frame = self.main_camera.read()
+        frame = horizontal_angle_grid(frame, h_fov=118)
         _, buffer = cv2.imencode('.jpg', frame)
         return buffer.tobytes()
 
