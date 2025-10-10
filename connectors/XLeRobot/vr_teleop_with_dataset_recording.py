@@ -482,6 +482,7 @@ def init_dataset():
         image_writer_threads=4,
     )
 
+
 def record_data_to_dataset(dataset, fps, stop_event, task_name):
     interval = 1.0 / fps
     while not stop_event.is_set():
@@ -495,6 +496,7 @@ def record_data_to_dataset(dataset, fps, stop_event, task_name):
 
 
         time_to_sleep = interval - (time.perf_counter() - start_time)
+        print (f"sleeping interval: {time_to_sleep}")
         if time_to_sleep > 0:
             time.sleep(time_to_sleep)
 
@@ -512,7 +514,7 @@ def main():
     
     # Initialize pygame for keyboard input handling
     pygame.init()
-    init_dataset()
+    dataset = init_dataset()
 
     try:
         # Try to use saved calibration file to avoid recalibrating each time
@@ -597,6 +599,13 @@ def main():
 
                 print(f"observation {robot.get_observation()}")
                 print(f"action: {action}")
+
+                lerobot_frame = {
+                    'action': np.array({**left_action, **right_action}, dtype=np.float32),
+                    'observation.state': np.array(robot.get_observation(), dtype=np.float32),
+                    'observation.images.main': image_array
+                }
+                dataset.add_frame(lerobot_frame, task=task_name)
                 
                 
                 # Handle keyboard exit (press ESC to quit)
