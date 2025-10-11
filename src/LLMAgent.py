@@ -32,8 +32,9 @@ class LLMAgent():
             self.camera_fov = camera_fov
         self.microphone_name = microphone_name
         if self.microphone_name:
-            self.sound_receiver = SoundReceiver(microphone_name)
             self.task_queue = queue.Queue()
+            self.sound_receiver = SoundReceiver(microphone_name, self.task_queue)
+            
 
     def capture_image(self):
         _, frame = self.main_camera.read()
