@@ -1,2 +1,3 @@
-pydantic_ai
 python_opencv
+sudo apt install portaudio19-dev
+pyaudio

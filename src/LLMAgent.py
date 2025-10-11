@@ -4,10 +4,10 @@ from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
 import cv2
 import base64
+import sys
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
-
 
 load_dotenv(find_dotenv())
 
@@ -71,14 +71,14 @@ class LLMAgent():
                     ]
                 )
             else:
-                message = HumanMessage(content="What is your next action?")
+                message = HumanMessage(content=f"Your task is: '{self.task}'")
 
 
                 
             self.message_history.append(message)
             response = self.llm.invoke(self.message_history)
-            print(response.content)
-            print(response.tool_calls)
+            print(response)
+            #print(response.tool_calls)
             self.message_history.append(response)
             if self.hitory_len:
                 self.cut_off_context(self.hitory_len)

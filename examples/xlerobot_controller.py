@@ -2,8 +2,12 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-from tools import move_forward, turn_right, turn_left, finish_task
+from tools import finish_task
 from LLMAgent import LLMAgent
+from pathlib import Path
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root / "connectors"))
+from connectors.XLeRobot.tools import move_forward, turn_left, turn_right  # type: ignore[import]
 
 print("Starting agent initialization...")
 
