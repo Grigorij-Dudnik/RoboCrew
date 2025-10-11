@@ -144,8 +144,7 @@ if __name__ == "__main__":
     try:
         # optionally set DEVICE_INDEX env var before running, or pass device_index to start_listening
         rec.start_listening()  # non-blocking
-        print("Listening for 10 seconds (buffering in RAM)...")
-        time.sleep(10)
+        input("Recording... press Enter to stop and save buffer to recent_from_buffer.wav\n")
         print("Saving last 5 seconds to recent_from_buffer.wav")
         recent = rec.get_last(5.0)
         with wave.open("recent_from_buffer.wav", "wb") as wf:
