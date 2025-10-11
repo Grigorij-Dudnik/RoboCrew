@@ -4,6 +4,7 @@ import threading
 import time
 import os
 import sys
+import audioop
 
 class SoundReceiver:
     """
@@ -131,9 +132,15 @@ class SoundReceiver:
             wf.setframerate(self.RATE)
             wf.writeframes(data)
 
+    # RMS helpers
+    def get_rms(self, data: bytes) -> float:
+        """Return RMS level for raw PCM bytes (paInt16 width expected)."""
+        return float(audioop.rms(self.get_last(0.1), self._sample_width))
+
+
 # Minimal CLI demo
 if __name__ == "__main__":
-    rec = MicRecorder(buffer_seconds=15, chunk=2048, channels=1, rate=48000)
+    rec = SoundReceiver(buffer_seconds=15, chunk=2048, channels=1, rate=48000)
     try:
         # optionally set DEVICE_INDEX env var before running, or pass device_index to start_listening
         rec.start_listening()  # non-blocking
