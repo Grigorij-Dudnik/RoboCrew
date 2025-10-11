@@ -8,12 +8,14 @@ import sys
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
-
+from sound_receiver import SoundReceiver
+import threading
+import queue
 load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, history_len=None, camera_fov=120):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, history_len=None, microphone_name=None):
         base_system_prompt = "You are mobile robot with two arms."
         self.task = "Find where is room exit and exit the room."
         system_prompt = system_prompt or base_system_prompt
@@ -28,6 +30,10 @@ class LLMAgent():
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
+        self.microphone_name = microphone_name
+        if self.microphone_name:
+            self.sound_receiver = SoundReceiver(microphone_name)
+            self.task_queue = queue.Queue()
 
     def capture_image(self):
         _, frame = self.main_camera.read()
@@ -52,6 +58,12 @@ class LLMAgent():
         if len(ai_indices) >= nr_of_loops:
             start_index = ai_indices[-nr_of_loops]
             self.message_history = [self.system_message] + self.message_history[start_index:]
+
+    def check_for_new_task(self):
+        """Non-blockingly checks the queue for a new task."""
+        if not self.task_queue.empty():
+            new_task = self.task_queue.get()
+            self.task = new_task
 
 
     def go(self):
@@ -89,6 +101,9 @@ class LLMAgent():
                 self.message_history.append(tool_response)
                 if tool_call["name"] == "finish_task":
                     return "Task finished, going idle."
+                
+            if self.microphone_name:
+                self.check_for_new_task()
             
 
 if __name__ == "__main__":
