@@ -73,46 +73,16 @@ class SoundReceiver:
             self._write_to_buffer(in_data)
         return (None, pyaudio.paContinue)
 
-    def _choose_device(self, device_index=None):
-        if device_index is not None:
-            # coerce numeric-like device_index to int and validate
-            try:
-                return int(device_index)
-            except (ValueError, TypeError):
-                raise ValueError(f"device_index must be integer (or None); got: {device_index!r}")
-        try:
-            default = self._p.get_default_input_device_info().get('index')
-        except Exception:
-            default = None
-
-        print("Available input devices:")
-        for i in range(self._p.get_device_count()):
-            info = self._p.get_device_info_by_index(i)
-            if info.get('maxInputChannels', 0) > 0:
-                print(f"  {i}: {info.get('name')}")
-        if default is not None:
-            print(f"Using default device index: {default}")
-            return default
-        raise RuntimeError("No default input device found; specify device_index.")
 
     def start_listening(self, device_index=None, frames_per_buffer=None):
         if self._listening:
             return
-        if frames_per_buffer is None:
-            frames_per_buffer = self.CHUNK
-        # determine idx with precedence: explicit arg -> env var -> default
-        if device_index is not None:
-            idx = self._choose_device(device_index)
-        elif self.DEVICE_INDEX is not None:
-            idx = self._choose_device(self.DEVICE_INDEX)
-        else:
-            idx = self._choose_device(None)
         try:
             self._stream = self._p.open(format=self.FORMAT,
                                        channels=self.CHANNELS,
                                        rate=self.RATE,
                                        input=True,
-                                       input_device_index=idx,
+                                       input_device_index=self.DEVICE_INDEX,
                                        frames_per_buffer=frames_per_buffer,
                                        stream_callback=self._callback)
         except Exception as e:
