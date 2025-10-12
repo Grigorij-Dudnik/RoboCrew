@@ -208,12 +208,10 @@ class XLeRobotWheels:
 
     def _run_for(self, action: str, duration_s: float) -> Dict[int, int]:
         duration = max(0.0, float(duration_s))
-        payload = self._apply_action(action)
-        if payload:
-            if duration > 0.0:
-                time.sleep(duration)
-            self._stop_all()
-        return payload
+        self._apply_action(action)
+        time.sleep(duration)
+        self._stop_all()
+        
 
     def _distance_to_duration(self, distance_m: float) -> float:
         return abs(float(distance_m)) / self.linear_mps

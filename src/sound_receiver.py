@@ -37,7 +37,7 @@ class SoundReceiver:
         self._stream = None
         self._listening = False
         self._recording = False
-        self.RMS_THRESHOLD = 500.0
+        self.RMS_THRESHOLD = 400.0
         self.reciver_thread = threading.Thread(target=self._recorder_loop)
         self.reciver_thread.daemon = True
         self.recorded_frames = []
@@ -78,7 +78,7 @@ class SoundReceiver:
     def _recorder_loop(self):
         while self._listening:
             loop_start_time = time.perf_counter()
-            print(f"rms: {self.get_rms()}")
+            # print(f"rms: {self.get_rms()}")
             if not self._recording:
                 if self.get_rms() > self.RMS_THRESHOLD:
                     self._recording = True

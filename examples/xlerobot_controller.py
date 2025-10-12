@@ -7,7 +7,7 @@ from LLMAgent import LLMAgent
 from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
-from connectors.XLeRobot.tools import move_forward, turn_left, turn_right  # type: ignore[import]
+from connectors.XLeRobot.tools import move_forward, turn  # type: ignore[import]
 
 print("Starting agent initialization...")
 
@@ -18,8 +18,7 @@ agent = LLMAgent(
     system_prompt=prompt,
     tools=[
         move_forward,
-        turn_right,
-        turn_left,
+        turn,
         finish_task,
     ],
     main_camera_usb_port="/dev/camera_center",

@@ -17,7 +17,7 @@ load_dotenv(find_dotenv())
 class LLMAgent():
     def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, history_len=None, sounddevice_index=None):
         base_system_prompt = "You are mobile robot with two arms."
-        self.task = "Find where is room exit and exit the room."
+        self.task = "You are standing in corridor. Explore the environment, find a backpack and approach it."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
@@ -34,9 +34,10 @@ class LLMAgent():
         if self.sounddevice_index:
             self.task_queue = queue.Queue()
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue)
-            
+            # self.task = ""
 
     def capture_image(self):
+        self.main_camera.grab() # Clear the buffer
         _, frame = self.main_camera.read()
         frame = horizontal_angle_grid(frame, h_fov=self.camera_fov)
         _, buffer = cv2.imencode('.jpg', frame)
@@ -69,8 +70,10 @@ class LLMAgent():
     def go(self):
         while True:
             if self.main_camera:
+                print("Capturing image from main camera...")
                 image_bytes = self.capture_image()
                 image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                print("Image captured and encoded.")
                 
                 message = HumanMessage(
                     content=[

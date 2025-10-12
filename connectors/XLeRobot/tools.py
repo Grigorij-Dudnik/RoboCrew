@@ -2,6 +2,7 @@
 import sys
 from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
+import time
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
@@ -25,14 +26,15 @@ def move_forward(distance_meters: float) -> str:
 
 
 @tool
-def turn_right(angle_degrees: float) -> str:
-    """Turns the robot right (or left if negative) by a specific angle in degrees."""
+def turn(angle_degrees: float) -> str:
+    """Turns the robot by a specific angle in degrees.  Right - positive, left - negative angle value."""
 
     angle = float(angle_degrees)
     if angle >= 0:
         wheel_controller.turn_right(angle)
     else:
         wheel_controller.turn_left(-angle)
+    time.sleep(0.4)  # wait a bit after turn for stabilization
     return f"Turned {'right' if angle >= 0 else 'left'} by {abs(angle):.2f} degrees."
 
 
