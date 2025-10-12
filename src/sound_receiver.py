@@ -8,7 +8,9 @@ import audioop
 import time
 from openai import OpenAI
 import io
+import whisper
 from dotenv import find_dotenv, load_dotenv
+import numpy as np
 
 
 load_dotenv(find_dotenv())
@@ -19,9 +21,12 @@ class SoundReceiver:
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 1
         self.RATE = 48000
-        self.BUFFER_SECONDS = 15
+        self.BUFFER_SECONDS = 2
+        self.frames_per_buffer = 2048
+        self.recording_loop_delay = 0.2
         # parse DEVICE_INDEX env var into an int if present, else None
         self.DEVICE_INDEX = int(os.getenv("DEVICE_INDEX"))
+        print(f"Using device index: {self.DEVICE_INDEX}")
 
         self._p = pyaudio.PyAudio()
         self._sample_width = self._p.get_sample_size(self.FORMAT)
@@ -32,17 +37,19 @@ class SoundReceiver:
         self._buffer = bytearray(self._buffer_capacity_bytes)
         self._write_pos = 0
         self._has_wrapped = False
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         self._stream = None
         self._listening = False
         self._recording = False
-        self.RMS_THRESHOLD = 1.0
+        self.RMS_THRESHOLD = 500.0
         self.reciver_thread = threading.Thread(target=self._recorder_loop)
         self.reciver_thread.daemon = True
         self.recorded_frames = []
-        self.last_below_threshold_time = None
+        self.first_timestamp_below_threshold = None
         self.openai_client = OpenAI()
+        self.asr_model = whisper.load_model("base")
+
 
 
     def _write_to_buffer(self, data: bytes):
@@ -67,18 +74,23 @@ class SoundReceiver:
     def _buffer_write_callback(self, in_data, frame_count, time_info, status):
         if in_data:
             self._write_to_buffer(in_data)
+            if self._recording:
+                with self._lock:
+                    self.recorded_frames.append(in_data)
         return (None, pyaudio.paContinue)
 
     def _recorder_loop(self):
         while self._listening:
+            loop_start_time = time.perf_counter()
             print(f"rms: {self.get_rms()}")
             if not self._recording:
                 if self.get_rms() > self.RMS_THRESHOLD:
                     self._recording = True
-                    self.recorded_frames = []
-                    self.recorded_frames.append(self.get_last_recording_bytes(2.0))
+                    pre_roll_data = self.get_last_recorded_bytes(2.0)
+                    with self._lock:
+                        self.recorded_frames = [pre_roll_data]
             else:
-                self.recorded_frames.append(self.get_last_recording_bytes(0.2))
+
                 if self.get_rms() < self.RMS_THRESHOLD:
                     if self.first_timestamp_below_threshold is None:
                         self.first_timestamp_below_threshold = time.time()
@@ -86,7 +98,11 @@ class SoundReceiver:
                         self._recording = False
                         self.first_timestamp_below_threshold = None
                         # TUTAJ WHISPER BIERZE RECORDED FRAMES
-                        audio_data = b''.join(self.recorded_frames)
+                        with self._lock:
+                            audio_data = b''.join(self.recorded_frames)
+                            self.recorded_frames = []
+
+                        print("Transcribing recorded audio...")
                         threading.Thread(
                             target=self._transcribe_audio, 
                             args=(audio_data,)
@@ -94,33 +110,47 @@ class SoundReceiver:
                 else:
                     self.first_timestamp_below_threshold = None
                         
-            
-            time.sleep(0.2)
+            loop_execution_time = time.perf_counter() - loop_start_time 
+            time.sleep(self.recording_loop_delay - loop_execution_time)
 
 
     def _transcribe_audio(self, audio_data: bytes) -> str:
-        # asr_model = whisper.load_model("base")
-        # chunk_transcript = asr_model.transcribe(
-        #     audio_data,
-        # )
-        ram_buffer = io.BytesIO()
-        with wave.open(ram_buffer, "wb") as wf:
-            wf.setnchannels(self.CHANNELS)
-            wf.setsampwidth(self._sample_width)
-            wf.setframerate(self.RATE)
-            wf.writeframes(audio_data)
-        ram_buffer.seek(0)
-
-
-        transcription = self.openai_client.audio.transcriptions.create(
-            model="gpt-4o-transcribe", 
-            file=ram_buffer
+        asr_model = whisper.load_model("base")
+        if len(audio_data) < 1000: # Check for minimum audio length
+            print("Audio data too short to transcribe.")
+            return
+        
+        np_audio = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+        transcription = self.asr_model.transcribe(
+            np_audio, 
+            language="en",
+            fp16=False,
         )
+
+        # with wave.open("recent_from_buffer.wav", "wb") as wf:
+        #     wf.setnchannels(self.CHANNELS)
+        #     wf.setsampwidth(self._sample_width)
+        #     wf.setframerate(self.RATE)
+        #     wf.writeframes(audio_data)
+        # print("Saved recorded audio to recent_from_buffer.wav")
+        # ram_buffer = io.BytesIO()
+        # with wave.open(ram_buffer, "wb") as wf:
+        #     wf.setnchannels(self.CHANNELS)
+        #     wf.setsampwidth(self._sample_width)
+        #     wf.setframerate(self.RATE)
+        #     wf.writeframes(audio_data)
+        # ram_buffer.seek(0)
+
+
+        # transcription = self.openai_client.audio.transcriptions.create(
+        #     model="gpt-4o-transcribe", 
+        #     file=ram_buffer
+        # )
         print(f"transcription: {transcription}")
-        self.task_queue.put(transcription.text)
+        # self.task_queue.put(transcription)
 
 
-    def start_listening(self, device_index=None, frames_per_buffer=None):
+    def start_listening(self):
         if self._listening:
             return
         try:
@@ -129,12 +159,13 @@ class SoundReceiver:
                                        rate=self.RATE,
                                        input=True,
                                        input_device_index=self.DEVICE_INDEX,
-                                       frames_per_buffer=frames_per_buffer,
+                                       frames_per_buffer=self.frames_per_buffer,
                                        stream_callback=self._buffer_write_callback)
         except Exception as e:
             raise RuntimeError(f"Failed to open input stream: {e}")
         self._stream.start_stream()
         self._listening = True
+        self.reciver_thread.start()
 
     def stop(self):
         if not self._listening:
@@ -160,7 +191,7 @@ class SoundReceiver:
                 return bytes(self._buffer[:self._write_pos])
             return bytes(self._buffer[self._write_pos:] + self._buffer[:self._write_pos])
 
-    def get_last_recording_bytes(self, seconds: float) -> bytes:
+    def get_last_recorded_bytes(self, seconds: float) -> bytes:
         bytes_needed = int(min(seconds * self._bytes_per_second, self._buffer_capacity_bytes))
         data = self.get_buffer_bytes()
         if len(data) <= bytes_needed:
@@ -170,7 +201,7 @@ class SoundReceiver:
     # RMS helpers
     def get_rms(self) -> float:
         """Return RMS level for raw PCM bytes (paInt16 width expected)."""
-        return float(audioop.rms(self.get_last_recording_bytes(seconds=0.2), self._sample_width))
+        return float(audioop.rms(self.get_last_recorded_bytes(seconds=0.2), self._sample_width))
     
 
 # Minimal CLI demo
@@ -181,11 +212,6 @@ if __name__ == "__main__":
         rec.start_listening()  # non-blocking
         input("Recording... press Enter to stop and save buffer to recent_from_buffer.wav\n")
         print("Saving last 5 seconds to recent_from_buffer.wav")
-        recent = rec.get_last(5.0)
-        with wave.open("recent_from_buffer.wav", "wb") as wf:
-            wf.setnchannels(rec.CHANNELS)
-            wf.setsampwidth(rec._sample_width)
-            wf.setframerate(rec.RATE)
-            wf.writeframes(recent)
+
     finally:
         rec.stop()
