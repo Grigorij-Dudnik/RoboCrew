@@ -51,7 +51,6 @@ class SoundReceiver:
         self.asr_model = whisper.load_model("base")
 
 
-
     def _write_to_buffer(self, data: bytes):
         with self._lock:
             n = len(data)
@@ -115,39 +114,35 @@ class SoundReceiver:
 
 
     def _transcribe_audio(self, audio_data: bytes) -> str:
-        asr_model = whisper.load_model("base")
-        if len(audio_data) < 1000: # Check for minimum audio length
-            print("Audio data too short to transcribe.")
-            return
+        # asr_model = whisper.load_model("base")
+        # if len(audio_data) < 1000: # Check for minimum audio length
+        #     print("Audio data too short to transcribe.")
+        #     return
         
-        np_audio = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-        transcription = self.asr_model.transcribe(
-            np_audio, 
-            language="en",
-            fp16=False,
-        )
-
-        # with wave.open("recent_from_buffer.wav", "wb") as wf:
-        #     wf.setnchannels(self.CHANNELS)
-        #     wf.setsampwidth(self._sample_width)
-        #     wf.setframerate(self.RATE)
-        #     wf.writeframes(audio_data)
-        # print("Saved recorded audio to recent_from_buffer.wav")
-        # ram_buffer = io.BytesIO()
-        # with wave.open(ram_buffer, "wb") as wf:
-        #     wf.setnchannels(self.CHANNELS)
-        #     wf.setsampwidth(self._sample_width)
-        #     wf.setframerate(self.RATE)
-        #     wf.writeframes(audio_data)
-        # ram_buffer.seek(0)
-
-
-        # transcription = self.openai_client.audio.transcriptions.create(
-        #     model="gpt-4o-transcribe", 
-        #     file=ram_buffer
+        # np_audio = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+        # transcription = self.asr_model.transcribe(
+        #     np_audio, 
+        #     language="en",
+        #     fp16=False,
         # )
+
+
+        ram_buffer = io.BytesIO()
+        ram_buffer.name = "recorded.wav"
+        with wave.open(ram_buffer, "wb") as wf:
+            wf.setnchannels(self.CHANNELS)
+            wf.setsampwidth(self._sample_width)
+            wf.setframerate(self.RATE)
+            wf.writeframes(audio_data)
+        ram_buffer.seek(0)
+
+
+        transcription = self.openai_client.audio.transcriptions.create(
+            model="gpt-4o-transcribe", 
+            file=ram_buffer
+        )
         print(f"transcription: {transcription}")
-        # self.task_queue.put(transcription)
+        self.task_queue.put(transcription.text)
 
 
     def start_listening(self):
