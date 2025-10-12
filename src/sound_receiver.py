@@ -2,22 +2,18 @@ import pyaudio
 import wave
 import threading
 import time
-import os
-import sys
 import audioop
 import time
 from openai import OpenAI
 import io
-import whisper
 from dotenv import find_dotenv, load_dotenv
-import numpy as np
 
 
 load_dotenv(find_dotenv())
 
 
 class SoundReceiver:
-    def __init__(self, task_queue=None):
+    def __init__(self, sounddevice_index, task_queue=None):
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 1
         self.RATE = 48000
@@ -25,8 +21,7 @@ class SoundReceiver:
         self.frames_per_buffer = 2048
         self.recording_loop_delay = 0.2
         # parse DEVICE_INDEX env var into an int if present, else None
-        self.DEVICE_INDEX = int(os.getenv("DEVICE_INDEX"))
-        print(f"Using device index: {self.DEVICE_INDEX}")
+        self.DEVICE_INDEX = sounddevice_index
 
         self._p = pyaudio.PyAudio()
         self._sample_width = self._p.get_sample_size(self.FORMAT)
@@ -47,8 +42,9 @@ class SoundReceiver:
         self.reciver_thread.daemon = True
         self.recorded_frames = []
         self.first_timestamp_below_threshold = None
+        self.num_recorded_buffers = 0
         self.openai_client = OpenAI()
-        self.asr_model = whisper.load_model("base")
+        self.start_listening()
 
 
     def _write_to_buffer(self, data: bytes):
@@ -76,6 +72,7 @@ class SoundReceiver:
             if self._recording:
                 with self._lock:
                     self.recorded_frames.append(in_data)
+                    self.num_recorded_buffers = self.num_recorded_buffers+1
         return (None, pyaudio.paContinue)
 
     def _recorder_loop(self):
@@ -114,19 +111,12 @@ class SoundReceiver:
 
 
     def _transcribe_audio(self, audio_data: bytes) -> str:
-        # asr_model = whisper.load_model("base")
-        # if len(audio_data) < 1000: # Check for minimum audio length
-        #     print("Audio data too short to transcribe.")
-        #     return
-        
-        # np_audio = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-        # transcription = self.asr_model.transcribe(
-        #     np_audio, 
-        #     language="en",
-        #     fp16=False,
-        # )
-
-
+        print(f"Buffer counter: {self.num_recorded_buffers}")
+        # ONLY FOR NOW - TO AVOID SHORT WHEEL NOISES
+        if self.num_recorded_buffers < 200: # Check for minimum audio length
+            print("Audio data too short to transcribe.")
+            return
+        self.num_recorded_buffers = 0
         ram_buffer = io.BytesIO()
         ram_buffer.name = "recorded.wav"
         with wave.open(ram_buffer, "wb") as wf:
@@ -141,8 +131,9 @@ class SoundReceiver:
             model="gpt-4o-transcribe", 
             file=ram_buffer
         )
-        print(f"transcription: {transcription}")
-        self.task_queue.put(transcription.text)
+        if transcription.text:  # If transcription is not ""
+            print(f"transcription: {transcription.text}")
+            self.task_queue.put(transcription.text)
 
 
     def start_listening(self):

@@ -6,7 +6,7 @@ from tools import finish_task
 from LLMAgent import LLMAgent
 from pathlib import Path
 project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root / "connectors"))
+sys.path.append(str(project_root))
 from connectors.XLeRobot.tools import move_forward, turn_left, turn_right  # type: ignore[import]
 
 print("Starting agent initialization...")
@@ -22,8 +22,9 @@ agent = LLMAgent(
         turn_left,
         finish_task,
     ],
-    main_camera_usb_port="/dev/video2",
+    main_camera_usb_port="/dev/camera_center",
     history_len=4,
+    sounddevice_index=2,
 )
 
 print("Agent initialized.")

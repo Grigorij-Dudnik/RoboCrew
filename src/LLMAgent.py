@@ -15,7 +15,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, history_len=None, microphone_name=None):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, history_len=None, sounddevice_index=None):
         base_system_prompt = "You are mobile robot with two arms."
         self.task = "Find where is room exit and exit the room."
         system_prompt = system_prompt or base_system_prompt
@@ -30,10 +30,10 @@ class LLMAgent():
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
-        self.microphone_name = microphone_name
-        if self.microphone_name:
+        self.sounddevice_index = sounddevice_index
+        if self.sounddevice_index:
             self.task_queue = queue.Queue()
-            self.sound_receiver = SoundReceiver(microphone_name, self.task_queue)
+            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue)
             
 
     def capture_image(self):
@@ -63,8 +63,7 @@ class LLMAgent():
     def check_for_new_task(self):
         """Non-blockingly checks the queue for a new task."""
         if not self.task_queue.empty():
-            new_task = self.task_queue.get()
-            self.task = new_task
+            self.task = self.task_queue.get()
 
 
     def go(self):
@@ -103,7 +102,7 @@ class LLMAgent():
                 if tool_call["name"] == "finish_task":
                     return "Task finished, going idle."
                 
-            if self.microphone_name:
+            if self.sounddevice_index:
                 self.check_for_new_task()
             
 

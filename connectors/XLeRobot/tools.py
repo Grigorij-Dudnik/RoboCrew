@@ -3,12 +3,12 @@ import sys
 from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
 
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root / "connectors" / "XLeRobot"))
-from wheel_controls import XLeRobotWheels  # type: ignore[import]
+project_root = Path(__file__).parent.parent.parent
+sys.path.append(str(project_root))
+from connectors.XLeRobot.wheel_controls import XLeRobotWheels
 
 
-sdk = XLeRobotWheels.connect_serial("/dev/ttyACM1")
+sdk = XLeRobotWheels.connect_serial("/dev/arm_right")
 wheel_controller = XLeRobotWheels(sdk)
 
 
