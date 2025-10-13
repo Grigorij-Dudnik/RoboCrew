@@ -13,7 +13,7 @@ load_dotenv(find_dotenv())
 
 
 class SoundReceiver:
-    def __init__(self, sounddevice_index, task_queue=None):
+    def __init__(self, sounddevice_index, task_queue=None, wakeword="robot"):
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 1
         self.RATE = 48000
@@ -22,6 +22,7 @@ class SoundReceiver:
         self.recording_loop_delay = 0.2
         # parse DEVICE_INDEX env var into an int if present, else None
         self.DEVICE_INDEX = sounddevice_index
+        self.wakeword = wakeword
 
         self._p = pyaudio.PyAudio()
         self._sample_width = self._p.get_sample_size(self.FORMAT)
@@ -133,7 +134,8 @@ class SoundReceiver:
         )
         if transcription.text:  # If transcription is not ""
             print(f"transcription: {transcription.text}")
-            self.task_queue.put(transcription.text)
+            if self.wakeword in transcription.text.lower():
+                self.task_queue.put(transcription.text)
 
 
     def start_listening(self):

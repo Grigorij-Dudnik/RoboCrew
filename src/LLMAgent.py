@@ -15,7 +15,17 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, history_len=None, sounddevice_index=None):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None):
+        """
+        model: name of the model to use
+        tools: list of langchain tools
+        system_prompt: custom system prompt - optional
+        main_camera_usb_port: provide usb port of your robot front camera if you want to use it.
+        camera_fov: field of view (degrees) of your main camera.
+        sounddevice_index: provide sounddevice index of your microphone if you want robot to hear.
+        wakeword: custom wakeword hearing which robot will set your sentence as a task o do.
+        history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
+        """
         base_system_prompt = "You are mobile robot with two arms."
         self.task = "You are standing in corridor. Explore the environment, find a backpack and approach it."
         system_prompt = system_prompt or base_system_prompt
@@ -33,7 +43,7 @@ class LLMAgent():
         self.sounddevice_index = sounddevice_index
         if self.sounddevice_index:
             self.task_queue = queue.Queue()
-            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue)
+            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
             # self.task = ""
 
     def capture_image(self):
