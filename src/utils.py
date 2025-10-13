@@ -4,8 +4,9 @@ import math
 
 def horizontal_angle_grid(image, h_fov=120, center_angle=0):
     """Draw horizontal angle markers on the bottom of the image."""
-    _, width = image.shape[:2]
+    height, width = image.shape[:2]
     yellow = (0, 255, 255)
+    orange = (0, 100, 255)
     y_pos = 25
     mark_len_angle = 10
 
@@ -25,12 +26,15 @@ def horizontal_angle_grid(image, h_fov=120, center_angle=0):
         cv2.line(image, (x, y_pos - 10), (x, y_pos + 10), yellow, 2)
         cv2.putText(image, f"{angle}", (x - 15, y_pos + 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, yellow, 2)
+        
+    # put right/left text
+    cv2.putText(image, "<=LEFT", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, orange, 2)
+    cv2.putText(image, "RIGHT=>", (width - 145, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
     return image
 
 if __name__ == "__main__":
     # Test the function with a sample image
-    img = cv2.imread("img.jpg")
+    img = cv2.imread("img.png")
     img_with_grid = horizontal_angle_grid(img, h_fov=118)
-    cv2.imshow("Image with Horizontal Angle Grid", img_with_grid)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # write to file
+    cv2.imwrite("img_with_grid.jpg", img_with_grid)

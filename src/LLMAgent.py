@@ -1,4 +1,3 @@
-#from phoenix.otel import register
 from utils import horizontal_angle_grid
 from dotenv import find_dotenv, load_dotenv
 from time import perf_counter
