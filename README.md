@@ -1,7 +1,7 @@
 `pip install robocrew`
 
 ##XLeRobot example:
-'''
+```
 import os, sys
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
@@ -37,4 +37,4 @@ print("Agent initialized.")
 
 # run agent
 agent.go()
-'''
+```
