@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "video_understanding"
+version = "0.1.0"
+authors = [
+  { name="Grigorij Dudnik", email="dudnikgrv@gmail.com" },
+]
+description = "🦾Set up your embodied LLM agent same easiness as you set up normal agents in CrewAI or Autogen"
+dependencies = [
+    "langchain",
+    "langchain-core",
+    "langchain-google-genai",
+    "opencv-python",
+    "pyaudio",
+    "pyserial>=3.5",
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"

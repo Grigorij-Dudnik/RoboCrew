@@ -5,3 +5,4 @@ venv/
 .coderrules
 .wav
 .idea/
+dist/

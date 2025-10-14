@@ -3,5 +3,7 @@ langchain-core
 langchain-google-genai
 opencv-python
 pyaudio
+pyserial>=3.5
+
 
 # sudo apt install portaudio19-dev
