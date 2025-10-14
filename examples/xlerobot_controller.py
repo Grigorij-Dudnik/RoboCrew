@@ -7,7 +7,7 @@ from LLMAgent import LLMAgent
 from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
-from connectors.XLeRobot.tools import move_forward, turn  # type: ignore[import]
+from robots.XLeRobot.tools import move_forward, turn  # type: ignore[import]
 
 print("Starting agent initialization...")
 
