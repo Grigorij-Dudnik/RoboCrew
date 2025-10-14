@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
-from robots.XLeRobot.sdk import DEFAULT_BAUDRATE, ScsServoSDK
+from robocrew.robots.XLeRobot.sdk import DEFAULT_BAUDRATE, ScsServoSDK
 
 
 # ---------------------------------------------------------------------------
