@@ -139,6 +139,7 @@ class SoundReceiver:
 
 
     def start_listening(self):
+        print(f"Starting SoundReceiver on device index {self.DEVICE_INDEX}")
         if self._listening:
             return
         try:

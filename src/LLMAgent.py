@@ -40,7 +40,7 @@ class LLMAgent():
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
         self.sounddevice_index = sounddevice_index
-        if self.sounddevice_index:
+        if self.sounddevice_index is not None:
             self.task_queue = queue.Queue()
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
             # self.task = ""
@@ -79,10 +79,8 @@ class LLMAgent():
     def go(self):
         while True:
             if self.main_camera:
-                print("Capturing image from main camera...")
                 image_bytes = self.capture_image()
                 image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                print("Image captured and encoded.")
                 
                 message = HumanMessage(
                     content=[
@@ -101,8 +99,8 @@ class LLMAgent():
                 
             self.message_history.append(message)
             response = self.llm.invoke(self.message_history)
-            print(response)
-            #print(response.tool_calls)
+            print(response.content)
+            print(response.tool_calls)
             self.message_history.append(response)
             if self.hitory_len:
                 self.cut_off_context(self.hitory_len)
