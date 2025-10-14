@@ -26,7 +26,7 @@ class LLMAgent():
         history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
         """
         base_system_prompt = "You are mobile robot with two arms."
-        self.task = "You are standing in corridor. Explore the environment, find a backpack and approach it."
+        self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)

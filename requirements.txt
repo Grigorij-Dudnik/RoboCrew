@@ -1,8 +1,7 @@
 langchain
 langchain-core
 langchain-google-genai
-python_opencv
-audioop
+opencv-python
 pyaudio
 
-sudo apt install portaudio19-dev
+# sudo apt install portaudio19-dev
