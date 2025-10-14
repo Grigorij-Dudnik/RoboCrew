@@ -1,6 +1,41 @@
 `pip install robocrew`
 
-##XLeRobot example:
+## XLeRobot example - simple:
+```
+import os, sys
+from robocrew.core.tools import finish_task
+from robocrew.core.LLMAgent import LLMAgent
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right
+from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
+
+
+#set up wheel movement tools
+wheel_arm_usb = "/dev/ttyUSB0"    # provide your right arm usb port
+sdk = XLeRobotWheels.connect_serial(wheel_arm_usb)
+wheel_controller = XLeRobotWheels(sdk)
+move_forward = create_move_forward(wheel_controller)
+turn_left = create_turn_left(wheel_controller)
+turn_right = create_turn_right(wheel_controller)
+
+# init agent
+agent = LLMAgent(
+    model="google_genai:gemini-robotics-er-1.5-preview",
+    tools=[
+        move_forward,
+        turn_left,
+        turn_right,
+        finish_task,
+    ],
+    main_camera_usb_port="/dev/camera_center",
+)
+
+print("Agent initialized.")
+
+# run agent
+agent.go()
+```
+
+## XLeRobot example - advanced:
 ```
 import os, sys
 from robocrew.core.tools import finish_task
