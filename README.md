@@ -73,6 +73,7 @@ Then install Portaudio for audio support:
 ```bash
 sudo apt install portaudio19-dev
 ```
+
 Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the word "robot" anywhere in your command, it'll use the entire phrase as its new task.
 
 

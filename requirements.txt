@@ -6,6 +6,3 @@ pyaudio
 pyserial>=3.5
 python-dotenv>=1.1.1
 openai>=2.3.0
-
-
-# sudo apt install portaudio19-dev
