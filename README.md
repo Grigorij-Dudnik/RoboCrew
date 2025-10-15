@@ -4,17 +4,13 @@
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
-```bash
-pip install robocrew
-```
-
 ![xlerobot_schema](images/main-coming.png)
 
 ## Features
 
 - 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
 - 🎤 **Voice** - Wake-word activated voice commands
-- 🧠 **Intelligence** - LLM agent robot control
+- 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
 - 🦾 **Manipulation** *(coming soon)* - VLA models as a tools for arms control
 - 🗺️ **Navigation** *(coming soon)* - Navigation features
@@ -26,6 +22,10 @@ pip install robocrew
 
 
 ## Quick Start
+
+```bash
+pip install robocrew
+```
 
 ### Mobile Robot (XLeRobot)
 
