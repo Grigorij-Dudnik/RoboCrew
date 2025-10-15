@@ -18,6 +18,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 ## Supported Robots
 
 - **XLeRobot**
+- **LeKiwi** (not tested, but we assume XLeRobot code will work for it as platforms are similar. Please try to run repo on your LeKiwi and open an issue with info if it works)
 - More robot platforms coming soon!
 
 
