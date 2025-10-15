@@ -69,13 +69,17 @@ agent = LLMAgent(
 )
 ```
 
+Then install Portaudio for audio support:
+```bash
+sudo apt install portaudio19-dev
+```
 Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the word "robot" anywhere in your command, it'll use the entire phrase as its new task.
 
 
 ## Key Parameters
 
 - **model**: Any LangChain model
-- **tools**: List of functions your robot can call
+- **tools**: List of functions your robot can call (movement, manipulation)
 - **main_camera_usb_port**: Your camera device (find with `ls /dev/video*`)
 - **sounddevice_index**: Microphone index (optional, for voice commands)
 - **wakeword**: Word that must appear in your speech to give robot a new task (default: "robot").
