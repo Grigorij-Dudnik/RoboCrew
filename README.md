@@ -49,8 +49,9 @@ turn_right = create_turn_right(wheel_controller)
 agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
     tools=[move_forward, turn_left, turn_right, finish_task],
-    main_camera_usb_port="/dev/video0",
+    main_camera_usb_port="/dev/video0",  # provide usb port main camera connected to
 )
+agent.task = "Find kitchen in my house and go there."
 
 agent.go()  # Robot explores autonomously
 ```
@@ -62,8 +63,8 @@ Add a microphone to give your robot voice-activated tasks:
 ```python
 agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
-    tools=[move_forward, turn_left, turn_right, finish_task],
-    main_camera_usb_port="/dev/video0",
+    tools=[move_forward, turn_left, turn_right],
+    main_camera_usb_port="/dev/video0",  # provide usb port main camera connected to
     sounddevice_index=0,  # Your mic device
     wakeword="robot",  # The robot listens for this word in your speech
     history_len=4,
