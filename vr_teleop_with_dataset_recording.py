@@ -15,7 +15,6 @@ import traceback
 
 # Third-party imports
 import numpy as np
-import pygame
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
 # Local imports
@@ -63,6 +62,12 @@ JOINT_CALIBRATION = [
     ['gripper', 0.0, 1.0],           # Joint6: zero position offset, scale factor
 ]
 
+EPISODE_LEN = 400  # Number of steps per episode
+RESET_LEN = 150
+NR_OF_EPISODES = 110
+TASK = "Pour water into cup"
+CAMERA_INDEX = "/dev/camera_center" 
+DATASET_REPO = "Grigorij/XLeRobot_arms"
 
 class SimpleTeleopArm:
     """
@@ -473,13 +478,13 @@ def init_dataset():
         },
     }
     import time
-    dataset_fps = 30
+    dataset_fps = 40
     dataset = LeRobotDataset.create(
-        repo_id="Grigorij/lerobot_test_set",
+        repo_id=DATASET_REPO,
         root=f"my_dataset_{time.time()}",
         features=features,
         fps=dataset_fps,
-        image_writer_processes=1,
+        image_writer_processes=0,
         image_writer_threads=4,
     )
     return dataset
@@ -513,10 +518,12 @@ def main():
     """
     print("XLerobot VR Control Example")
     print("="*50)
-    
-    # Initialize pygame for keyboard input handling
-    pygame.init()
+
     dataset = init_dataset()
+
+    # save videos into separate files to avoid concatenation problems
+    dataset.meta.update_chunk_settings(video_files_size_in_mb=0.001)
+    
 
     try:
         # Try to use saved calibration file to avoid recalibrating each time
@@ -565,14 +572,14 @@ def main():
         from lerobot.cameras.opencv import OpenCVCamera
         from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 		
-        config = OpenCVCameraConfig(index_or_path="/dev/camera_center")
+        config = OpenCVCameraConfig(index_or_path=CAMERA_INDEX)
         camera = OpenCVCamera(config)
         camera.connect()
-        from lerobot.datasets.utils import build_dataset_frame, combine_feature_dicts	
-        print("Starting VR control loop. Press ESC to exit.")
-        task_name = "Doing awesome things"
+        print("Starting VR control loop.")
+        recording_dataset = True
 
         step = 0
+        episode = 0
         try:
             while True:
                 # Get VR controller data
@@ -597,7 +604,6 @@ def main():
                 head_action = head_control.p_control_action(robot)
 
                 # Get base control from VR
-                print(f'right_goal: {right_goal}')
                 base_action = get_vr_base_action(right_goal, robot)
                 # speed_multiplier = get_vr_speed_control(right_goal)
                 
@@ -610,10 +616,11 @@ def main():
                 action = {**left_action, **right_action, **head_action, **base_action}
                 robot.send_action(action)
 
-                # print(f"observation {robot.get_observation()}")
-                # print(f"action: {action}")
+                #print(f"observation {robot.get_observation()}")
+                #print(f"action: {action}")
 				
                 image_array = camera.read()
+                #print(f"image_array: {image_array}")
                 # print("camera shape", image_array.shape)
                 action_values = list(left_action.values())
                 action_values.extend(right_action.values())
@@ -622,27 +629,26 @@ def main():
                     'action': np.array(action_values, dtype=np.float32),
                     'observation.state': np.array(list(robot.get_observation().values())[:12], dtype=np.float32),
                     'observation.images.main': image_array,
-                    'task': task_name,
+                    'task': TASK,
                 }
-                dataset.add_frame(lerobot_frame)
-                if step % 300 == 0:
-                    print("saving episode?")
+                if recording_dataset:
+                    dataset.add_frame(lerobot_frame)
+                print(f"step {step} added to dataset")
+                
+                if step == EPISODE_LEN:
+                    print(f"Finishing episode {episode}, reset...")
                     dataset.image_writer.wait_until_done()
                     dataset.save_episode()
-                    dataset.clear_episode_buffer()
-                
-                # Handle keyboard exit (press ESC to quit)
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        print("Quit event detected, exiting...")
+                    recording_dataset = False
+                if step == EPISODE_LEN + RESET_LEN:
+                    recording_dataset = True
+                    step = 0
+                    episode += 1
+                    if episode >= NR_OF_EPISODES:
+                        print("Reached maximum number of episodes. Exiting...")
+                        dataset.push_to_hub()
                         break
-                    elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_ESCAPE:
-                            print("ESC pressed, exiting...")
-                            break
-                else:
-                    continue  # Continue the while loop if no break occurred
-                break  # Break the while loop if a break occurred in the for loop
+                    print(f"Starting episode {episode} recording...")
                 
         finally:
             robot.disconnect()
@@ -657,7 +663,6 @@ def main():
         try:
             dataset.save_episode()
             dataset.push_to_hub()
-            pygame.quit()
         except:
             pass
         try:
