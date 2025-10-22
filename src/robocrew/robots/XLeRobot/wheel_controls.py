@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Dict, Mapping, Optional
 
-from src.robocrew.robots.XLeRobot.sdk import DEFAULT_BAUDRATE, ScsServoSDK
+from robocrew.robots.XLeRobot.sdk import DEFAULT_BAUDRATE, ScsServoSDK
 
 DEFAULT_SPEED = 10_000
 LINEAR_MPS = 0.25
