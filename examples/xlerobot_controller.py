@@ -9,8 +9,7 @@ prompt = "You are mobile household robot with two arms."
 
 #set up wheel movement tools
 wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port, as /dev/TTY0
-sdk = XLeRobotWheels.connect_serial(wheel_arm_usb)
-wheel_controller = XLeRobotWheels(sdk)
+wheel_controller = XLeRobotWheels(wheel_arm_usb)
 move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)

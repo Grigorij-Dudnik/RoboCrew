@@ -24,13 +24,13 @@ class XLeRobotWheels:
 
     def __init__(
         self,
-        sdk: ScsServoSDK,
+        wheel_arm_usb: str = "/dev/arm_right",
         *,
         speed: int = DEFAULT_SPEED,
         action_map: Optional[Mapping[str, Mapping[int, int]]] = None,
     ) -> None:
-        
-        self.sdk = sdk
+        self.wheel_arm_usb = wheel_arm_usb
+        self.sdk = XLeRobotWheels.connect_serial(wheel_arm_usb, DEFAULT_BAUDRATE)
         self.speed = speed
         self.action_map = ACTION_MAP if action_map is None else action_map
         self._wheel_ids = tuple(sorted(next(iter(self.action_map.values())).keys()))
