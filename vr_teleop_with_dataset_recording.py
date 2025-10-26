@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import traceback
+import queue
 
 # Third-party imports
 import numpy as np
@@ -62,12 +63,21 @@ JOINT_CALIBRATION = [
     ['gripper', 0.0, 1.0],           # Joint6: zero position offset, scale factor
 ]
 
-EPISODE_LEN = 400  # Number of steps per episode
+# --- Minimal flags to disable one whole hand and head teleop ---
+# Set to False to disable left-hand teleop and head teleop.
+# Re-enable by setting to True.
+ENABLE_LEFT_HAND = False
+ENABLE_HEAD = False
+
+EPISODE_LEN = 450  # Number of steps per episode
 RESET_LEN = 150
 NR_OF_EPISODES = 110
-TASK = "Pour water into cup"
-CAMERA_INDEX = "/dev/camera_center" 
-DATASET_REPO = "Grigorij/XLeRobot_arms"
+TASK = "Grab the cup"
+MAIN_CAMERA_INDEX = "/dev/ttyACM0" 
+#RIGHT_ARM_CAMERA_INDEX = "/dev/video2"
+LEFT_ARM_CAMERA_INDEX = "/dev/video2"
+DATASET_REPO = "Grigorij/XLeRobot_arms_5"
+FPS = 30
 
 class SimpleTeleopArm:
     """
@@ -166,8 +176,6 @@ class SimpleTeleopArm:
         if not hasattr(self, 'prev_vr_pos'):
             self.prev_vr_pos = current_vr_pos
             return  # Skip first frame to establish baseline
-        
-        print(current_vr_pos)
         
         # Calculate relative change (delta) from previous frame
         vr_x = (current_vr_pos[0] - self.prev_vr_pos[0]) * 220 # Scale for the shoulder
@@ -381,9 +389,9 @@ def get_vr_base_action(vr_goal, robot):
 
 
 # Base speed control parameters - adjustable slopes
-BASE_ACCELERATION_RATE = 2.0  # acceleration slope (speed/second)
-BASE_DECELERATION_RATE = 2.5  # deceleration slope (speed/second)
-BASE_MAX_SPEED = 3.0          # maximum speed multiplier
+BASE_ACCELERATION_RATE = 2.0/2  # acceleration slope (speed/second)
+BASE_DECELERATION_RATE = 2.5/2    # deceleration slope (speed/second)
+BASE_MAX_SPEED = 3.0/2          # maximum speed multiplier
 
 
 def get_vr_speed_control(vr_goal):
@@ -452,21 +460,33 @@ def init_dataset():
     features = {
         "action": {
             "dtype": "float32",
-            "shape": (12,),
-            "names": ["left_arm_shoulder_pan.pos", "left_arm_shoulder_lift.pos", "left_arm_elbow_flex.pos", 
-                "left_arm_wrist_flex.pos", "left_arm_wrist_roll.pos", "left_arm_gripper.pos",
+            "shape": (6,),
+            "names": [
+                #"left_arm_shoulder_pan.pos", "left_arm_shoulder_lift.pos", "left_arm_elbow_flex.pos", 
+                #"left_arm_wrist_flex.pos", "left_arm_wrist_roll.pos", "left_arm_gripper.pos",
                 "right_arm_shoulder_pan.pos", "right_arm_shoulder_lift.pos", "right_arm_elbow_flex.pos", 
                 "right_arm_wrist_flex.pos", "right_arm_wrist_roll.pos", "right_arm_gripper.pos",]
         },
         "observation.state": {
             "dtype": "float32",
-            "shape": (12,),
-            "names": ["left_arm_shoulder_pan.pos", "left_arm_shoulder_lift.pos", "left_arm_elbow_flex.pos", 
-                "left_arm_wrist_flex.pos", "left_arm_wrist_roll.pos", "left_arm_gripper.pos",
+            "shape": (6,),
+            "names": [
+                #"left_arm_shoulder_pan.pos", "left_arm_shoulder_lift.pos", "left_arm_elbow_flex.pos", 
+                #"left_arm_wrist_flex.pos", "left_arm_wrist_roll.pos", "left_arm_gripper.pos",
                 "right_arm_shoulder_pan.pos", "right_arm_shoulder_lift.pos", "right_arm_elbow_flex.pos", 
                 "right_arm_wrist_flex.pos", "right_arm_wrist_roll.pos", "right_arm_gripper.pos",]
         },
         "observation.images.main": {
+            "dtype": "video",
+            "shape": (480, 640, 3),
+            "names": ["height", "width", "channel"],
+        },
+        # "observation.images.right_arm": {
+        #     "dtype": "video",
+        #     "shape": (480, 640, 3),
+        #     "names": ["height", "width", "channel"],
+        # },
+        "observation.images.left_arm": {
             "dtype": "video",
             "shape": (480, 640, 3),
             "names": ["height", "width", "channel"],
@@ -478,36 +498,66 @@ def init_dataset():
         },
     }
     import time
-    dataset_fps = 40
     dataset = LeRobotDataset.create(
         repo_id=DATASET_REPO,
         root=f"my_dataset_{time.time()}",
         features=features,
-        fps=dataset_fps,
+        fps=FPS,
         image_writer_processes=0,
         image_writer_threads=4,
     )
     return dataset
 
 
-def record_data_to_dataset(dataset, fps, stop_event, task_name):
-    interval = 1.0 / fps
-    while not stop_event.is_set():
-        start_time = time.perf_counter()
-        lerobot_frame = {
-                'action': np.array({**left_action, **right_action}, dtype=np.float32),
-                'observation.state': np.array(robot.get_observation(), dtype=np.float32),
-                'observation.images.main': image_array
-            }
-        dataset.add_frame(lerobot_frame, task=task_name)
 
+def saving_dataset_worker(frame_queue, shutdown_event, saving_in_progress_event):
+    """
+    Worker function to save dataset frames in the background.
+    
+    Continuously checks for new dataset frames and saves them to disk.
+    """
+    try:
+        dataset = init_dataset()
+        # save videos into separate files to avoid concatenation problems
+        dataset.meta.update_chunk_settings(video_files_size_in_mb=0.001)
+        recording_dataset = True
+        frame_nr = 0
+        episode = 0
+        while not shutdown_event.is_set():
+            try:
+                lerobot_frame = frame_queue.get(timeout=1)
+            except queue.Empty:
+                continue
+    
+            if recording_dataset:
+                dataset.add_frame(lerobot_frame)
+                print(f"step {frame_nr} added to dataset")
 
-        time_to_sleep = interval - (time.perf_counter() - start_time)
-        print (f"sleeping interval: {time_to_sleep}")
-        if time_to_sleep > 0:
-            time.sleep(time_to_sleep)
+            frame_nr += 1
 
-        
+            if frame_nr == EPISODE_LEN:
+                print(f"Finishing episode {episode}, reset...")
+                saving_in_progress_event.set()
+                dataset.save_episode()
+                dataset.image_writer.wait_until_done()
+                #recording_dataset = False
+                saving_in_progress_event.clear()
+                #recording_dataset = True
+                frame_nr = 0
+                episode += 1
+                if episode >= NR_OF_EPISODES:
+                    print("Reached maximum number of episodes. Exiting...")
+                    shutdown_event.set()
+                    break
+                print(f"Starting episode {episode} recording...")
+   
+    except Exception as e:
+        logger.error(f"Error in dataset saving worker: {e}", exc_info=True)
+    finally:
+        if dataset:
+            dataset.image_writer.wait_until_done()
+            dataset.save_episode()
+            dataset.push_to_hub()
 
 def main():
     """
@@ -519,11 +569,10 @@ def main():
     print("XLerobot VR Control Example")
     print("="*50)
 
-    dataset = init_dataset()
+    shutdown_event = threading.Event()
+    saving_in_progress_event = threading.Event()
 
-    # save videos into separate files to avoid concatenation problems
-    dataset.meta.update_chunk_settings(video_files_size_in_mb=0.001)
-    
+    robot, vr_monitor, camera_main, camera_left, dataset_saving_thread = None, None, None, None, None
 
     try:
         # Try to use saved calibration file to avoid recalibrating each time
@@ -559,100 +608,95 @@ def main():
         obs = robot.get_observation()
         kin_left = SO101Kinematics()
         kin_right = SO101Kinematics()
-        left_arm = SimpleTeleopArm(LEFT_JOINT_MAP, obs, kin_left, prefix="left")
+        left_arm = SimpleTeleopArm(LEFT_JOINT_MAP, obs, kin_left, prefix="left") if ENABLE_LEFT_HAND else None
         right_arm = SimpleTeleopArm(RIGHT_JOINT_MAP, obs, kin_right, prefix="right")
-        head_control = SimpleHeadControl(obs)
+        head_control = SimpleHeadControl(obs) if ENABLE_HEAD else None
 
         # Move both arms and head to zero position at start
-        left_arm.move_to_zero_position(robot)
+        if ENABLE_LEFT_HAND and left_arm:
+            left_arm.move_to_zero_position(robot)
         right_arm.move_to_zero_position(robot)
-        head_control.move_to_zero_position(robot)
+        if ENABLE_HEAD and head_control:
+            head_control.move_to_zero_position(robot)
         
         # Main VR control loop
         from lerobot.cameras.opencv import OpenCVCamera
         from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 		
-        config = OpenCVCameraConfig(index_or_path=CAMERA_INDEX)
-        camera = OpenCVCamera(config)
-        camera.connect()
+        config_main_camera = OpenCVCameraConfig(index_or_path=MAIN_CAMERA_INDEX)
+        #config_right_camera = OpenCVCameraConfig(index_or_path=RIGHT_ARM_CAMERA_INDEX)
+        config_left_camera =  OpenCVCameraConfig(index_or_path=LEFT_ARM_CAMERA_INDEX)
+        camera_main = OpenCVCamera(config_main_camera)
+        #camera_right = OpenCVCamera(config_right_camera) 
+        camera_left = OpenCVCamera(config_left_camera)
+        camera_main.connect()
+        #camera_right.connect()
+        camera_left.connect()
         print("Starting VR control loop.")
-        recording_dataset = True
+        frame_queue = queue.Queue()
+        thread_args = (frame_queue, shutdown_event, saving_in_progress_event)
+        dataset_saving_thread = threading.Thread(target=saving_dataset_worker, args=thread_args, daemon=False)
+        dataset_saving_thread.start()
 
-        step = 0
-        episode = 0
-        try:
-            while True:
-                # Get VR controller data
-                dual_goals = vr_monitor.get_latest_goal_nowait()
-                left_goal = dual_goals.get("left") if dual_goals else None
-                right_goal = dual_goals.get("right") if dual_goals else None
-                headset_goal = dual_goals.get("headset") if dual_goals else None
+        while not shutdown_event.is_set():
+            if saving_in_progress_event.is_set():
+                print("[MAIN] Waiting for dataset saving to complete...  ", end='\r')
+                time.sleep(0.1)
+                continue
 
-                # Wait for VR connection before proceeding
-                if dual_goals is None:
-                    time.sleep(0.01)  # Wait 10ms for VR connection
-                    continue
-                step += 1
+            # Get VR controller data
+            dual_goals = vr_monitor.get_latest_goal_nowait()
+            left_goal = dual_goals.get("left") if dual_goals else None
+            right_goal = dual_goals.get("right") if dual_goals else None
+            headset_goal = dual_goals.get("headset") if dual_goals else None
 
-                # Handle VR input for both arms
+            # Wait for VR connection before proceeding
+            if dual_goals is None:
+                time.sleep(0.01)  # Wait 10ms for VR connection
+                continue
+
+            # Handle VR input for both arms
+            if ENABLE_LEFT_HAND and left_arm:
                 left_arm.handle_vr_input(left_goal, gripper_state=None)
-                right_arm.handle_vr_input(right_goal, gripper_state=None)
-                
-                # Get actions from both arms and head
-                left_action = left_arm.p_control_action(robot)
-                right_action = right_arm.p_control_action(robot)
-                head_action = head_control.p_control_action(robot)
+            right_arm.handle_vr_input(right_goal, gripper_state=None)
+            
+            # Get actions from both arms and head
+            left_action = left_arm.p_control_action(robot) if (ENABLE_LEFT_HAND and left_arm) else {}
+            right_action = right_arm.p_control_action(robot)
+            head_action = head_control.p_control_action(robot) if (ENABLE_HEAD and head_control) else {}
 
-                # Get base control from VR
-                base_action = get_vr_base_action(right_goal, robot)
-                # speed_multiplier = get_vr_speed_control(right_goal)
-                
-                # if base_action:
-                #     for key in base_action:
-                #         if 'vel' in key or 'velocity' in key:  
-                            # base_action[key] *= speed_multiplier 
+            # Get base control from VR
+            base_action = get_vr_base_action(right_goal, robot)
+            # speed_multiplier = get_vr_speed_control(right_goal)
+            
+            # if base_action:
+            #     for key in base_action:
+            #         if 'vel' in key or 'velocity' in key:  
+                        # base_action[key] *= speed_multiplier 
 
-                # Merge all actions
-                action = {**left_action, **right_action, **head_action, **base_action}
-                robot.send_action(action)
+            # Merge all actions
+            action = {**left_action, **right_action, **head_action, **base_action}
+            robot.send_action(action)
 
-                #print(f"observation {robot.get_observation()}")
-                #print(f"action: {action}")
-				
-                image_array = camera.read()
-                #print(f"image_array: {image_array}")
-                # print("camera shape", image_array.shape)
-                action_values = list(left_action.values())
-                action_values.extend(right_action.values())
-                
-                lerobot_frame = {
-                    'action': np.array(action_values, dtype=np.float32),
-                    'observation.state': np.array(list(robot.get_observation().values())[:12], dtype=np.float32),
-                    'observation.images.main': image_array,
-                    'task': TASK,
-                }
-                if recording_dataset:
-                    dataset.add_frame(lerobot_frame)
-                print(f"step {step} added to dataset")
-                
-                if step == EPISODE_LEN:
-                    print(f"Finishing episode {episode}, reset...")
-                    dataset.image_writer.wait_until_done()
-                    dataset.save_episode()
-                    recording_dataset = False
-                if step == EPISODE_LEN + RESET_LEN:
-                    recording_dataset = True
-                    step = 0
-                    episode += 1
-                    if episode >= NR_OF_EPISODES:
-                        print("Reached maximum number of episodes. Exiting...")
-                        dataset.push_to_hub()
-                        break
-                    print(f"Starting episode {episode} recording...")
-                
-        finally:
-            robot.disconnect()
-            print("VR teleoperation ended.")
+            #print(f"observation {robot.get_observation()}")
+            #print(f"action: {action}")
+            
+            image_array_main = camera_main.read()
+            #image_array_right = camera_right.read()
+            image_array_left = camera_left.read()
+            #action_values = list(left_action.values())
+            #action_values.extend(right_action.values())
+            action_values = list(right_action.values())
+            
+            lerobot_frame = {
+                'action': np.array(action_values, dtype=np.float32),
+                'observation.state': np.array(list(robot.get_observation().values())[6:12], dtype=np.float32),
+                'observation.images.main': image_array_main,
+                #'observation.images.right_arm': image_array_right,
+                'observation.images.left_arm': image_array_left,
+                'task': TASK,
+            }
+            frame_queue.put(lerobot_frame)
         
     except Exception as e:
         print(f"Program execution failed: {e}")
@@ -660,15 +704,22 @@ def main():
         
     finally:
         # Cleanup
-        try:
-            dataset.save_episode()
-            dataset.push_to_hub()
-        except:
-            pass
-        try:
+        shutdown_event.set()
+
+        if dataset_saving_thread and dataset_saving_thread.is_alive():
+            print("[MAIN] Waiting for dataset saving thread to finish...")
+            dataset_saving_thread.join()
+
+        if camera_main:
+            camera_main.disconnect()
+        #if camera_right:
+        #    camera_right.disconnect()
+        if camera_left:
+            camera_left.disconnect()       
+        if robot:
             robot.disconnect()
-        except:
-            pass
+
+
 
 if __name__ == "__main__":
     main()
