@@ -22,11 +22,10 @@ agent = LLMAgent(
         turn_right,
         finish_task,
     ],
+    history_len=4,
     main_camera_usb_port="/dev/video0",  # provide usb port main camera connected to
     camera_fov=120,
-    sounddevice_index=0,  # Your mic device
-    wakeword="robot",  # The robot listens for this word in your speech
-    history_len=4,
+    sounddevice_index=0,  # index of your microphone sounddevice
     debug_mode=False,
 )
 
@@ -34,4 +33,4 @@ print("Agent initialized.")
 
 # run agent with a sample task
 agent.task = "Find kitchen in my house and go there."
-agent.go() 
+agent.go()
