@@ -5,17 +5,19 @@ from __future__ import annotations
 import time
 from typing import Dict, Mapping, Optional
 
-from robocrew.robots.XLeRobot.sdk import DEFAULT_BAUDRATE, ScsServoSDK
+from lerobot.motors import Motor, MotorNormMode
+from lerobot.motors.feetech import FeetechMotorsBus
 
+DEFAULT_BAUDRATE = 1_000_000
 DEFAULT_SPEED = 10_000
 LINEAR_MPS = 0.25
 ANGULAR_DPS = 100.0
 
 ACTION_MAP = {
-    "up": {7: 1, 8: 0, 9: -1},
-    "down": {7: -1, 8: 0, 9: 1},
-    "left": {7: -1, 8: -1, 9: -1},
-    "right": {7: 1, 8: 1, 9: 1},
+    "up": {"base_left_wheel": 1, "base_back_wheel": 0, "base_right_wheel": -1},
+    "down": {"base_left_wheel": -1, "base_back_wheel": 0, "base_right_wheel": 1},
+    "left": {"base_left_wheel": -1, "base_back_wheel": -1, "base_right_wheel": -1},
+    "right": {"base_left_wheel": 1, "base_back_wheel": 1, "base_right_wheel": 1},
 }
 
 
@@ -27,26 +29,37 @@ class XLeRobotWheels:
         wheel_arm_usb: str = "/dev/arm_right",
         *,
         speed: int = DEFAULT_SPEED,
-        action_map: Optional[Mapping[str, Mapping[int, int]]] = None,
+        action_map: Optional[Mapping[str, Mapping[str, int]]] = None,
     ) -> None:
         self.wheel_arm_usb = wheel_arm_usb
-        self.sdk = XLeRobotWheels.connect_serial(wheel_arm_usb, DEFAULT_BAUDRATE)
         self.speed = speed
         self.action_map = ACTION_MAP if action_map is None else action_map
-        self._wheel_ids = tuple(sorted(next(iter(self.action_map.values())).keys()))
+        self._wheel_names = tuple(sorted(next(iter(self.action_map.values())).keys()))
 
-    def _write(self, action: str) -> Dict[int, int]:
+        # Initialize FeetechMotorsBus with the three wheel motors
+        self.bus = FeetechMotorsBus(
+            port=wheel_arm_usb,
+            motors={
+                "base_left_wheel": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
+                "base_back_wheel": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
+                "base_right_wheel": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+            },
+        )
+        self.bus.connect()
+        self.apply_wheel_modes()
+
+    def _write(self, action: str) -> Dict[str, int]:
         multipliers = self.action_map[action.lower()]
-        payload = {wid: self.speed * factor for wid, factor in multipliers.items()}
-        self.sdk.sync_write_wheel_speeds(payload)
+        payload = {name: self.speed * factor for name, factor in multipliers.items()}
+        self.bus.sync_write("Goal_Velocity", payload)
         return payload
 
-    def _stop(self) -> Dict[int, int]:
-        payload = {wid: 0 for wid in self._wheel_ids}
-        self.sdk.sync_write_wheel_speeds(payload)
+    def _stop(self) -> Dict[str, int]:
+        payload = {name: 0 for name in self._wheel_names}
+        self.bus.sync_write("Goal_Velocity", payload)
         return payload
 
-    def _run(self, action: str, duration: float) -> Dict[int, int]:
+    def _run(self, action: str, duration: float) -> Dict[str, int]:
         if duration <= 0:
             return {}
         payload = self._write(action)
@@ -54,31 +67,34 @@ class XLeRobotWheels:
         self._stop()
         return payload
 
-    def go_forward(self, meters: float) -> Dict[int, int]:
+    def go_forward(self, meters: float) -> Dict[str, int]:
         return self._run("up", float(meters) / LINEAR_MPS)
 
-    def go_backward(self, meters: float) -> Dict[int, int]:
+    def go_backward(self, meters: float) -> Dict[str, int]:
         return self._run("down", float(meters) / LINEAR_MPS)
 
-    def turn_left(self, degrees: float) -> Dict[int, int]:
+    def turn_left(self, degrees: float) -> Dict[str, int]:
         return self._run("left", float(degrees) / ANGULAR_DPS)
 
-    def turn_right(self, degrees: float) -> Dict[int, int]:
+    def turn_right(self, degrees: float) -> Dict[str, int]:
         return self._run("right", float(degrees) / ANGULAR_DPS)
 
     def apply_wheel_modes(self) -> None:
-        for wid in self._wheel_ids:
-            self.sdk.set_wheel_mode(wid)
+        """Configure motors for wheel mode (velocity control)."""
+        from lerobot.motors.feetech import OperatingMode
 
-    @staticmethod
-    def connect_serial(
-        port: str,
-        baudrate: int = DEFAULT_BAUDRATE,
-        protocol_end: int = 0,
-    ) -> ScsServoSDK:
-        sdk = ScsServoSDK()
-        if not sdk.connect(port, baudrate, protocol_end):
-            raise RuntimeError(f"Failed to open serial port {port} @ {baudrate}")
-        return sdk
+        for name in self._wheel_names:
+            self.bus.write("Operating_Mode", name, OperatingMode.VELOCITY.value)
 
+        self.bus.enable_torque()
+
+    def disconnect(self) -> None:
+        """Disconnect and cleanup."""
+        self._stop()
+        self.bus.disconnect()
+
+    def __del__(self) -> None:
+        """Ensure cleanup on destruction."""
+        if hasattr(self, "bus") and self.bus.is_connected:
+            self.disconnect()
 
