@@ -8,12 +8,16 @@ import serial  # type: ignore[import]
 import serial.tools.list_ports  # type: ignore[import]
 
 BROADCAST_ID = 0xFE
+INST_READ = 0x02
 INST_WRITE = 0x03
+INST_SYNC_READ = 0x82
 INST_SYNC_WRITE = 0x83
 
 ADDR_SCS_GOAL_SPEED = 46
 ADDR_SCS_MODE = 33
 ADDR_SCS_LOCK = 55
+ADDR_SCS_GOAL_POSITION = 42
+ADDR_SCS_PRESENT_POSITION = 56
 
 DEFAULT_BAUDRATE = 1_000_000
 MAX_SPEED = 10_000
@@ -111,4 +115,34 @@ class ScsServoSDK:
         packet = self._packet(BROADCAST_ID, INST_SYNC_WRITE, params)
         self._send(packet)
         return "success"
+
+    def sync_write_positions(self, servo_positions: Dict[int, int]) -> str:
+        payload: List[int] = []
+        for sid, pos in servo_positions.items():
+            payload.extend([int(sid) & 0xFF, _lo(int(pos)), _hi(int(pos))])
+        if not payload:
+            return "success"
+        params = [ADDR_SCS_GOAL_POSITION, 2, *payload]
+        packet = self._packet(BROADCAST_ID, INST_SYNC_WRITE, params)
+        self._send(packet)
+        return "success"
+
+    def sync_read_positions(self, servo_ids: List[int]) -> Dict[int, int]:
+        ids = [int(sid) & 0xFF for sid in servo_ids]
+        if not ids:
+            return {}
+        ser = self._ensure_serial()
+        ser.reset_input_buffer()
+        params = [ADDR_SCS_PRESENT_POSITION, 2, *ids]
+        packet = self._packet(BROADCAST_ID, INST_SYNC_READ, params)
+        self._send(packet)
+        prev_timeout = ser.timeout
+        ser.timeout = 0.1
+        readings: Dict[int, int] = {}
+        for _ in ids:
+            data = ser.read(8)
+            if len(data) == 8 and data[0] == 0xFF and data[1] == 0xFF:
+                readings[data[2]] = data[5] | (data[6] << 8)
+        ser.timeout = prev_timeout
+        return readings
 
