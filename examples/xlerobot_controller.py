@@ -6,7 +6,7 @@ from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
 prompt = "You are mobile household robot with two arms."
 
 #set up wheel movement tools
-wheel_arm_usb = "/dev/ttyACM1"    # provide your right arm usb port, as /dev/TTY0
+wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
 wheel_controller = XLeRobotWheels(wheel_arm_usb)
 move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
@@ -23,10 +23,10 @@ agent = LLMAgent(
         finish_task,
     ],
     history_len=4,  # nr of last message-answer pairs to keep
-    main_camera_usb_port="/dev/video0",  # provide usb port main camera connected to
+    main_camera_usb_port="/dev/camera_center",  # provide usb port main camera. Eg: /dev/video0
     camera_fov=120,
-    sounddevice_index=0,  # index of your microphone sounddevice
-    debug_mode=False,
+    sounddevice_index=2,  # index of your microphone sounddevice
+    debug_mode=True,
 )
 
 print("Agent initialized.")
