@@ -25,7 +25,7 @@ agent = LLMAgent(
     history_len=4,  # nr of last message-answer pairs to keep
     main_camera_usb_port="/dev/camera_center",  # provide usb port main camera. Eg: /dev/video0
     camera_fov=120,
-    sounddevice_index=2,  # index of your microphone sounddevice
+    sounddevice_index=0,  # index of your microphone sounddevice
     debug_mode=False,
 )
 
