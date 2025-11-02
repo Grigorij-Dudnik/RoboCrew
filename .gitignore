@@ -6,3 +6,4 @@ venv/
 .wav
 .idea/
 dist/
+old_sdk.py
