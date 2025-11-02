@@ -33,7 +33,7 @@ class LLMAgent():
         self.message_history = [self.system_message]
         # cameras
         self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
-        self.hitory_len = history_len
+        self.history_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
@@ -102,9 +102,8 @@ class LLMAgent():
             print(response.tool_calls)
             
             self.message_history.append(response)
-            if self.hitory_len:
-                self.cut_off_context(self.hitory_len)
-
+            if self.history_len:
+                self.cut_off_context(self.history_len)
             # execute tool
             for tool_call in response.tool_calls:
                 tool_response = self.invoke_tool(tool_call)
