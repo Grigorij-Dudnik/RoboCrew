@@ -118,7 +118,6 @@ class XLeRobotWheels:
         return self._wheels_run("right", float(degrees) / ANGULAR_DPS)
 
     def apply_wheel_modes(self) -> None:
-        """Configure motors for wheel mode (velocity control)."""
         from lerobot.motors.feetech import OperatingMode
 
         for wid in self._wheel_ids:
@@ -127,7 +126,6 @@ class XLeRobotWheels:
         self.wheel_bus.enable_torque()
 
     def apply_head_modes(self) -> None:
-        """Configure head motors for position mode."""
         from lerobot.motors.feetech import OperatingMode
 
         for id in self._head_ids:
@@ -151,13 +149,11 @@ class XLeRobotWheels:
         return self.head_bus.sync_read("Present_Position", list(self._head_ids))
 
     def disconnect(self) -> None:
-        """Disconnect and cleanup."""
         self._wheels_stop()
         self.wheel_bus.disconnect()
         self.head_bus.disconnect()
 
     def __del__(self) -> None:
-        """Ensure cleanup on destruction."""
         if hasattr(self, "wheel_bus") and self.wheel_bus.is_connected:
             self.disconnect()
 
