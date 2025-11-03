@@ -93,9 +93,10 @@ class XLeRobotWheels:
         self.wheel_bus.sync_write("Goal_Velocity", payload)
         return payload
 
-    def _wheels_stop(self) -> None:
-        payload = {id: 0 for id in self._wheel_ids}
+    def _wheels_stop(self) -> Dict[int, int]:
+        payload = {wid: 0 for wid in self._wheel_ids}
         self.wheel_bus.sync_write("Goal_Velocity", payload)
+        return payload
 
     def _wheels_run(self, action: str, duration: float) -> Dict[int, int]:
         if duration <= 0:
