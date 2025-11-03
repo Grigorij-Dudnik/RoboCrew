@@ -93,6 +93,10 @@ class XLeRobotWheels:
         self.wheel_bus.sync_write("Goal_Velocity", payload)
         return payload
 
+    def _wheels_stop(self) -> None:
+        payload = {id: 0 for id in self._wheel_ids}
+        self.wheel_bus.sync_write("Goal_Velocity", payload)
+
     def _wheels_run(self, action: str, duration: float) -> Dict[int, int]:
         if duration <= 0:
             return {}
@@ -132,27 +136,19 @@ class XLeRobotWheels:
         self.head_bus.enable_torque()
 
     def turn_head_yaw(self, degrees: float) -> Dict[int, float]:
-        """Turn head yaw to specified degrees."""
         payload = {HEAD_SERVO_MAP["yaw"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
         self._head_positions.update(payload)
         return payload
 
     def turn_head_pitch(self, degrees: float) -> Dict[int, float]:
-        """Turn head pitch to specified degrees."""
         payload = {HEAD_SERVO_MAP["pitch"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
         self._head_positions.update(payload)
         return payload
 
     def get_head_position(self) -> Dict[int, float]:
-        """Get current head motor positions in degrees."""
         return self.head_bus.sync_read("Present_Position", list(self._head_ids))
-
-    def _wheels_stop(self) -> None:
-        """Stop all wheel motors."""
-        payload = {id: 0 for id in self._wheel_ids}
-        self.wheel_bus.sync_write("Goal_Velocity", payload)
 
     def disconnect(self) -> None:
         """Disconnect and cleanup."""
