@@ -14,12 +14,12 @@ LINEAR_MPS = 0.25
 ANGULAR_DPS = 100.0
 
 ACTION_MAP = {
-    "up": {"base_left_wheel": 1, "base_back_wheel": 0, "base_right_wheel": -1},
-    "down": {"base_left_wheel": -1, "base_back_wheel": 0, "base_right_wheel": 1},
-    "left": {"base_left_wheel": -1, "base_back_wheel": -1, "base_right_wheel": -1},
-    "right": {"base_left_wheel": 1, "base_back_wheel": 1, "base_right_wheel": 1},
+    "up": {7: 1, 8: 0, 9: -1},
+    "down": {7: -1, 8: 0, 9: 1},
+    "left": {7: -1, 8: -1, 9: -1},
+    "right": {7: 1, 8: 1, 9: 1},
 }
-
+HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
 
 class XLeRobotWheels:
     """Minimal wheel controller that keeps only basic movement helpers."""
@@ -30,22 +30,22 @@ class XLeRobotWheels:
         head_arm_usb: str = "/dev/arm_head",
         *,
         speed: int = DEFAULT_SPEED,
-        action_map: Optional[Mapping[str, Mapping[str, int]]] = None,
+        action_map: Optional[Mapping[str, Mapping[int, int]]] = None,
     ) -> None:
         self.wheel_arm_usb = wheel_arm_usb
         self.head_arm_usb = head_arm_usb
         self.speed = speed
         self.action_map = ACTION_MAP if action_map is None else action_map
-        self._wheel_names = tuple(sorted(next(iter(self.action_map.values())).keys()))
-        self._head_names = ("yaw", "pitch")
-        
+        self._wheel_ids = tuple(sorted(next(iter(self.action_map.values())).keys()))
+        self._head_ids = tuple(sorted(HEAD_SERVO_MAP.values()))
+
         # Initialize FeetechMotorsBus with the three wheel motors
         self.wheel_bus = FeetechMotorsBus(
             port=wheel_arm_usb,
             motors={
-                "base_left_wheel": Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-                "base_back_wheel": Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
-                "base_right_wheel": Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+                7: Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
+                8: Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
+                9: Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
             },
         )
         self.wheel_bus.connect()
@@ -54,14 +54,14 @@ class XLeRobotWheels:
         # Create basic calibration for head motors
         # STS3215 motors have 4096 positions (0-4095) which typically map to ~360 degrees
         head_calibration = {
-            "yaw": MotorCalibration(
+            7: MotorCalibration(
                 id=7,
                 drive_mode=0,
                 homing_offset=0,
                 range_min=0,
                 range_max=4095,
             ),
-            "pitch": MotorCalibration(
+            8: MotorCalibration(
                 id=8,
                 drive_mode=0,
                 homing_offset=0,
@@ -74,21 +74,21 @@ class XLeRobotWheels:
         self.head_bus = FeetechMotorsBus(
             port=head_arm_usb,
             motors={
-                "yaw": Motor(7, "sts3215", MotorNormMode.DEGREES),
-                "pitch": Motor(8, "sts3215", MotorNormMode.DEGREES),
+                HEAD_SERVO_MAP["yaw"]: Motor(HEAD_SERVO_MAP["yaw"], "sts3215", MotorNormMode.DEGREES),
+                HEAD_SERVO_MAP["pitch"]: Motor(HEAD_SERVO_MAP["pitch"], "sts3215", MotorNormMode.DEGREES),
             },
             calibration=head_calibration,
         )
         self.head_bus.connect()
         self.apply_head_modes()
 
-    def _wheels_write(self, action: str) -> Dict[str, int]:
+    def _wheels_write(self, action: str) -> Dict[int, int]:
         multipliers = self.action_map[action.lower()]
         payload = {name: self.speed * factor for name, factor in multipliers.items()}
         self.wheel_bus.sync_write("Goal_Velocity", payload)
         return payload
 
-    def _wheels_run(self, action: str, duration: float) -> Dict[str, int]:
+    def _wheels_run(self, action: str, duration: float) -> Dict[int, int]:
         if duration <= 0:
             return {}
         payload = self._wheels_write(action)
@@ -96,24 +96,24 @@ class XLeRobotWheels:
         self._wheels_stop()
         return payload
 
-    def go_forward(self, meters: float) -> Dict[str, int]:
+    def go_forward(self, meters: float) -> Dict[int, int]:
         return self._wheels_run("up", float(meters) / LINEAR_MPS)
 
-    def go_backward(self, meters: float) -> Dict[str, int]:
+    def go_backward(self, meters: float) -> Dict[int, int]:
         return self._wheels_run("down", float(meters) / LINEAR_MPS)
 
-    def turn_left(self, degrees: float) -> Dict[str, int]:
+    def turn_left(self, degrees: float) -> Dict[int, int]:
         return self._wheels_run("left", float(degrees) / ANGULAR_DPS)
 
-    def turn_right(self, degrees: float) -> Dict[str, int]:
+    def turn_right(self, degrees: float) -> Dict[int, int]:
         return self._wheels_run("right", float(degrees) / ANGULAR_DPS)
 
     def apply_wheel_modes(self) -> None:
         """Configure motors for wheel mode (velocity control)."""
         from lerobot.motors.feetech import OperatingMode
 
-        for name in self._wheel_names:
-            self.wheel_bus.write("Operating_Mode", name, OperatingMode.VELOCITY.value)
+        for id in self._wheel_ids:
+            self.wheel_bus.write("Operating_Mode", id, OperatingMode.VELOCITY.value)
 
         self.wheel_bus.enable_torque()
 
@@ -121,30 +121,30 @@ class XLeRobotWheels:
         """Configure head motors for position mode."""
         from lerobot.motors.feetech import OperatingMode
 
-        for name in self._head_names:
-            self.head_bus.write("Operating_Mode", name, OperatingMode.POSITION.value)
+        for id in self._head_ids:
+            self.head_bus.write("Operating_Mode", id, OperatingMode.POSITION.value)
 
         self.head_bus.enable_torque()
 
-    def turn_head_yaw(self, degrees: float) -> Dict[str, float]:
+    def turn_head_yaw(self, degrees: float) -> Dict[int, float]:
         """Turn head yaw to specified degrees."""
-        payload = {"yaw": float(degrees)}
+        payload = {HEAD_SERVO_MAP["yaw"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
         return payload
 
-    def turn_head_pitch(self, degrees: float) -> Dict[str, float]:
+    def turn_head_pitch(self, degrees: float) -> Dict[int, float]:
         """Turn head pitch to specified degrees."""
-        payload = {"pitch": float(degrees)}
+        payload = {HEAD_SERVO_MAP["pitch"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
         return payload
 
-    def get_head_position(self) -> Dict[str, float]:
+    def get_head_position(self) -> Dict[int, float]:
         """Get current head motor positions in degrees."""
-        return self.head_bus.sync_read("Present_Position", list(self._head_names))
+        return self.head_bus.sync_read("Present_Position", list(self._head_ids))
 
     def _wheels_stop(self) -> None:
         """Stop all wheel motors."""
-        payload = {name: 0 for name in self._wheel_names}
+        payload = {id: 0 for id in self._wheel_ids}
         self.wheel_bus.sync_write("Goal_Velocity", payload)
 
     def disconnect(self) -> None:
