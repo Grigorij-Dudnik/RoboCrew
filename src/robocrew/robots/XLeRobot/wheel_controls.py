@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Dict, Mapping, Optional
 
-from lerobot.motors import Motor, MotorNormMode
+from lerobot.motors import Motor, MotorCalibration, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
 
 DEFAULT_BAUDRATE = 1_000_000
@@ -51,6 +51,25 @@ class XLeRobotWheels:
         self.wheel_bus.connect()
         self.apply_wheel_modes()
         
+        # Create basic calibration for head motors
+        # STS3215 motors have 4096 positions (0-4095) which typically map to ~360 degrees
+        head_calibration = {
+            "yaw": MotorCalibration(
+                id=7,
+                drive_mode=0,
+                homing_offset=0,
+                range_min=0,
+                range_max=4095,
+            ),
+            "pitch": MotorCalibration(
+                id=8,
+                drive_mode=0,
+                homing_offset=0,
+                range_min=0,
+                range_max=4095,
+            ),
+        }
+        
         # Initialize FeetechMotorsBus for head motors
         self.head_bus = FeetechMotorsBus(
             port=head_arm_usb,
@@ -58,6 +77,7 @@ class XLeRobotWheels:
                 "yaw": Motor(7, "sts3215", MotorNormMode.DEGREES),
                 "pitch": Motor(8, "sts3215", MotorNormMode.DEGREES),
             },
+            calibration=head_calibration,
         )
         self.head_bus.connect()
         self.apply_head_modes()
