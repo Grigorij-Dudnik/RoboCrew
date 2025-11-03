@@ -83,6 +83,9 @@ class XLeRobotWheels:
         )
         self.head_bus.connect()
         self.apply_head_modes()
+        self._head_positions = self.get_head_position()
+        for sid in self._head_ids:
+            self._head_positions.setdefault(sid, 2048)
 
     def _wheels_write(self, action: str) -> Dict[int, int]:
         multipliers = self.action_map[action.lower()]
@@ -132,12 +135,14 @@ class XLeRobotWheels:
         """Turn head yaw to specified degrees."""
         payload = {HEAD_SERVO_MAP["yaw"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
+        self._head_positions.update(payload)
         return payload
 
     def turn_head_pitch(self, degrees: float) -> Dict[int, float]:
         """Turn head pitch to specified degrees."""
         payload = {HEAD_SERVO_MAP["pitch"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
+        self._head_positions.update(payload)
         return payload
 
     def get_head_position(self) -> Dict[int, float]:
