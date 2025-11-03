@@ -19,7 +19,9 @@ ACTION_MAP = {
     "left": {7: -1, 8: -1, 9: -1},
     "right": {7: 1, 8: 1, 9: 1},
 }
+
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
+
 
 class XLeRobotWheels:
     """Minimal wheel controller that keeps only basic movement helpers."""
@@ -84,7 +86,7 @@ class XLeRobotWheels:
 
     def _wheels_write(self, action: str) -> Dict[int, int]:
         multipliers = self.action_map[action.lower()]
-        payload = {name: self.speed * factor for name, factor in multipliers.items()}
+        payload = {wid: self.speed * factor for wid, factor in multipliers.items()}
         self.wheel_bus.sync_write("Goal_Velocity", payload)
         return payload
 
@@ -112,8 +114,8 @@ class XLeRobotWheels:
         """Configure motors for wheel mode (velocity control)."""
         from lerobot.motors.feetech import OperatingMode
 
-        for id in self._wheel_ids:
-            self.wheel_bus.write("Operating_Mode", id, OperatingMode.VELOCITY.value)
+        for wid in self._wheel_ids:
+            self.wheel_bus.write("Operating_Mode", wid, OperatingMode.VELOCITY.value)
 
         self.wheel_bus.enable_torque()
 
