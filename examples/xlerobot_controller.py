@@ -1,5 +1,3 @@
-import sys
-import os
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right
@@ -8,7 +6,7 @@ from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
 prompt = "You are mobile household robot with two arms."
 
 #set up wheel movement tools
-wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port, as /dev/TTY0
+wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
 wheel_controller = XLeRobotWheels(wheel_arm_usb)
 move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
@@ -25,12 +23,14 @@ agent = LLMAgent(
         finish_task,
     ],
     history_len=4,  # nr of last message-answer pairs to keep
-    main_camera_usb_port="/dev/camera_center",
+    main_camera_usb_port="/dev/camera_center",  # provide usb port main camera. Eg: /dev/video0
     camera_fov=120,
-    sounddevice_index=0,   # index of your microphone sounddevice
+    sounddevice_index=0,  # index of your microphone sounddevice
+    debug_mode=False,
 )
 
 print("Agent initialized.")
 
-# run agent
+# run agent with a sample task
+agent.task = "Find kitchen in my house and go there."
 agent.go()

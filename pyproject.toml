@@ -14,11 +14,13 @@ dependencies = [
     "langchain>=0.3.27",
     "langchain-core>=0.3.79",
     "langchain-google-genai",
+    "lerobot @ git+https://github.com/huggingface/lerobot.git@d57d1aa1970eec7b102a9527262ede4a3dd7a726",
     "opencv-python",
     "pyaudio",
     "pyserial>=3.5",
     "python-dotenv>=1.1.1",
     "openai>=2.3.0",
+    "feetech-servo-sdk",
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,3 +33,6 @@ license-files = ["LICEN[CS]E*"]
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
+
+[tool.hatch.metadata]
+allow-direct-references = true

@@ -7,3 +7,5 @@ venv/
 .idea/
 dist/
 old_sdk.py
+uv.lock
+debug/

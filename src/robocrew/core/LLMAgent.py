@@ -11,7 +11,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -28,11 +28,12 @@ class LLMAgent():
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
         self.tools = tools
+        self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
         self.system_message = SystemMessage(content=system_prompt)
         self.message_history = [self.system_message]
         # cameras
         self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
-        self.hitory_len = history_len
+        self.history_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
@@ -41,6 +42,7 @@ class LLMAgent():
             self.task_queue = queue.Queue()
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
             # self.task = ""
+        self.debug = debug_mode
 
     def capture_image(self):
         self.main_camera.grab() # Clear the buffer
@@ -51,9 +53,7 @@ class LLMAgent():
 
     def invoke_tool(self, tool_call):
         # convert string to real function
-        tool_name_to_tool = {tool.name: tool for tool in self.tools}
-        name = tool_call["name"]
-        requested_tool = tool_name_to_tool[name]
+        requested_tool = self.tool_name_to_tool[tool_call["name"]]
         args = tool_call["args"]
         tool_output = requested_tool.invoke(args)
         return ToolMessage(tool_output, tool_call_id=tool_call["id"])
@@ -78,6 +78,8 @@ class LLMAgent():
             if self.main_camera:
                 image_bytes = self.capture_image()
                 image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                if self.debug:
+                    open(f"debug/latest_view.jpg", "wb").write(image_bytes)
                 
                 message = HumanMessage(
                     content=[
@@ -98,10 +100,10 @@ class LLMAgent():
             response = self.llm.invoke(self.message_history)
             print(response.content)
             print(response.tool_calls)
+            
             self.message_history.append(response)
-            if self.hitory_len:
-                self.cut_off_context(self.hitory_len)
-
+            if self.history_len:
+                self.cut_off_context(self.history_len)
             # execute tool
             for tool_call in response.tool_calls:
                 tool_response = self.invoke_tool(tool_call)
