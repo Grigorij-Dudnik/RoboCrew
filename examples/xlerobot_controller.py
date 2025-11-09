@@ -9,7 +9,7 @@ from robocrew.robots.XLeRobot.robot_controls import XLeRobotControler
 prompt = "You are mobile household robot with two arms."
 
 
-main_camera_usb_port="/dev/camera_center",
+main_camera_usb_port = "/dev/camera_center"
 
 main_camera = cv2.VideoCapture(main_camera_usb_port)
 main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -18,12 +18,11 @@ main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 #set up wheel movement tools
 wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port, as /dev/TTY0
 head_arm_usb = "/dev/arm_left"
-wheel_controler = XLeRobotControler(wheel_arm_usb)
-head_controler = XLeRobotControler(head_arm_usb)
-move_forward = create_move_forward(wheel_controler)
-turn_left = create_turn_left(wheel_controler)
-turn_right = create_turn_right(wheel_controler)
-look_around = create_look_around(head_controler, main_camera)
+robot_controler = XLeRobotControler(wheel_arm_usb, head_arm_usb)
+move_forward = create_move_forward(robot_controler)
+turn_left = create_turn_left(robot_controler)
+turn_right = create_turn_right(robot_controler)
+look_around = create_look_around(robot_controler, main_camera)
 
 # init agent
 agent = LLMAgent(
