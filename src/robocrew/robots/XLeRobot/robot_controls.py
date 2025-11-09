@@ -21,7 +21,7 @@ ACTION_MAP = {
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
 
 
-class XLeRobotWheels:
+class XLeRobotControler:
     """Minimal wheel controller that keeps only basic movement helpers."""
 
     def __init__(
@@ -34,8 +34,8 @@ class XLeRobotWheels:
     ) -> None:
         self.wheel_arm_usb = wheel_arm_usb
         self.head_arm_usb = head_arm_usb
-        self.wheel_sdk = XLeRobotWheels.connect_serial(wheel_arm_usb, DEFAULT_BAUDRATE)
-        self.head_sdk = XLeRobotWheels.connect_serial(head_arm_usb, DEFAULT_BAUDRATE)
+        self.wheel_sdk = XLeRobotControler.connect_serial(wheel_arm_usb, DEFAULT_BAUDRATE)
+        self.head_sdk = XLeRobotControler.connect_serial(head_arm_usb, DEFAULT_BAUDRATE)
         self.speed = speed
         self.action_map = ACTION_MAP if action_map is None else action_map
         self._wheel_ids = tuple(sorted(next(iter(self.action_map.values())).keys()))

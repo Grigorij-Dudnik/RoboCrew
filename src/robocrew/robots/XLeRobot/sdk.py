@@ -93,14 +93,6 @@ class ScsServoSDK:
         self._write_byte(servo_id, ADDR_SCS_LOCK, 1)
         return "success"
 
-    def write_wheel_speed(self, servo_id: int, speed: int) -> str:
-        clamped = max(-MAX_SPEED, min(MAX_SPEED, int(speed)))
-        value = abs(clamped) & 0x7FFF
-        if clamped < 0:
-            value |= 0x8000
-        self._write_word(servo_id, ADDR_SCS_GOAL_SPEED, value)
-        return "success"
-
     def sync_write_wheel_speeds(self, servo_speeds: Dict[int, int]) -> str:
         payload: List[int] = []
         for sid, speed in servo_speeds.items():

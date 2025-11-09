@@ -11,7 +11,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None):
+    def __init__(self, model, tools, system_prompt=None, main_camera=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -31,8 +31,8 @@ class LLMAgent():
         self.system_message = SystemMessage(content=system_prompt)
         self.message_history = [self.system_message]
         # cameras
-        self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
-        self.hitory_len = history_len
+        self.main_camera = main_camera if main_camera else None
+        self.history_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
