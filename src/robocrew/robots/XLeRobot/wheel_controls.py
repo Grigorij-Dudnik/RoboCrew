@@ -29,7 +29,7 @@ class XLeRobotWheels:
     def __init__(
         self,
         wheel_arm_usb: str = "/dev/arm_right",
-        head_arm_usb: str = "/dev/arm_head",
+        head_arm_usb: str = "/dev/arm_left",
         *,
         speed: int = DEFAULT_SPEED,
         action_map: Optional[Mapping[str, Mapping[int, int]]] = None,

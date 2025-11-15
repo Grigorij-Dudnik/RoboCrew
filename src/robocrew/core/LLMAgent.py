@@ -1,4 +1,4 @@
-from robocrew.core.utils import horizontal_angle_grid
+from robocrew.core.utils import horizontal_angle_grid , capture_image
 from robocrew.core.sound_receiver import SoundReceiver
 from dotenv import find_dotenv, load_dotenv
 import cv2
@@ -11,7 +11,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False):
+    def __init__(self, model, tools, system_prompt=None, main_camera=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -23,7 +23,7 @@ class LLMAgent():
         history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
         """
         base_system_prompt = "You are mobile robot with two arms."
-        self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
+        self.task = "You are standing in a room. Explore the environment, find a backpack and approach it. First look around to understand your surroundings."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
@@ -32,7 +32,7 @@ class LLMAgent():
         self.system_message = SystemMessage(content=system_prompt)
         self.message_history = [self.system_message]
         # cameras
-        self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
+        self.main_camera = main_camera if main_camera else None
         self.history_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -44,12 +44,6 @@ class LLMAgent():
             # self.task = ""
         self.debug = debug_mode
 
-    def capture_image(self):
-        self.main_camera.grab() # Clear the buffer
-        _, frame = self.main_camera.read()
-        frame = horizontal_angle_grid(frame, h_fov=self.camera_fov)
-        _, buffer = cv2.imencode('.jpg', frame)
-        return buffer.tobytes()
 
     def invoke_tool(self, tool_call):
         # convert string to real function
@@ -76,7 +70,7 @@ class LLMAgent():
     def go(self):
         while True:
             if self.main_camera:
-                image_bytes = self.capture_image()
+                image_bytes = capture_image(self.main_camera, camera_fov=self.camera_fov)
                 image_base64 = base64.b64encode(image_bytes).decode('utf-8')
                 if self.debug:
                     open(f"debug/latest_view.jpg", "wb").write(image_bytes)
