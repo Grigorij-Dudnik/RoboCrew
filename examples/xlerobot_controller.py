@@ -35,12 +35,12 @@ agent = LLMAgent(
     history_len=4,  # nr of last message-answer pairs to keep
     main_camera=main_camera,  # provide main camera.
     camera_fov=120,
-    sounddevice_index=0,  # index of your microphone sounddevice
+    sounddevice_index=2,  # index of your microphone sounddevice
     debug_mode=False,
 )
 
 print("Agent initialized.")
 
 # run agent with a sample task
-agent.task = "Look around to understand your surroundings, find a backpack and approach it."
+agent.task = "Look around to understand your surroundings, find a door and approach it."
 agent.go()
