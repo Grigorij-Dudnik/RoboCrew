@@ -12,7 +12,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 - 🎤 **Voice** - Wake-word activated voice commands
 - 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
-- 📚 **Memory** - Long-term memory system to remember important things
+- 📚 **Memory** - Long-term memory to remember envinronment details
 - 🦾 **Manipulation** *(coming soon)* - VLA models as a tools for arms control
 - 🗺️ **Navigation** *(coming soon)* - Navigation features
 
@@ -51,7 +51,6 @@ agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
     tools=[move_forward, turn_left, turn_right, finish_task],
     main_camera_usb_port="/dev/video0",  # provide usb port main camera connected to
-    use_memory=True, # memory system to remember important things
 )
 agent.task = "Find kitchen in my house and go there."
 

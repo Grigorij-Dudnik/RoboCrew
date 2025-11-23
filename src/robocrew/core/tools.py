@@ -22,7 +22,6 @@ def remember_thing(text: str):
 def recall_thing(query: str):
     """
     Search memory for information.
-    Useful when you need to find something or remember where a room is.
+    Useful when you need to find something or remind you where a room is.
     """
     return robot_memory.search_memory(query)
-
