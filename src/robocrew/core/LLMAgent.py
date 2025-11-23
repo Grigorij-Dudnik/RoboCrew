@@ -24,20 +24,20 @@ class LLMAgent():
         use_memory: set to True to enable long-term memory (requires sqlite3).
         """
         base_system_prompt = "You are a mobile robot with two arms."
+        system_prompt = system_prompt or base_system_prompt
         
         if use_memory:
             from robocrew.core.tools import remember_thing, recall_thing
             tools.append(remember_thing)
             tools.append(recall_thing)
-            base_system_prompt = (
-                "You are a mobile robot with two arms. "
-                "You have a memory. When you find important things (like a specific room, object, or person) "
+            memory_prompt = (
+                " You have a memory. When you find important things (like a specific room, object, or person) "
                 "or complete a navigation step, use the `remember_thing` tool to save it for later. "
                 "Do not wait for the user to tell you to remember. Be proactive."
             )
+            system_prompt += memory_prompt
 
         self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
-        system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
         self.tools = tools
