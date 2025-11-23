@@ -11,7 +11,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -21,8 +21,21 @@ class LLMAgent():
         sounddevice_index: provide sounddevice index of your microphone if you want robot to hear.
         wakeword: custom wakeword hearing which robot will set your sentence as a task o do.
         history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
+        use_memory: set to True to enable long-term memory (requires sqlite3).
         """
-        base_system_prompt = "You are mobile robot with two arms."
+        base_system_prompt = "You are a mobile robot with two arms."
+        
+        if use_memory:
+            from robocrew.core.tools import remember_thing, recall_thing
+            tools.append(remember_thing)
+            tools.append(recall_thing)
+            base_system_prompt = (
+                "You are a mobile robot with two arms. "
+                "You have a memory. When you find important things (like a specific room, object, or person) "
+                "or complete a navigation step, use the `remember_thing` tool to save it for later. "
+                "Do not wait for the user to tell you to remember. Be proactive."
+            )
+
         self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
         system_prompt = system_prompt or base_system_prompt
         llm = init_chat_model(model)

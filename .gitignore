@@ -9,3 +9,4 @@ dist/
 old_sdk.py
 uv.lock
 debug/
+robot_memory.db
