@@ -10,3 +10,4 @@ old_sdk.py
 uv.lock
 debug/
 physical_path.sh
+robot_memory.db
