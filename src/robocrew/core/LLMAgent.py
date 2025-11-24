@@ -1,4 +1,4 @@
-from robocrew.core.utils import horizontal_angle_grid
+from robocrew.core.utils import horizontal_angle_grid , capture_image
 from robocrew.core.sound_receiver import SoundReceiver
 from dotenv import find_dotenv, load_dotenv
 import cv2
@@ -45,7 +45,7 @@ class LLMAgent():
         self.system_message = SystemMessage(content=system_prompt)
         self.message_history = [self.system_message]
         # cameras
-        self.main_camera = cv2.VideoCapture(main_camera_usb_port) if main_camera_usb_port else None
+        self.main_camera = main_camera if main_camera else None
         self.history_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -57,12 +57,6 @@ class LLMAgent():
             # self.task = ""
         self.debug = debug_mode
 
-    def capture_image(self):
-        self.main_camera.grab() # Clear the buffer
-        _, frame = self.main_camera.read()
-        frame = horizontal_angle_grid(frame, h_fov=self.camera_fov)
-        _, buffer = cv2.imencode('.jpg', frame)
-        return buffer.tobytes()
 
     def invoke_tool(self, tool_call):
         # convert string to real function
@@ -89,7 +83,7 @@ class LLMAgent():
     def go(self):
         while True:
             if self.main_camera:
-                image_bytes = self.capture_image()
+                image_bytes = capture_image(self.main_camera, camera_fov=self.camera_fov)
                 image_base64 = base64.b64encode(image_bytes).decode('utf-8')
                 if self.debug:
                     open(f"debug/latest_view.jpg", "wb").write(image_bytes)

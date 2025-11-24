@@ -2,6 +2,13 @@ import cv2
 import math
 
 
+def capture_image(main_camera, camera_fov=120):
+    main_camera.grab() # Clear the buffer
+    _, frame = main_camera.read()
+    frame = horizontal_angle_grid(frame, h_fov=camera_fov)
+    _, buffer = cv2.imencode('.jpg', frame)
+    return buffer.tobytes()
+
 def horizontal_angle_grid(image, h_fov=120, center_angle=0):
     """Draw horizontal angle markers on the bottom of the image."""
     height, width = image.shape[:2]
