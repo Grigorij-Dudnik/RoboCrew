@@ -12,6 +12,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 - 🎤 **Voice** - Wake-word activated voice commands
 - 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
+- 📚 **Memory** - Long-term memory to remember envinronment details
 - 🦾 **Manipulation** *(coming soon)* - VLA models as a tools for arms control
 - 🗺️ **Navigation** *(coming soon)* - Navigation features
 
@@ -68,6 +69,7 @@ agent = LLMAgent(
     sounddevice_index=0,  # Your mic device
     wakeword="robot",  # The robot listens for this word in your speech
     history_len=4,
+    use_memory=True, # memory system to remember important things
 )
 ```
 
@@ -87,6 +89,7 @@ Now just say something like **"Hey robot, bring me a beer."** — the robot list
 - **sounddevice_index**: Microphone index (optional, for voice commands)
 - **wakeword**: Word that must appear in your speech to give robot a new task (default: "robot").
 - **history_len**: How many conversation turns to remember (optional)
+- **use_memory**: Enable memory system to remember important things (optional)
 
 
 ## Custom Tools
