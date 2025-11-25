@@ -2,6 +2,10 @@ import base64
 import sys
 from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
+from lerobot.async_inference.robot_client import async_client
+from lerobot.async_inference.configs import RobotClientConfig
+from lerobot.common.robot_devices.robots.configs import ManipulatorRobotConfig
+from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
 from robocrew.core.utils import capture_image
 import time
 
@@ -70,3 +74,64 @@ def create_look_around(head_controller, main_camera):
         return f"Looked around and captured images: left (data:image/jpeg;base64,{image_left64}), center (data:image/jpeg;base64,{image_center64}), right (data:image/jpeg;base64,{image_right64})."
 
     return look_around
+
+
+def create_vla_arm_manipulation(
+        server_address: str,
+        policy_name: str, 
+        policy_type: str, 
+        arm_port: str, 
+        camera_config: dict[str, dict], 
+        policy_device: str = "cuda"
+    ):
+    """Creates a tool that makes the robot pick up a cup using its arm.
+    Args:
+        server_address (str): The address of the server to connect to.
+        policy_name (str): The name or path of the pretrained policy.
+        policy_type (str): The type of policy to use.
+        arm_port (str): The USB port of the robot's arm.
+        camera_config (dict, optional): Lerobot-type camera configuration. (E.g., "{ main: {type: opencv, index_or_path: /dev/video2, width: 640, height: 480, fps: 30}, left_arm: {type: opencv, index_or_path: /dev/video0, width: 640, height: 480, fps: 30}}")
+        policy_device (str, optional): The device to run the policy on. Defaults to "cuda".
+    """
+    configured_cameras = {}
+    for cam_name, cam_settings in camera_config.items():
+        # Unpack the dictionary settings directly into the Config class
+        configured_cameras[cam_name] = OpenCVCameraConfig(
+            type=cam_settings.get("type", "opencv"),
+            index_or_path=cam_settings["index_or_path"],
+            width=cam_settings.get("width", 640),
+            height=cam_settings.get("height", 480),
+            fps=cam_settings.get("fps", 30)
+        )
+
+
+    bot_config = ManipulatorRobotConfig(
+        type="so101_follower",
+        port=arm_port,
+        cameras=configured_cameras,
+        id="black"
+    )
+
+    cfg = RobotClientConfig(
+        robot=bot_config,
+        task="dummy",
+        server_address=server_address,
+        policy_type=policy_type,
+        pretrained_name_or_path=policy_name,
+        policy_device=policy_device,
+        actions_per_chunk=50,
+        chunk_size_threshold=0.5,
+        aggregate_fn_name="weighted_average",
+        debug_visualize_queue_size=True,
+        fps=30
+    )
+    
+    @tool
+    def pick_cup() -> str:
+        """Makes the robot pick up a cup using its arm."""
+
+        async_client(cfg)
+
+        return "Picked up the cup."
+
+    return pick_cup

@@ -1,8 +1,9 @@
 import cv2
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around, create_vla_arm_manipulation
 from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
+
 
 prompt = "You are mobile household robot with two arms."
 
@@ -16,10 +17,18 @@ main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
 head_arm_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /dev/ttyACM0
 wheel_controller = XLeRobotWheels(wheel_arm_usb)
+
 move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
+pick_up_cup = create_vla_arm_manipulation(
+    "1.2.3.4:8080",
+    "Grigorij/act_xle_cup_to_box",
+    "act",
+    wheel_arm_usb,
+    camera_config={"main": {"index_or_path": "/dev/video2"}, "left_arm": {"index_or_path": "/dev/video0"}}, 
+)
 
 # init agent
 agent = LLMAgent(
