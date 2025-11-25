@@ -23,11 +23,11 @@ turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
 pick_up_cup = create_vla_arm_manipulation(
-    "1.2.3.4:8080",
+    "10.206.149.243:8080",
     "Grigorij/act_xle_cup_to_box",
     "act",
     wheel_arm_usb,
-    camera_config={"main": {"index_or_path": "/dev/video2"}, "left_arm": {"index_or_path": "/dev/video0"}}, 
+    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}}, 
 )
 
 # init agent
@@ -39,6 +39,7 @@ agent = LLMAgent(
         turn_left,
         turn_right,
         look_around,
+        pick_up_cup,
         finish_task,
     ],
     history_len=4,  # nr of last message-answer pairs to keep
@@ -51,5 +52,5 @@ agent = LLMAgent(
 print("Agent initialized.")
 
 # run agent with a sample task
-agent.task = "Look around to understand your surroundings, find a door and approach it."
+agent.task = "Pick up the cup in front of you"
 agent.go()

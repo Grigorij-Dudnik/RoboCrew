@@ -2,12 +2,13 @@ import base64
 import sys
 from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
-from lerobot.async_inference.robot_client import async_client
+from lerobot.async_inference.robot_client import RobotClient 
 from lerobot.async_inference.configs import RobotClientConfig
 from lerobot.common.robot_devices.robots.configs import ManipulatorRobotConfig
 from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
 from robocrew.core.utils import capture_image
 import time
+import threading
 
 
 
@@ -127,11 +128,25 @@ def create_vla_arm_manipulation(
     )
     
     @tool
-    def pick_cup() -> str:
+    def pick_up_cup() -> str:
         """Makes the robot pick up a cup using its arm."""
 
-        async_client(cfg)
+        client = RobotClient(cfg)
+        if not client.start():
+           return "Failed to connect to robot server."
+
+        # 3. Start background thread to listen for actions (Required)
+        threading.Thread(target=client.receive_actions, daemon=True).start()
+
+        # 4. Schedule the STOP command after 30 seconds
+        # This is the key: When this fires, control_loop stops cleanly
+        threading.Timer(30.0, client.stop).start()
+
+        # 5. Run the loop
+        # This blocks for 30s, then exits automatically when the Timer calls client.stop()
+        client.control_loop(task="dummy")
+
 
         return "Picked up the cup."
 
-    return pick_cup
+    return pick_up_cup
