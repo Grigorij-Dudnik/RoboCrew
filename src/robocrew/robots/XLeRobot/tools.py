@@ -4,8 +4,8 @@ from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
 from lerobot.async_inference.robot_client import RobotClient 
 from lerobot.async_inference.configs import RobotClientConfig
-from lerobot.common.robot_devices.robots.configs import ManipulatorRobotConfig
-from lerobot.common.robot_devices.cameras.configs import OpenCVCameraConfig
+from lerobot.robots.so101_follower.config_so101_follower import SO101FollowerConfig
+from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 from robocrew.core.utils import capture_image
 import time
 import threading
@@ -106,15 +106,14 @@ def create_vla_arm_manipulation(
         )
 
 
-    bot_config = ManipulatorRobotConfig(
-        type="so101_follower",
+    robot_config = SO101FollowerConfig(
         port=arm_port,
         cameras=configured_cameras,
-        id="black"
+        id="robot_arms",
     )
 
     cfg = RobotClientConfig(
-        robot=bot_config,
+        robot=robot_config,
         task="dummy",
         server_address=server_address,
         policy_type=policy_type,
@@ -122,8 +121,7 @@ def create_vla_arm_manipulation(
         policy_device=policy_device,
         actions_per_chunk=50,
         chunk_size_threshold=0.5,
-        aggregate_fn_name="weighted_average",
-        debug_visualize_queue_size=True,
+        debug_visualize_queue_size=True,    # probably we need to remove that line, default is false
         fps=30
     )
     
