@@ -117,6 +117,7 @@ class LLMAgent():
                 tool_response = self.invoke_tool(tool_call)
                 self.message_history.append(tool_response)
                 if tool_call["name"] == "finish_task":
+                    print("Task finished, going idle.")
                     return "Task finished, going idle."
                 
             if self.sounddevice_index:

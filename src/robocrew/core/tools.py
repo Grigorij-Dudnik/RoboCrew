@@ -1,4 +1,5 @@
 from langchain_core.tools import tool
+from robocrew.core.memory import Memory
 
 
 @tool
@@ -6,7 +7,6 @@ def finish_task():
     """Claim that task is finished and go idle. You need to ensure the task is actually finished before calling this tool."""
     return "Task finished"
 
-from robocrew.core.memory import Memory
 
 robot_memory = Memory()
 

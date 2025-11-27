@@ -44,7 +44,7 @@ agent = LLMAgent(
         turn_right,
         look_around,
         pick_up_cup,
-        finish_task,
+        #finish_task,
     ],
     history_len=4,  # nr of last message-answer pairs to keep
     main_camera_usb_port=main_camera,  # provide main camera.
