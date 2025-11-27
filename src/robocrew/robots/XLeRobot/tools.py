@@ -144,6 +144,6 @@ def create_vla_arm_manipulation(
         client.control_loop(task="dummy")
 
 
-        return "Picked up the cup."
+        return "Grabbed a cup."
 
-    return pick_up_cup
+    return grab_cup
