@@ -28,7 +28,8 @@ pick_up_cup = create_vla_arm_manipulation(
     "act",
     wheel_arm_usb,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
-    camera_object = main_camera,
+    main_camera_object = main_camera,
+    main_camera_usb_port=main_camera_usb_port,
     policy_device="cpu"
 )
 

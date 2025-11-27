@@ -129,6 +129,7 @@ def create_vla_arm_manipulation(
     @tool
     def grab_cup() -> str:
         """Makes the robot pick up a cup using its arm."""
+        print("Tries to grab a cup")
 
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
@@ -145,10 +146,8 @@ def create_vla_arm_manipulation(
             return "Grabbed a cup."
         
         finally:
-            main_camera_object.open(main_camera_object)
+            main_camera_object.open(main_camera_usb_port)
             # Restore settings usually needed for low latency
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-
 
     return grab_cup
