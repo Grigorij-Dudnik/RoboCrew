@@ -27,7 +27,9 @@ pick_up_cup = create_vla_arm_manipulation(
     "Grigorij/act_xle_cup_to_box",
     "act",
     wheel_arm_usb,
-    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}}, 
+    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
+    camera_object = main_camera,
+    policy_device="cpu"
 )
 
 # init agent

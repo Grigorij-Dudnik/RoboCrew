@@ -44,12 +44,13 @@ class LLMAgent():
         self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
         self.system_message = SystemMessage(content=system_prompt)
         self.message_history = [self.system_message]
+        self.history_len = history_len
         # cameras
         self.main_camera = main_camera_usb_port if main_camera_usb_port else None
-        self.history_len = history_len
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
+
         self.sounddevice_index = sounddevice_index
         if self.sounddevice_index is not None:
             self.task_queue = queue.Queue()

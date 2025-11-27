@@ -1,5 +1,5 @@
 import base64
-import sys
+import cv2
 from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
 from lerobot.async_inference.robot_client import RobotClient 
@@ -83,6 +83,8 @@ def create_vla_arm_manipulation(
         policy_type: str, 
         arm_port: str, 
         camera_config: dict[str, dict], 
+        main_camera_object,
+        main_camera_usb_port,
         policy_device: str = "cuda"
     ):
     """Creates a tool that makes the robot pick up a cup using its arm.
@@ -128,22 +130,25 @@ def create_vla_arm_manipulation(
     def grab_cup() -> str:
         """Makes the robot pick up a cup using its arm."""
 
-        client = RobotClient(cfg)
-        if not client.start():
-           return "Failed to connect to robot server."
+        main_camera_object.release()
+        time.sleep(1)  # give some time to release camera
 
-        # 3. Start background thread to listen for actions (Required)
-        threading.Thread(target=client.receive_actions, daemon=True).start()
+        try:
+            client = RobotClient(cfg)
+            if not client.start():
+                return "Failed to connect to robot server."
 
-        # 4. Schedule the STOP command after 30 seconds
-        # This is the key: When this fires, control_loop stops cleanly
-        threading.Timer(30.0, client.stop).start()
+            threading.Thread(target=client.receive_actions, daemon=True).start()
+            threading.Timer(30.0, client.stop).start()
+            client.control_loop(task="dummy")
 
-        # 5. Run the loop
-        # This blocks for 30s, then exits automatically when the Timer calls client.stop()
-        client.control_loop(task="dummy")
+            return "Grabbed a cup."
+        
+        finally:
+            main_camera_object.open(main_camera_object)
+            # Restore settings usually needed for low latency
+            main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
 
-        return "Grabbed a cup."
 
     return grab_cup
