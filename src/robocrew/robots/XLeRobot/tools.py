@@ -122,7 +122,6 @@ def create_vla_arm_manipulation(
         policy_device=policy_device,
         actions_per_chunk=50,
         chunk_size_threshold=0.5,
-        debug_visualize_queue_size=True,    # probably we need to remove that line, default is false
         fps=30
     )
     
