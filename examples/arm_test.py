@@ -11,7 +11,7 @@ def create_vla_arm_manipulation(
         policy_type: str, 
         arm_port: str, 
         camera_config: dict[str, dict], 
-        policy_device: str = "cuda"
+        policy_device: str = "cpu"
     ):
     """Creates a tool that makes the robot pick up a cup using its arm.
     Args:
