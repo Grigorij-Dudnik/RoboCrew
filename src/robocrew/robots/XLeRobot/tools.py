@@ -98,7 +98,6 @@ def create_vla_arm_manipulation(
     for cam_name, cam_settings in camera_config.items():
         # Unpack the dictionary settings directly into the Config class
         configured_cameras[cam_name] = OpenCVCameraConfig(
-            type=cam_settings.get("type", "opencv"),
             index_or_path=cam_settings["index_or_path"],
             width=cam_settings.get("width", 640),
             height=cam_settings.get("height", 480),
