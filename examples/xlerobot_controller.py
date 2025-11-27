@@ -24,7 +24,7 @@ turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
 pick_up_cup = create_vla_arm_manipulation(
-    "192.168.1.107:8080",
+    "localhost:8080",
     "Grigorij/act_xle_cup_to_box",
     "act",
     wheel_arm_usb,
