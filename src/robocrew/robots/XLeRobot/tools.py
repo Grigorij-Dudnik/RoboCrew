@@ -143,6 +143,7 @@ def create_vla_arm_manipulation(
             threading.Timer(30.0, client.stop).start()
             client.control_loop(task="dummy")
 
+            print("Finished grabbing action")
             return "Grabbed a cup."
         
         finally:
