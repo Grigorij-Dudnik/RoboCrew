@@ -6,7 +6,8 @@ import time
 from typing import Dict, Mapping, Optional
 
 from lerobot.motors import Motor, MotorCalibration, MotorNormMode
-from lerobot.motors.feetech import FeetechMotorsBus
+from lerobot.motors.feetech import FeetechMotorsBus, OperatingMode
+
 
 DEFAULT_BAUDRATE = 1_000_000
 DEFAULT_SPEED = 10_000
@@ -119,16 +120,12 @@ class XLeRobotWheels:
         return self._wheels_run("right", float(degrees) / ANGULAR_DPS)
 
     def apply_wheel_modes(self) -> None:
-        from lerobot.motors.feetech import OperatingMode
-
         for wid in self._wheel_ids:
             self.wheel_bus.write("Operating_Mode", wid, OperatingMode.VELOCITY.value)
 
         self.wheel_bus.enable_torque()
 
     def apply_head_modes(self) -> None:
-        from lerobot.motors.feetech import OperatingMode
-
         for id in self._head_ids:
             self.head_bus.write("Operating_Mode", id, OperatingMode.POSITION.value)
 
@@ -157,4 +154,3 @@ class XLeRobotWheels:
     def __del__(self) -> None:
         if hasattr(self, "wheel_bus") and self.wheel_bus.is_connected:
             self.disconnect()
-
