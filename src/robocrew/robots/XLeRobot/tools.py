@@ -150,7 +150,7 @@ def create_vla_arm_manipulation(
             time.sleep(1)
             main_camera_object.open(main_camera_usb_port)
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            time.sleep(1)  # give some time to re-open camera
+            #time.sleep(1)  # give some time to re-open camera
         
         return "Grabbed a cup."
 

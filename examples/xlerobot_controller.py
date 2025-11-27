@@ -8,8 +8,7 @@ from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
 prompt = "You are mobile household robot with two arms."
 
 # set up main camera for head tools
-#main_camera_usb_port = "/dev/camera_center"
-main_camera_usb_port = "/dev/video0"
+main_camera_usb_port = "/dev/camera_center" # camera usb port Eg: /dev/video0
 main_camera = cv2.VideoCapture(main_camera_usb_port)
 main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -44,7 +43,7 @@ agent = LLMAgent(
         turn_right,
         look_around,
         pick_up_cup,
-        #finish_task,
+        finish_task,
     ],
     history_len=4,  # nr of last message-answer pairs to keep
     main_camera_usb_port=main_camera,  # provide main camera.
