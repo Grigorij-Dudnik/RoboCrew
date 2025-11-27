@@ -111,7 +111,7 @@ def create_vla_arm_manipulation(
         port=arm_port,
         cameras=configured_cameras,
         id="robot_arms",
-        calibration_dir="/home/pi/RoboCrew/calibrations"
+        calibration_dir=Path("/home/pi/RoboCrew/calibrations")
     )
 
     cfg = RobotClientConfig(
