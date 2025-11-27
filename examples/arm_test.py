@@ -64,7 +64,7 @@ def create_vla_arm_manipulation(
 
         # 4. Schedule the STOP command after 30 seconds
         # This is the key: When this fires, control_loop stops cleanly
-        threading.Timer(30.0, client.stop).start()
+        threading.Timer(10.0, client.stop).start()
 
         # 5. Run the loop
         # This blocks for 30s, then exits automatically when the Timer calls client.stop()
