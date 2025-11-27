@@ -57,3 +57,7 @@ print("Agent initialized.")
 # run agent with a sample task
 agent.task = "Grab the cup, and then turn right"
 agent.go()
+
+# clean up
+wheel_controller.disconnect()
+main_camera.release()
