@@ -125,7 +125,7 @@ def create_vla_arm_manipulation(
     )
     
     @tool
-    def pick_up_cup() -> str:
+    def grab_cup() -> str:
         """Makes the robot pick up a cup using its arm."""
 
         client = RobotClient(cfg)

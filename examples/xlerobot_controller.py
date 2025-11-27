@@ -52,5 +52,5 @@ agent = LLMAgent(
 print("Agent initialized.")
 
 # run agent with a sample task
-agent.task = "Pick up the cup in front of you"
+agent.task = "Grab the cup in front of you"
 agent.go()
