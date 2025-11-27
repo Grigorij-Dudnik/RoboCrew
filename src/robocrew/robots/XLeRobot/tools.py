@@ -147,7 +147,6 @@ def create_vla_arm_manipulation(
         
         finally:
             main_camera_object.open(main_camera_usb_port)
-            # Restore settings usually needed for low latency
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     return grab_cup
