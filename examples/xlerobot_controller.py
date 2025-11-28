@@ -23,10 +23,12 @@ turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
 pick_up_cup = create_vla_arm_manipulation(
-    "localhost:8080",
-    "Grigorij/act_xle_cup_to_box",
-    "act",
-    wheel_arm_usb,
+    tool_name="grab_a_cup",
+    tool_description="Grab a cup in front of you",
+    server_address="localhost:8080",
+    policy_name="Grigorij/act_xle_cup_to_box",
+    policy_type="act",
+    arm_port=wheel_arm_usb,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object = main_camera,
     main_camera_usb_port=main_camera_usb_port,

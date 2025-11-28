@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time
 from typing import Dict, Mapping, Optional
-
 from lerobot.motors import Motor, MotorCalibration, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus, OperatingMode
 

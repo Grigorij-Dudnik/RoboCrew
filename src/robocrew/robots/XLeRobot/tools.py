@@ -77,14 +77,17 @@ def create_look_around(head_controller, main_camera):
     return look_around
 
 
-def create_vla_arm_manipulation(
+def create_vla_single_arm_manipulation(
+        tool_name: str,
+        tool_description: str,
         server_address: str,
         policy_name: str, 
         policy_type: str, 
         arm_port: str, 
         camera_config: dict[str, dict], 
         main_camera_object,
-        main_camera_usb_port,
+        main_camera_usb_port: str,
+        execution_time: int = 30,
         policy_device: str = "cuda"
     ):
     """Creates a tool that makes the robot pick up a cup using its arm.
@@ -127,10 +130,11 @@ def create_vla_arm_manipulation(
     )
     
     @tool
-    def grab_cup() -> str:
-        """Makes the robot pick up a cup using its arm."""
+    def tool_name_to_override() -> str:
+        """Tood description to override."""
         print("Tries to grab a cup")
 
+        # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
 
@@ -140,18 +144,21 @@ def create_vla_arm_manipulation(
                 return "Failed to connect to robot server."
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
-            threading.Timer(30.0, client.stop).start()
+            threading.Timer(execution_time, client.stop).start()
             client.control_loop(task="dummy")
 
             print("Finished grabbing action")
             
         
         finally:
+            # Re-open main camera for agent use. 
             time.sleep(1)
             main_camera_object.open(main_camera_usb_port)
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            #time.sleep(1)  # give some time to re-open camera
         
-        return "Grabbed a cup."
+        return "Arm manipulation done"
+    
+    tool_name_to_override.name = tool_name
+    tool_name_to_override.description = tool_description
 
-    return grab_cup
+    return tool_name_to_override
