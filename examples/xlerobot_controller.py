@@ -1,7 +1,7 @@
 import cv2
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around, create_vla_arm_manipulation
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation
 from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
 
 
@@ -22,7 +22,7 @@ move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
-pick_up_cup = create_vla_arm_manipulation(
+pick_up_cup = create_vla_single_arm_manipulation(
     tool_name="grab_a_cup",
     tool_description="Grab a cup in front of you",
     server_address="localhost:8080",
