@@ -11,7 +11,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False):
+    def __init__(self, model, tools, main_camera_usb_port, system_prompt=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -46,10 +46,9 @@ class LLMAgent():
         self.message_history = [self.system_message]
         self.history_len = history_len
         # cameras
-        self.main_camera = main_camera_usb_port if main_camera_usb_port else None
-        if self.main_camera:
-            self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            self.camera_fov = camera_fov
+        self.main_camera = main_camera_usb_port
+        self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.camera_fov = camera_fov
 
         self.sounddevice_index = sounddevice_index
         if self.sounddevice_index is not None:
@@ -80,30 +79,24 @@ class LLMAgent():
         if not self.task_queue.empty():
             self.task = self.task_queue.get()
 
-
     def go(self):
         while True:
-            if self.main_camera:
-                image_bytes = capture_image(self.main_camera, camera_fov=self.camera_fov)
-                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                if self.debug:
-                    open(f"debug/latest_view.jpg", "wb").write(image_bytes)
-                
-                message = HumanMessage(
-                    content=[
-                        {"type": "text", "text": "Here is the current view from your main camera. Use it to understand your current status."},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
-                        },
-                        {"type": "text", "text": f"Your task is: '{self.task}'"}
-                    ]
-                )
-            else:
-                message = HumanMessage(content=f"Your task is: '{self.task}'")
-
-
-                
+            image_bytes = capture_image(self.main_camera, camera_fov=self.camera_fov)
+            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+            if self.debug:
+                open(f"debug/latest_view.jpg", "wb").write(image_bytes)
+            
+            message = HumanMessage(
+                content=[
+                    {"type": "text", "text": "Here is the current view from your main camera. Use it to understand your current status."},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                    },
+                    {"type": "text", "text": f"Your task is: '{self.task}'"}
+                ]
+            )
+               
             self.message_history.append(message)
             response = self.llm.invoke(self.message_history)
             print(response.content)
@@ -123,20 +116,3 @@ class LLMAgent():
             if self.sounddevice_index:
                 self.check_for_new_task()
             
-
-if __name__ == "__main__":
-
-    @tool
-    def do_nothing() -> str:
-        """does nothing at all"""
-        print("Doing nothing...")
-        return "Doing nothing."
-    
-    agent = LLMAgent(
-        model="google_genai:gemini-robotics-er-1.5-preview",
-        tools=[
-            do_nothing,
-        ],
-    )
-    result = agent.go()
-    print(result)
