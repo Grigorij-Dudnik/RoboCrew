@@ -82,15 +82,15 @@ Now just say something like **"Hey robot, bring me a beer."** — the robot list
 
 ### Add VLA policy as a tool
 
-Let's make our robot to manipulate with his hands! First, you need to pretrain your own policy for it. After you have your policy, run policy server in separate terminal.
+Let's make our robot to manipulate with its arms! First, you need to pretrain your own policy for it. After you have your policy, run the policy server in separate terminal.
 
-Let's create a tool for the agent to enable him to use a VLA policy:
+Let's create a tool for the agent to enable it to use a VLA policy:
 ```python
 from robocrew.robots.XLeRobot.tools import create_vla_single_arm_manipulation
 
 grab_a_cup = create_vla_single_arm_manipulation(
     tool_name="grab_a_cup",
-    tool_description="Grab a cup in front of you and place to robot container",
+    tool_description="""Grab a cup in front of you and place to robot container""",
     server_address="localhost:8080",
     policy_name="Grigorij/act_xle_grab_a_cup",
     policy_type="act",
@@ -111,4 +111,3 @@ grab_a_cup = create_vla_single_arm_manipulation(
 - **wakeword**: Word that must appear in your speech to give robot a new task (default: "robot").
 - **history_len**: How many conversation turns to remember (optional)
 - **use_memory**: Enable memory system to remember important things (optional)
-
