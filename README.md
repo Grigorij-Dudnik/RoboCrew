@@ -90,7 +90,7 @@ from robocrew.robots.XLeRobot.tools import create_vla_single_arm_manipulation
 
 grab_a_cup = create_vla_single_arm_manipulation(
     tool_name="grab_a_cup",
-    tool_description="""Grab a cup in front of you and place to robot container""",
+    tool_description="""Grab a cup in front of you and place it to the robot container""",
     server_address="localhost:8080",
     policy_name="Grigorij/act_xle_grab_a_cup",
     policy_type="act",
