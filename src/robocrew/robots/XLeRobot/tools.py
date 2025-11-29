@@ -132,8 +132,6 @@ def create_vla_single_arm_manipulation(
     @tool
     def tool_name_to_override() -> str:
         """Tood description to override."""
-        print("Tries to grab a cup")
-
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
