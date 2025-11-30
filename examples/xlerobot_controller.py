@@ -16,7 +16,7 @@ main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 #set up wheel movement tools
 wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
 head_arm_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /dev/ttyACM0
-wheel_controller = XLeRobotWheels(wheel_arm_usb)
+wheel_controller = XLeRobotWheels(wheel_arm_usb, head_arm_usb)
 
 move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
@@ -29,6 +29,7 @@ pick_up_cup = create_vla_single_arm_manipulation(
     policy_name="Grigorij/act_xle_cup_to_box",
     policy_type="act",
     arm_port=wheel_arm_usb,
+    head_controller=wheel_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object = main_camera,
     main_camera_usb_port=main_camera_usb_port,
@@ -57,7 +58,7 @@ agent = LLMAgent(
 print("Agent initialized.")
 
 # run agent with a sample task
-agent.task = "Grab the cup, and then turn right"
+agent.task = "Grab the cup"
 agent.go()
 
 # clean up
