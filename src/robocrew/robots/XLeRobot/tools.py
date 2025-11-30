@@ -10,63 +10,65 @@ from robocrew.core.utils import capture_image
 import time
 import threading
 
+from robocrew.robots.XLeRobot.utils import turn_head_to_vla_position
 
 
-def create_move_forward(wheel_controller):
+
+def create_move_forward(servo_controller):
     @tool
     def move_forward(distance_meters: float) -> str:
         """Drives the robot forward (or backward) for a specific distance."""
 
         distance = float(distance_meters)
         if distance >= 0:
-            wheel_controller.go_forward(distance)
+            servo_controller.go_forward(distance)
         else:
-            wheel_controller.go_backward(-distance)
+            servo_controller.go_backward(-distance)
         return f"Moved {'forward' if distance >= 0 else 'backward'} {abs(distance):.2f} meters."
 
     return move_forward
 
 
-def create_turn_right(wheel_controller):
+def create_turn_right(servo_controller):
     @tool
     def turn_right(angle_degrees: float) -> str:
         """Turns the robot right by angle in degrees."""
         angle = float(angle_degrees)
-        wheel_controller.turn_right(angle)
+        servo_controller.turn_right(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
         return f"Turned right by {angle} degrees."
 
     return turn_right
 
 
-def create_turn_left(wheel_controller):
+def create_turn_left(servo_controller):
     @tool
     def turn_left(angle_degrees: float) -> str:
         """Turns the robot left by angle in degrees."""
         angle = float(angle_degrees)
-        wheel_controller.turn_left(angle)
+        servo_controller.turn_left(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
         return f"Turned left by {angle} degrees."
 
     return turn_left
 
-def create_look_around(head_controller, main_camera):
+def create_look_around(servo_controller, main_camera):
     @tool
     def look_around() -> str:
         """Makes the robot look around by moving its head."""
         movement_delay = 1.5  # seconds
         print("Start")
-        head_controller.turn_head_yaw(-120)
+        servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
         image_left = capture_image(main_camera)
         image_left64 = base64.b64encode(image_left).decode('utf-8')
         print("-120 deg")
-        head_controller.turn_head_yaw(120)
+        servo_controller.turn_head_yaw(120)
         time.sleep(movement_delay)
         image_right = capture_image(main_camera)
         image_right64 = base64.b64encode(image_right).decode('utf-8')  
         print("120 deg")
-        head_controller.turn_head_yaw(0)
+        servo_controller.turn_head_yaw(0)
         time.sleep(movement_delay)
         image_center = capture_image(main_camera)
         image_center64 = base64.b64encode(image_center).decode('utf-8')
@@ -84,7 +86,7 @@ def create_vla_single_arm_manipulation(
         policy_name: str, 
         policy_type: str, 
         arm_port: str,
-        head_controller, 
+        servo_controller, 
         camera_config: dict[str, dict], 
         main_camera_object,
         main_camera_usb_port: str,
@@ -135,7 +137,7 @@ def create_vla_single_arm_manipulation(
     def tool_name_to_override() -> str:
         """Tood description to override."""
         print("Tries to grab a cup")
-        head_controller.turn_head_pitch(45)
+        turn_head_to_vla_position(servo_controller)
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera

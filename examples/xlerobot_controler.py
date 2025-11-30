@@ -2,7 +2,7 @@ import cv2
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation
-from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
+from robocrew.robots.XLeRobot.servo_controls import XLeRobotWheels
 
 
 prompt = "You are mobile household robot with two arms."
@@ -29,7 +29,7 @@ pick_up_cup = create_vla_single_arm_manipulation(
     policy_name="Grigorij/act_xle_cup_to_box",
     policy_type="act",
     arm_port=wheel_arm_usb,
-    head_controller=wheel_controller,
+    servo_controller=wheel_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object = main_camera,
     main_camera_usb_port=main_camera_usb_port,
