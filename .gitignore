@@ -11,3 +11,4 @@ uv.lock
 debug/
 physical_path.sh
 robot_memory.db
+logs/
