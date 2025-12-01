@@ -25,13 +25,13 @@ look_around = create_look_around(wheel_controller, main_camera)
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
     tool_description="Grab a notebook.",
-    server_address="7.tcp.eu.ngrok.io:18900",
-    policy_name="~/Experiments/lerobot/outputs/train/2025-11-30/16-57-34_smolvla/checkpoints/040000/pretrained_model",
-    policy_type="smolVLA",
+    server_address="localhost:8080",
+    policy_name="Grigorij/smolvla_40000_right_arm_grab_notebook",   #"~/Experiments/lerobot/outputs/train/2025-11-30/16-57-34_smolvla/checkpoints/040000/pretrained_model",
+    policy_type="smolvla",
     arm_port=wheel_arm_usb,
     servo_controller=wheel_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
-    main_camera_object = main_camera,
+    main_camera_object=main_camera,
     main_camera_usb_port=main_camera_usb_port,
     policy_device="cpu"
 )
