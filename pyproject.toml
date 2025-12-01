@@ -7,7 +7,7 @@ name = "robocrew"
 version = "0.0.1"
 authors = [
   { name="Grigorij Dudnik", email="dudnikgrv@gmail.com" },
-  { name="Konrad Suchodolski"},
+  { name="Konrad Suchodolski", email="konrad.suchodolski50@gmail.com" },
 ]
 description = "🦾Set up your embodied LLM agent same easiness as you set up normal agents in CrewAI or Autogen"
 dependencies = [
@@ -30,6 +30,10 @@ classifiers = [
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
+
+[project.scripts]
+robocrew-generate-udev-rules = "robocrew.scripts.robocrew_generate_udev_rules:main"
+robocrew-find-components = "robocrew.scripts.robocrew_find_components:main"
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
