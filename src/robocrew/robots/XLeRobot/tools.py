@@ -123,7 +123,7 @@ def create_vla_single_arm_manipulation(
 
     cfg = RobotClientConfig(
         robot=robot_config,
-        task="dummy",
+        task="Grab a notebook.",
         server_address=server_address,
         policy_type=policy_type,
         pretrained_name_or_path=policy_name,
@@ -149,7 +149,7 @@ def create_vla_single_arm_manipulation(
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
             threading.Timer(execution_time, client.stop).start()
-            client.control_loop(task="dummy")
+            client.control_loop(task="Grab a notebook.")
 
             print("Finished grabbing action")
             

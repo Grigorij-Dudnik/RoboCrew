@@ -22,12 +22,12 @@ move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
-pick_up_cup = create_vla_single_arm_manipulation(
-    tool_name="Grab_a_cup",
-    tool_description="Grab a cup in front of you",
-    server_address="0.0.0.0:8080",  #"2.tcp.eu.ngrok.io:13845",
-    policy_name="Grigorij/act_xle_cup_to_box",
-    policy_type="act",
+pick_up_notebook = create_vla_single_arm_manipulation(
+    tool_name="Grab_a_notebook",
+    tool_description="Grab a notebook.",
+    server_address="2.tcp.eu.ngrok.io:13845",
+    policy_name="~/Experiments/lerobot/outputs/train/2025-11-30/16-57-34_smolvla/checkpoints/040000/pretrained_model",
+    policy_type="smolVLA",
     arm_port=wheel_arm_usb,
     servo_controller=wheel_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
@@ -45,7 +45,7 @@ agent = LLMAgent(
         turn_left,
         turn_right,
         look_around,
-        pick_up_cup,
+        pick_up_notebook,
         #finish_task,
     ],
     history_len=4,  # nr of last message-answer pairs to keep
@@ -58,7 +58,7 @@ agent = LLMAgent(
 print("Agent initialized.")
 
 # run agent with a sample task
-agent.task = "Go around a room, find a cup and grab it"
+agent.task = "Grab a notebook from the table."
 agent.go()
 
 # clean up
