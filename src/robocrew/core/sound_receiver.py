@@ -38,7 +38,7 @@ class SoundReceiver:
         self._stream = None
         self._listening = False
         self._recording = False
-        self.RMS_THRESHOLD = 400.0
+        self.RMS_THRESHOLD = 800.0
         self.reciver_thread = threading.Thread(target=self._recorder_loop)
         self.reciver_thread.daemon = True
         self.recorded_frames = []

@@ -2,7 +2,7 @@ import cv2
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation
-from robocrew.robots.XLeRobot.servo_controls import XLeRobotWheels
+from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
 prompt = "You are mobile household robot with two arms."
@@ -16,16 +16,16 @@ main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 #set up wheel movement tools
 wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
 head_arm_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /dev/ttyACM0
-wheel_controller = XLeRobotWheels(wheel_arm_usb, head_arm_usb)
+wheel_controller = ServoControler(wheel_arm_usb, head_arm_usb)
 
 move_forward = create_move_forward(wheel_controller)
 turn_left = create_turn_left(wheel_controller)
 turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
 pick_up_cup = create_vla_single_arm_manipulation(
-    tool_name="grab_a_cup",
+    tool_name="Grab_a_cup",
     tool_description="Grab a cup in front of you",
-    server_address="2.tcp.eu.ngrok.io:13845",
+    server_address="0.0.0.0:8080",  #"2.tcp.eu.ngrok.io:13845",
     policy_name="Grigorij/act_xle_cup_to_box",
     policy_type="act",
     arm_port=wheel_arm_usb,
@@ -46,7 +46,7 @@ agent = LLMAgent(
         turn_right,
         look_around,
         pick_up_cup,
-        finish_task,
+        #finish_task,
     ],
     history_len=4,  # nr of last message-answer pairs to keep
     main_camera_usb_port=main_camera,  # provide main camera.
@@ -58,7 +58,7 @@ agent = LLMAgent(
 print("Agent initialized.")
 
 # run agent with a sample task
-agent.task = "Grab the cup"
+agent.task = "Go around a room, find a cup and grab it"
 agent.go()
 
 # clean up
