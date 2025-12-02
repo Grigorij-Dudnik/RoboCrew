@@ -4,14 +4,13 @@ import os
 import subprocess
 import sys
 import time
-import getpass
 from robocrew.scripts import robocrew_generate_udev_rules as base_rules
 
 
 MODE = os.environ.get("MODE", getattr(base_rules, "MODE", "0660"))
 GROUP = os.environ.get("GROUP", getattr(base_rules, "GROUP", "dialout"))
 
-default_devices = ["main_camera", "left_arm_camera", "right_arm_camera", "right_arm", "left_arm"]
+default_devices = ["camera_center", "camera_left", "camera_right", "arm_right", "arm_left"]
 
 
 def capture_devices():
@@ -56,6 +55,14 @@ def build_rule(dev, alias, serial_counts):
 	return rule
 
 
+def ensure_root():
+	if os.geteuid() == 0:
+		return
+	print("This script needs elevated privileges for saving udev rules, requesting sudo...")
+	cmd = ["sudo", "-E", sys.executable, *sys.argv]
+	os.execvp("sudo", cmd)
+
+
 def main():
 	input("Disconnect all RoboCrew devices, then press Enter to continue.")
 
@@ -64,7 +71,7 @@ def main():
 
 	for alias in default_devices:
 		resp = input(
-			f"Connect device for '{alias}' and press Enter (or 's' to skip): "
+			f"Connect USB for '{alias}' and press Enter (or 's' to skip): "
 		).strip().lower()
 		if resp == "s":
 			continue
@@ -72,29 +79,6 @@ def main():
 		assignments.append({"alias": alias, "device": dev})
 		known.add(key)
 
-	while True:
-		answer = input("Connect additional device and press Enter (or type 'q' to finish): \n\n"+
-				 "!!! Skip this step if you don't know what you're doing !!!").strip().lower()
-		if answer == "q":
-			break
-		dev, key = wait_for_device(known)
-		print(
-			f"Detected {dev['subsystem']} device on {dev['kernel']} "
-			f"(vendor {dev['vendor']}, product {dev['product']})."
-		)
-		alias = input("Enter alias for this device (or 's' to skip): ").strip()
-		if alias.lower() != "s" and alias:
-			if any(entry["alias"] == alias for entry in assignments):
-				print("Alias already used, device skipped.")
-			else:
-				assignments.append({"alias": alias, "device": dev})
-				print(f"Alias '{alias}' recorded.")
-		else:
-			print("Device skipped.")
-		known.add(key)
-		again = input("Register another device? (y/n): ").strip().lower()
-		if again != "y":
-			break
 
 	if not assignments:
 		print("No devices registered, nothing to emit.")
@@ -105,14 +89,15 @@ def main():
 		serial = entry["device"].get("serial")
 		if serial:
 			serial_counts[serial] = serial_counts.get(serial, 0) + 1
-
+	
 	rules = [build_rule(entry["device"], entry["alias"], serial_counts) for entry in assignments]
+	ensure_root()
 	rules_path = "/etc/udev/rules.d/99-robocrew.rules"
 	with open(rules_path, "w", encoding="ascii") as fh:
 		fh.write("\n\n".join(rules) + "\n")
 	print(f"Saved {len(rules)} rules to {rules_path}.")
-	subprocess.run(["sudo", "udevadm", "control", "--reload-rules"], check=False)
-	subprocess.run(["sudo", "udevadm", "trigger"], check=False)
+	subprocess.run(["udevadm", "control", "--reload-rules"], check=False)
+	subprocess.run(["udevadm", "trigger"], check=False)
 
 
 if __name__ == "__main__":
