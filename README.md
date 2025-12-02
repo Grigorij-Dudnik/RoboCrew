@@ -102,6 +102,26 @@ grab_a_cup = create_vla_single_arm_manipulation(
 )
 ```
 
+## Udev Rules Setup
+To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
+
+```bash
+robocrew-find-components
+```
+
+This script will guide you through connecting each component one by one and will create the necessary udev rules to maintain consistent device naming.
+
+After running the script, you can check the generated rules at `/etc/udev/rules.d/99-robocrew.rules`, or check the symlinks:
+
+```bash
+pi@raspberrypi:~ $ ls -l /dev/arm*
+lrwxrwxrwx 1 root root 7 Dec  2 11:40 /dev/arm_left -> ttyACM4
+lrwxrwxrwx 1 root root 7 Dec  2 11:40 /dev/arm_right -> ttyACM2
+pi@raspberrypi:~ $ ls -l /dev/cam*
+lrwxrwxrwx 1 root root 6 Dec  2 11:40 /dev/camera_center -> video0
+lrwxrwxrwx 1 root root 6 Dec  2 11:40 /dev/camera_right -> video2
+```
+
 ## Key Parameters
 
 - **model**: Any LangChain model

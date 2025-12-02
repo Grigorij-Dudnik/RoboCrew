@@ -51,7 +51,7 @@ def build_rule(dev, alias, serial_counts):
 			rule += f', KERNELS=="{dev["phys"]}"'
 	else:
 		rule += f', KERNELS=="{dev["phys"]}"'
-	rule += f', MODE=="{MODE}", GROUP=="{GROUP}", SYMLINK+="{alias}"'
+	rule += f', MODE="{MODE}", GROUP="{GROUP}", SYMLINK+="{alias}"'
 	return rule
 
 
@@ -64,6 +64,7 @@ def ensure_root():
 
 
 def main():
+	ensure_root()
 	input("Disconnect all RoboCrew devices, then press Enter to continue.")
 
 	known = {device_key(dev) for dev in capture_devices()}
@@ -91,7 +92,6 @@ def main():
 			serial_counts[serial] = serial_counts.get(serial, 0) + 1
 	
 	rules = [build_rule(entry["device"], entry["alias"], serial_counts) for entry in assignments]
-	ensure_root()
 	rules_path = "/etc/udev/rules.d/99-robocrew.rules"
 	with open(rules_path, "w", encoding="ascii") as fh:
 		fh.write("\n\n".join(rules) + "\n")
