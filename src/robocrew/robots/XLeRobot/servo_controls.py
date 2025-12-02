@@ -119,6 +119,10 @@ class ServoControler:
 
     def turn_right(self, degrees: float) -> Dict[int, int]:
         return self._wheels_run("right", float(degrees) / ANGULAR_DPS)
+    
+    def turn_head_to_vla_position(self, pitch_deg=45) -> str:
+        self.turn_head_pitch(pitch_deg)
+        self.turn_head_yaw(0)
 
     def apply_wheel_modes(self) -> None:
         for wid in self._wheel_ids:

@@ -137,7 +137,7 @@ def create_vla_single_arm_manipulation(
     def tool_name_to_override() -> str:
         """Tood description to override."""
         print("Tries to grab a cup")
-        turn_head_to_vla_position(servo_controller)
+        servo_controller.turn_head_to_vla_position()
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
