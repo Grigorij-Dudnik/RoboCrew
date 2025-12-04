@@ -11,7 +11,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False, tts=False):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -22,6 +22,7 @@ class LLMAgent():
         wakeword: custom wakeword hearing which robot will set your sentence as a task o do.
         history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
         use_memory: set to True to enable long-term memory (requires sqlite3).
+        tts: set to True to enable text-to-speech (robot can speak).
         """
         base_system_prompt = "You are a mobile robot with two arms."
         system_prompt = system_prompt or base_system_prompt
@@ -36,6 +37,15 @@ class LLMAgent():
                 "Do not wait for the user to tell you to remember. Be proactive."
             )
             system_prompt += memory_prompt
+
+        if tts:
+            from robocrew.core.tools import say
+            tools.append(say)
+            tts_prompt = (
+                " You can speak to the user using the `say` tool. "
+                "Use it to communicate important updates, greet users, or answer their questions verbally."
+            )
+            system_prompt += tts_prompt
 
         self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
         llm = init_chat_model(model)
@@ -54,9 +64,10 @@ class LLMAgent():
         if self.sounddevice_index is not None:
             self.task_queue = queue.Queue()
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
-            # Connect sound_receiver to TTS tool for pause/resume during speech
-            from robocrew.core.tools import set_sound_receiver
-            set_sound_receiver(self.sound_receiver)
+            # Connect sound_receiver to TTS tool for pause/resume during speech (if TTS enabled)
+            if tts:
+                from robocrew.core.tools import set_sound_receiver
+                set_sound_receiver(self.sound_receiver)
             # self.task = ""
         self.debug = debug_mode
 
