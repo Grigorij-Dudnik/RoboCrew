@@ -45,6 +45,7 @@ class SoundReceiver:
         self.first_timestamp_below_threshold = None
         self.num_recorded_buffers = 0
         self.openai_client = OpenAI()
+        self._paused = False  # Flag to pause listening during TTS
         self.start_listening()
 
 
@@ -78,6 +79,10 @@ class SoundReceiver:
 
     def _recorder_loop(self):
         while self._listening:
+            # Skip processing if paused (e.g., during TTS)
+            if self._paused:
+                time.sleep(0.1)
+                continue
             loop_start_time = time.perf_counter()
             # print(f"rms: {self.get_rms()}")
             if not self._recording:
@@ -170,6 +175,19 @@ class SoundReceiver:
             except Exception:
                 pass
             self._listening = False
+
+    def pause_listening(self):
+        """Pause audio processing (used during TTS to avoid self-hearing)."""
+        self._paused = True
+        # Clear any ongoing recording to avoid capturing TTS audio
+        with self._lock:
+            self._recording = False
+            self.recorded_frames = []
+            self.first_timestamp_below_threshold = None
+
+    def resume_listening(self):
+        """Resume audio processing after TTS."""
+        self._paused = False
 
     def is_listening(self):
         return self._listening

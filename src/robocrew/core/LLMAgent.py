@@ -54,6 +54,9 @@ class LLMAgent():
         if self.sounddevice_index is not None:
             self.task_queue = queue.Queue()
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
+            # Connect sound_receiver to TTS tool for pause/resume during speech
+            from robocrew.core.tools import set_sound_receiver
+            set_sound_receiver(self.sound_receiver)
             # self.task = ""
         self.debug = debug_mode
 
