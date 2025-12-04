@@ -14,7 +14,7 @@ dependencies = [
     "langchain>=0.3.27",
     "langchain-core>=0.3.79",
     "langchain-google-genai",
-    "lerobot @ git+https://github.com/huggingface/lerobot.git@d57d1aa1970eec7b102a9527262ede4a3dd7a726",
+    "lerobot>=0.4.2",
     "opencv-python",
     "pyaudio",
     "pyserial>=3.5",

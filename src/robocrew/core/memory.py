@@ -1,10 +1,12 @@
 import sqlite3
 import os
 from datetime import datetime
+from pathlib import Path
 
 class Memory:
-    def __init__(self, db_path="robot_memory.db"):
-        self.db_path = db_path
+    def __init__(self, db_filename="robot_memory.db"):
+        script_dir = Path(__file__).parent.resolve()
+        self.db_path = script_dir / db_filename
         self.init_db()
 
     def init_db(self):
