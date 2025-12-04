@@ -29,7 +29,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 license = "MIT"
-license-files = ["LICEN[CS]E*"]
+license-files = ["LICEN[CS]E*", ".github/LICEN[CS]E*"]
 
 [project.scripts]
 robocrew-generate-udev-rules = "robocrew.scripts.robocrew_generate_udev_rules:main"
