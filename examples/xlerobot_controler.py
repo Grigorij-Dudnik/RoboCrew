@@ -24,10 +24,10 @@ turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
-    tool_description="Grab a notebook.",
+    tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are close to table with a notebook.",
     server_address="localhost:8080",
-    policy_name="Grigorij/smolvla_40000_right_arm_grab_notebook",   #"~/Experiments/lerobot/outputs/train/2025-11-30/16-57-34_smolvla/checkpoints/040000/pretrained_model",
-    policy_type="smolvla",
+    policy_name="Grigorij/act_right_arm_grab_notebook",
+    policy_type="act",
     arm_port=wheel_arm_usb,
     servo_controller=wheel_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
@@ -35,7 +35,19 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     main_camera_usb_port=main_camera_usb_port,
     policy_device="cpu"
 )
-
+give_notebook = create_vla_single_arm_manipulation(
+    tool_name="Give_a_notebook_to_a_human",
+    tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human.",
+    server_address="localhost:8080",
+    policy_name="Grigorij/act_right_arm_give_notebook",
+    policy_type="act",
+    arm_port=wheel_arm_usb,
+    servo_controller=wheel_controller,
+    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
+    main_camera_object=main_camera,
+    main_camera_usb_port=main_camera_usb_port,
+    policy_device="cpu"
+)
 # init agent
 agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
@@ -46,9 +58,10 @@ agent = LLMAgent(
         turn_right,
         look_around,
         pick_up_notebook,
+        give_notebook,
         #finish_task,
     ],
-    history_len=4,  # nr of last message-answer pairs to keep
+    history_len=6,  # nr of last message-answer pairs to keep
     main_camera_usb_port=main_camera,  # provide main camera.
     camera_fov=120,
     sounddevice_index=2,  # index of your microphone sounddevice
@@ -58,7 +71,7 @@ agent = LLMAgent(
 print("Agent initialized.")
 
 # run agent with a sample task
-agent.task = "Grab a notebook from the table."
+agent.task = "Grab a notebook from the table, go to human and give it to him."
 agent.go()
 
 # clean up
