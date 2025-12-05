@@ -24,26 +24,28 @@ turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
-    tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are close to table with a notebook.",
+    tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are close to table with a notebook, and look straingt on it.",
+    task_prompt="Grab a notebook.",
     server_address="localhost:8080",
     policy_name="Grigorij/act_right_arm_grab_notebook",
     policy_type="act",
     arm_port=wheel_arm_usb,
     servo_controller=wheel_controller,
-    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
+    camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
     main_camera_usb_port=main_camera_usb_port,
     policy_device="cpu"
 )
 give_notebook = create_vla_single_arm_manipulation(
     tool_name="Give_a_notebook_to_a_human",
-    tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human.",
+    tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human, and look straingt on him.",
+    task_prompt="Grab a notebook and give it to a human.",
     server_address="localhost:8080",
     policy_name="Grigorij/act_right_arm_give_notebook",
     policy_type="act",
     arm_port=wheel_arm_usb,
     servo_controller=wheel_controller,
-    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
+    camera_config={"main": {"index_or_path": "/dev/video0"}, "right_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object=main_camera,
     main_camera_usb_port=main_camera_usb_port,
     policy_device="cpu"
@@ -69,6 +71,8 @@ agent = LLMAgent(
 )
 
 print("Agent initialized.")
+
+wheel_controller.reset_head_position()
 
 # run agent with a sample task
 agent.task = "Grab a notebook from the table, go to human and give it to him."

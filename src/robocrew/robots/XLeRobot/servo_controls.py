@@ -124,6 +124,10 @@ class ServoControler:
         self.turn_head_pitch(pitch_deg)
         self.turn_head_yaw(0)
 
+    def reset_head_position(self) -> str:
+        self.turn_head_pitch(10)
+        self.turn_head_yaw(0)
+
     def apply_wheel_modes(self) -> None:
         for wid in self._wheel_ids:
             self.wheel_bus.write("Operating_Mode", wid, OperatingMode.VELOCITY.value)
