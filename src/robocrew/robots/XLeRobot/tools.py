@@ -51,28 +51,38 @@ def create_turn_left(servo_controller):
 
 def create_look_around(servo_controller, main_camera):
     @tool
-    def look_around() -> str:
+    def look_around() -> list:
         """Look around yourself to find a thing you looking for or to understand an envinronment."""
         movement_delay = 1.5  # seconds
-        print("Start")
+        print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
         image_left = capture_image(main_camera)
         image_left64 = base64.b64encode(image_left).decode('utf-8')
-        print("-120 deg")
         servo_controller.turn_head_yaw(120)
         time.sleep(movement_delay)
         image_right = capture_image(main_camera)
         image_right64 = base64.b64encode(image_right).decode('utf-8')  
-        print("120 deg")
         servo_controller.turn_head_yaw(0)
         time.sleep(movement_delay)
         image_center = capture_image(main_camera)
         image_center64 = base64.b64encode(image_center).decode('utf-8')
-        print("back and done")
 
-        return f"Looked around and captured images: left (data:image/jpeg;base64,{image_left64}), center (data:image/jpeg;base64,{image_center64}), right (data:image/jpeg;base64,{image_right64})."
-
+        return [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_left64}"}
+                },
+                {
+                    "type": "image_url", 
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_center64}"}
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_right64}"}
+                }
+            ]
+        
     return look_around
 
 
