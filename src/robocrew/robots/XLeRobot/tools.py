@@ -79,6 +79,7 @@ def create_look_around(servo_controller, main_camera):
 def create_vla_single_arm_manipulation(
         tool_name: str,
         tool_description: str,
+        task_prompt: str,
         server_address: str,
         policy_name: str, 
         policy_type: str, 
@@ -121,7 +122,7 @@ def create_vla_single_arm_manipulation(
 
     cfg = RobotClientConfig(
         robot=robot_config,
-        task="Grab a notebook.",
+        task=task_prompt,
         server_address=server_address,
         policy_type=policy_type,
         pretrained_name_or_path=policy_name,
@@ -134,8 +135,9 @@ def create_vla_single_arm_manipulation(
     @tool
     def tool_name_to_override() -> str:
         """Tood description to override."""
-        print("Tries to grab a cup")
-        servo_controller.turn_head_to_vla_position()
+        print("Manipulation tool activated")
+        servo_controller.turn_head_pitch(45)
+        servo_controller.turn_head_yaw(0)
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
@@ -147,9 +149,7 @@ def create_vla_single_arm_manipulation(
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
             threading.Timer(execution_time, client.stop).start()
-            client.control_loop(task="Grab a notebook.")
-
-            print("Finished grabbing action")
+            client.control_loop(task=task_prompt)
             
         
         finally:
@@ -157,6 +157,7 @@ def create_vla_single_arm_manipulation(
             time.sleep(1)
             main_camera_object.open(main_camera_usb_port)
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            servo_controller.turn_head_pitch(0)
         
         return "Arm manipulation done"
     
