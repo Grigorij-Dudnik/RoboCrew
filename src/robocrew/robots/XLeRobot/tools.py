@@ -157,7 +157,7 @@ def create_vla_single_arm_manipulation(
             time.sleep(1)
             main_camera_object.open(main_camera_usb_port)
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            servo_controller.turn_head_pitch(0)
+            servo_controller.reset_head_position()
         
         return "Arm manipulation done"
     

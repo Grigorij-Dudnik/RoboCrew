@@ -5,7 +5,12 @@ from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
-prompt = "You are mobile household robot with two arms."
+prompt = "You are mobile household robot with two arms. " \
+"Use manipulation tools ONLY when you are right next to the " \
+"target object (notebook), because your arms have short reach." \
+" If you are not close enough to the target object, " \
+" first move closer to it. If you drive into a wall, " \
+"try going backwards and turning."
 
 # set up main camera for head tools
 main_camera_usb_port = "/dev/video0" # camera usb port Eg: /dev/video0
@@ -24,9 +29,9 @@ turn_right = create_turn_right(wheel_controller)
 look_around = create_look_around(wheel_controller, main_camera)
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
-    tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are close to table with a notebook, and look straingt on it.",
+    tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
     task_prompt="Grab a notebook.",
-    server_address="localhost:8080",
+    server_address="100.86.155.83:8080",
     policy_name="Grigorij/act_right_arm_grab_notebook",
     policy_type="act",
     arm_port=wheel_arm_usb,
@@ -58,7 +63,7 @@ agent = LLMAgent(
         move_forward,
         turn_left,
         turn_right,
-        look_around,
+        # look_around,
         pick_up_notebook,
         give_notebook,
         #finish_task,
