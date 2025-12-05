@@ -10,9 +10,6 @@ from robocrew.core.utils import capture_image
 import time
 import threading
 
-from robocrew.robots.XLeRobot.utils import turn_head_to_vla_position
-
-
 
 def create_move_forward(servo_controller):
     @tool
