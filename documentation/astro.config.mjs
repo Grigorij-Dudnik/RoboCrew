@@ -7,7 +7,7 @@ export default defineConfig({
   base: 'RoboCrew',
   integrations: [
     starlight({
-      title: 'Robo Crew',
+      title: '/Robo Crew/',
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/withastro/starlight' }
       ],
