@@ -10,9 +10,6 @@ from robocrew.core.utils import capture_image
 import time
 import threading
 
-from robocrew.robots.XLeRobot.utils import turn_head_to_vla_position
-
-
 
 def create_move_forward(servo_controller):
     @tool
@@ -54,34 +51,45 @@ def create_turn_left(servo_controller):
 
 def create_look_around(servo_controller, main_camera):
     @tool
-    def look_around() -> str:
-        """Makes the robot look around by moving its head."""
+    def look_around() -> list:
+        """Look around yourself to find a thing you looking for or to understand an envinronment."""
         movement_delay = 1.5  # seconds
-        print("Start")
+        print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
         image_left = capture_image(main_camera)
         image_left64 = base64.b64encode(image_left).decode('utf-8')
-        print("-120 deg")
         servo_controller.turn_head_yaw(120)
         time.sleep(movement_delay)
         image_right = capture_image(main_camera)
         image_right64 = base64.b64encode(image_right).decode('utf-8')  
-        print("120 deg")
         servo_controller.turn_head_yaw(0)
         time.sleep(movement_delay)
         image_center = capture_image(main_camera)
         image_center64 = base64.b64encode(image_center).decode('utf-8')
-        print("back and done")
 
-        return f"Looked around and captured images: left (data:image/jpeg;base64,{image_left64}), center (data:image/jpeg;base64,{image_center64}), right (data:image/jpeg;base64,{image_right64})."
-
+        return [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_left64}"}
+                },
+                {
+                    "type": "image_url", 
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_center64}"}
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_right64}"}
+                }
+            ]
+        
     return look_around
 
 
 def create_vla_single_arm_manipulation(
         tool_name: str,
         tool_description: str,
+        task_prompt: str,
         server_address: str,
         policy_name: str, 
         policy_type: str, 
@@ -124,7 +132,7 @@ def create_vla_single_arm_manipulation(
 
     cfg = RobotClientConfig(
         robot=robot_config,
-        task="Grab a notebook.",
+        task=task_prompt,
         server_address=server_address,
         policy_type=policy_type,
         pretrained_name_or_path=policy_name,
@@ -137,8 +145,9 @@ def create_vla_single_arm_manipulation(
     @tool
     def tool_name_to_override() -> str:
         """Tood description to override."""
-        print("Tries to grab a cup")
-        servo_controller.turn_head_to_vla_position()
+        print("Manipulation tool activated")
+        servo_controller.turn_head_pitch(45)
+        servo_controller.turn_head_yaw(0)
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
@@ -150,9 +159,7 @@ def create_vla_single_arm_manipulation(
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
             threading.Timer(execution_time, client.stop).start()
-            client.control_loop(task="Grab a notebook.")
-
-            print("Finished grabbing action")
+            client.control_loop(task=task_prompt)
             
         
         finally:
@@ -160,6 +167,7 @@ def create_vla_single_arm_manipulation(
             time.sleep(1)
             main_camera_object.open(main_camera_usb_port)
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            servo_controller.reset_head_position()
         
         return "Arm manipulation done"
     
