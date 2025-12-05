@@ -17,8 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: docs   # <- sprawia, że GitHub pobiera branch docs
-
+          ref: docs
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
