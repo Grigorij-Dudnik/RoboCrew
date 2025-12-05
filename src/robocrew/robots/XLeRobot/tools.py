@@ -52,7 +52,7 @@ def create_turn_left(servo_controller):
 def create_look_around(servo_controller, main_camera):
     @tool
     def look_around() -> str:
-        """Makes the robot look around by moving its head."""
+        """Look around yourself to find a thing you looking for or to understand an envinronment."""
         movement_delay = 1.5  # seconds
         print("Start")
         servo_controller.turn_head_yaw(-120)
