@@ -71,8 +71,15 @@ def create_look_around(servo_controller, main_camera):
         image_center64 = base64.b64encode(image_center).decode('utf-8')
         print("back and done")
 
-        return f"Looked around and captured images: left (data:image/jpeg;base64,{image_left64}), center (data:image/jpeg;base64,{image_center64}), right (data:image/jpeg;base64,{image_right64})."
-
+        return [
+            {"type": "text", "text": "I looked around and captured images from three angles:"},
+            {"type": "text", "text": "Left (-120°)"},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_left64}", "detail": "auto"}},
+            {"type": "text", "text": "Center (0°)"},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_center64}", "detail": "auto"}},
+            {"type": "text", "text": "Right (120°)"}
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_right64}", "detail": "auto"}},         
+        ]
     return look_around
 
 
