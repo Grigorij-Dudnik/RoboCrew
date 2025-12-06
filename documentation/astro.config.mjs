@@ -4,7 +4,7 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://Grigorij-Dudnik.github.io/RoboCrew',
-  base: 'RoboCrew',
+  base: '/RoboCrew/',
   integrations: [
     starlight({
       title: '/Robo Crew/',
