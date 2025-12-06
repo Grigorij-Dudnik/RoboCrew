@@ -1,4 +1,4 @@
-name: Deploy Astro Starlight to GitHub Pages
+name: Deploy Astro Starlight to GitHub Pages #
 
 on:
   push:
