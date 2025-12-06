@@ -5,6 +5,27 @@ from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
+
+import torch
+
+# --- FIX START: Force all incoming tensors to CPU ---
+# This prevents the "RuntimeError: Attempting to deserialize object on a CUDA device"
+# by intercepting the load call and redirecting it to 'cpu'.
+
+_original_restore = torch.serialization.default_restore_location
+
+def force_cpu_restore(storage, location):
+    # Regardless of what device the server said (e.g., 'cuda:0'), 
+    # we force it to load on 'cpu'
+    return _original_restore(storage, "cpu")
+
+torch.serialization.default_restore_location = force_cpu_restore
+# --- FIX END ---
+
+# ... Your existing imports and code follow below ...
+
+
+
 prompt = """You are a mobile household robot with two arms. Your arms are VERY SHORT (only ~30cm reach).
 
 CRITICAL MANIPULATION RULES:
@@ -29,8 +50,9 @@ DECISION PRIORITY:
 1. Am I stuck/hitting a wall? → Go forward by negative distance and turn first
 2. Do I know where the target is? → If NO, use look_around to scan the environment
 3. Can I see the target? → Navigate toward it
-4. Is the target close enough (filling 20%+ of view)? → Use manipulation tool
-5. Target not visible after scanning? → Move to a new location and look_around again"""
+4. Is the target close enough (touching bottom edge of view)? → Use manipulation tool
+5. Do you see object you tried to pick up still in the same place after picking up? → It means you failed to grab it, you might be too far. → Go closer and try again.
+6. Target not visible after scanning? → Move to a new location and look_around again"""
 
 # set up main camera for head tools
 main_camera_usb_port = "/dev/video0" # camera usb port Eg: /dev/video0
@@ -59,21 +81,23 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
     main_camera_usb_port=main_camera_usb_port,
-    policy_device="cpu"
+    policy_device="cuda",
+    execution_time=45
 )
 give_notebook = create_vla_single_arm_manipulation(
     tool_name="Give_a_notebook_to_a_human",
     tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human, and look straingt on him.",
     task_prompt="Grab a notebook and give it to a human.",
     server_address="100.86.155.83:8080",
-    policy_name="Grigorij/smolvla_40000_right_arm_grab_notebook",
+    policy_name="Grigorij/act_right_arm_give_notebook",
     policy_type="act",
     arm_port=wheel_arm_usb,
     servo_controller=wheel_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "right_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object=main_camera,
     main_camera_usb_port=main_camera_usb_port,
-    policy_device="cpu"
+    policy_device="cuda",
+    execution_time=45
 )
 # init agent
 agent = LLMAgent(
@@ -100,7 +124,7 @@ print("Agent initialized.")
 wheel_controller.reset_head_position()
 
 # run agent with a sample task
-agent.task = "Grab a blue notebook from the table, go to human and give it to him."
+agent.task = "Go to human and give a notebook to him."
 agent.go()
 
 # clean up
