@@ -82,7 +82,7 @@ Now just say something like **"Hey robot, bring me a beer."** — the robot list
 
 ### Add VLA policy as a tool
 
-Let's make our robot to manipulate with its arms! First, you need to pretrain your own policy for it. After you have your policy, run the policy server in separate terminal.
+Let's make our robot to manipulate with its arms! First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html). After you have your policy, run the policy server in separate terminal.
 
 Let's create a tool for the agent to enable it to use a VLA policy:
 ```python
@@ -92,7 +92,7 @@ grab_a_cup = create_vla_single_arm_manipulation(
     tool_name="grab_a_cup",
     tool_description="""Grab a cup in front of you and place it to the robot container""",
     server_address="localhost:8080",
-    policy_name="Grigorij/act_xle_grab_a_cup",
+    policy_name="Grigorij/act_right_arm_grab_notebook",
     policy_type="act",
     arm_port=right_arm_usb,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
