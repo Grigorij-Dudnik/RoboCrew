@@ -63,7 +63,12 @@ class LLMAgent():
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
         args = tool_call["args"]
         tool_output = requested_tool.invoke(args)
-        return ToolMessage(tool_output, tool_call_id=tool_call["id"])
+        if isinstance(tool_output, tuple) and len(tool_output) == 2:
+            additional_output = HumanMessage(content=tool_output[1])
+            tool_output = tool_output[0]
+        else:
+            additional_output = None
+        return ToolMessage(tool_output, tool_call_id=tool_call["id"]), additional_output
     
     def cut_off_context(self, nr_of_loops):
         """
@@ -107,8 +112,10 @@ class LLMAgent():
                 self.cut_off_context(self.history_len)
             # execute tool
             for tool_call in response.tool_calls:
-                tool_response = self.invoke_tool(tool_call)
+                tool_response, additional_response = self.invoke_tool(tool_call)
                 self.message_history.append(tool_response)
+                if additional_response:
+                    self.message_history.append(additional_response)
                 if tool_call["name"] == "finish_task":
                     print("Task finished, going idle.")
                     return "Task finished, going idle."
