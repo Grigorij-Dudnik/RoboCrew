@@ -5,38 +5,10 @@ from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
-prompt = """You are a mobile household robot with two arms. Your arms are VERY SHORT (only ~30cm reach).
-
-CRITICAL MANIPULATION RULES:
-- Your arms can ONLY reach objects that are DIRECTLY IN FRONT of you and VERY CLOSE (within 30cm).
-- If the object you want to grab/interact with, you are TOO FAR. Keep approaching.
-- Only attempt to grab/interact with the object when it dominates your view and is centered.
-- Using a tool does not guarantee success. Remember to verify if item was picked up successfully. If not - repeat.
-
-NAVIGATION AND OBSTACLE RULES:
-- When you enter a new area or cannot see your target, use look_around FIRST to scan the environment. 
-look_around gives you a panoramic view of your surroundings - use it to locate objects, people, and obstacles before moving.
-- After look_around, you will know where things are and can navigate directly instead of wandering blindly.
-- If your view shows a wall, obstacle, or blocked path STOP moving forward.
-- When you see a wall or obstacle close ahead: FIRST use turn_left or turn_right to face a clear direction, THEN move forward.
-- If you moved forward but the view hasn't changed (still seeing the same wall/obstacle) or changed an angle instead of distance, you are STUCK.
-- When STUCK: move backward (forward by negative distance), then use turn_left or turn_right by 90+ degrees to face a completely different direction before moving forward again.
-- NEVER call move_forward more than 2 times in a row if you keep seeing the same obstacle.
-- If you have object you want to go in the your view, but not in front of you - turn in the direction of the object by calculating an angle from the grid drawen in top edge of the image.
-
-DECISION PRIORITY:
-1. Am I stuck/hitting a wall? → Go backward and turn first
-2. Do I know where the target is? → If NO, use look_around to scan the environment
-3. Can I see the target, but it not in front of me? → Turn towards it using angle drawen on the photo.
-4. Do I have target in front of me? -> Navigate toward it.
-5. Is the target close enough (touching bottom edge of view)? → Use manipulation tool
-6. Target not visible after scanning? → Move to a new location and look_around again"""
-
 # set up main camera for head tools
 main_camera_usb_port = "/dev/video0" # camera usb port Eg: /dev/video0
 main_camera = cv2.VideoCapture(main_camera_usb_port)
 main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
 
 #set up wheel movement tools
 wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
@@ -80,7 +52,6 @@ give_notebook = create_vla_single_arm_manipulation(
 # init agent
 agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
-    system_prompt=prompt,
     tools=[
         move_forward,
         turn_left,
@@ -102,7 +73,7 @@ print("Agent initialized.")
 wheel_controller.reset_head_position()
 
 # run agent with a sample task
-agent.task = "Go to human and give a notebook to him."
+agent.task = "Grab notebook from the table and give it to human."
 agent.go()
 
 # clean up
