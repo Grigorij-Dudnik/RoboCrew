@@ -125,7 +125,7 @@ class ServoControler:
         self.turn_head_yaw(0)
 
     def reset_head_position(self) -> str:
-        self.turn_head_pitch(35)
+        self.turn_head_pitch(20)
         self.turn_head_yaw(0)
 
     def apply_wheel_modes(self) -> None:

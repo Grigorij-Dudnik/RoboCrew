@@ -57,11 +57,11 @@ def create_look_around(servo_controller, main_camera):
         print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
-        image_left = capture_image(main_camera)
+        image_left = capture_image(main_camera, center_angle=-120)
         image_left64 = base64.b64encode(image_left).decode('utf-8')
         servo_controller.turn_head_yaw(120)
         time.sleep(movement_delay)
-        image_right = capture_image(main_camera)
+        image_right = capture_image(main_camera, center_angle=120)
         image_right64 = base64.b64encode(image_right).decode('utf-8')  
         servo_controller.turn_head_yaw(0)
         time.sleep(movement_delay)
@@ -69,14 +69,14 @@ def create_look_around(servo_controller, main_camera):
         image_center64 = base64.b64encode(image_center).decode('utf-8')
 
         return "Looked around", [
-            {"type": "text", "text": "Left (-120°)"},
+            {"type": "text", "text": "Left"},
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_left64}",}},
-            {"type": "text", "text": "Center (0°)"},
+            {"type": "text", "text": "Center"},
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_center64}"}},
-            {"type": "text", "text": "Right (120°)"},
+            {"type": "text", "text": "Right"},
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_right64}"}},         
         ]
-
+    return look_around
 
 
 def create_vla_single_arm_manipulation(

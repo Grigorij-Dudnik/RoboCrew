@@ -1,9 +1,8 @@
-from robocrew.core.utils import horizontal_angle_grid , capture_image
+from robocrew.core.utils import capture_image
 from robocrew.core.sound_receiver import SoundReceiver
 from dotenv import find_dotenv, load_dotenv
 import cv2
 import base64
-from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 import queue
