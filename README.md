@@ -4,7 +4,8 @@
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
-![xlerobot_schema](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/master/images/main-coming.png)
+![xlerobot_schema](https://github.com/user-attachments/assets/d371487c-2e77-4a3e-9f20-eb6a54e427af)
+
 
 ## Features
 
@@ -13,8 +14,8 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 - 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
 - 📚 **Memory** - Long-term memory to remember envinronment details
-- 🦾 **Manipulation** *(coming soon)* - VLA models as a tools for arms control
-- 🗺️ **Navigation** *(coming soon)* - Navigation features
+- 🦾 **Manipulation** - VLA models as a tools for arms control
+- 🗺️ **Navigation** - Navigation features
 
 ## Supported Robots
 
