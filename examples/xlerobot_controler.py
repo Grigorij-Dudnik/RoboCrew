@@ -5,20 +5,6 @@ from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
-# --- FIX START: Force all incoming tensors to CPU ---
-# This prevents the "RuntimeError: Attempting to deserialize object on a CUDA device"
-# by intercepting the load call and redirecting it to 'cpu'.
-import torch
-
-_original_restore = torch.serialization.default_restore_location
-
-def force_cpu_restore(storage, location):
-    return _original_restore(storage, "cpu")
-
-torch.serialization.default_restore_location = force_cpu_restore
-# --- FIX END ---
-
-
 prompt = """You are a mobile household robot with two arms. Your arms are VERY SHORT (only ~30cm reach).
 
 CRITICAL MANIPULATION RULES:
