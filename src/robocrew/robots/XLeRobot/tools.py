@@ -51,36 +51,32 @@ def create_turn_left(servo_controller):
 
 def create_look_around(servo_controller, main_camera):
     @tool
-    def look_around() -> str:
-        """Makes the robot look around by moving its head."""
+    def look_around() -> list:
+        """Look around yourself to find a thing you looking for or to understand an envinronment."""
         movement_delay = 1.5  # seconds
-        print("Start")
+        print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
         image_left = capture_image(main_camera)
         image_left64 = base64.b64encode(image_left).decode('utf-8')
-        print("-120 deg")
         servo_controller.turn_head_yaw(120)
         time.sleep(movement_delay)
         image_right = capture_image(main_camera)
         image_right64 = base64.b64encode(image_right).decode('utf-8')  
-        print("120 deg")
         servo_controller.turn_head_yaw(0)
         time.sleep(movement_delay)
         image_center = capture_image(main_camera)
         image_center64 = base64.b64encode(image_center).decode('utf-8')
-        print("back and done")
 
-        return [
-            {"type": "text", "text": "I looked around and captured images from three angles:"},
+        return "Looked around", [
             {"type": "text", "text": "Left (-120°)"},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_left64}", "detail": "auto"}},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_left64}",}},
             {"type": "text", "text": "Center (0°)"},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_center64}", "detail": "auto"}},
-            {"type": "text", "text": "Right (120°)"}
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_right64}", "detail": "auto"}},         
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_center64}"}},
+            {"type": "text", "text": "Right (120°)"},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_right64}"}},         
         ]
-    return look_around
+
 
 
 def create_vla_single_arm_manipulation(
@@ -164,7 +160,7 @@ def create_vla_single_arm_manipulation(
             time.sleep(1)
             main_camera_object.open(main_camera_usb_port)
             main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            servo_controller.turn_head_pitch(0)
+            servo_controller.reset_head_position()
         
         return "Arm manipulation done"
     

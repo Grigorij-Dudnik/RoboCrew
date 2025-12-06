@@ -63,7 +63,11 @@ class LLMAgent():
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
         args = tool_call["args"]
         tool_output = requested_tool.invoke(args)
-        additional_output = None
+        if isinstance(tool_output, tuple) and len(tool_output) == 2:
+            additional_output = HumanMessage(content=tool_output[1])
+            tool_output = tool_output[0]
+        else:
+            additional_output = None
         return ToolMessage(tool_output, tool_call_id=tool_call["id"]), additional_output
     
     def cut_off_context(self, nr_of_loops):

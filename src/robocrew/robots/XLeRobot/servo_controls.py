@@ -16,8 +16,8 @@ ANGULAR_DPS = 100.0
 ACTION_MAP = {
     "up": {7: 1, 8: 0, 9: -1},
     "down": {7: -1, 8: 0, 9: 1},
-    "left": {7: -1, 8: -1, 9: -1},
-    "right": {7: 1, 8: 1, 9: 1},
+    "left": {7: 1, 8: 1, 9: 1},
+    "right": {7: -1, 8: -1, 9: -1},
 }
 
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
@@ -125,7 +125,7 @@ class ServoControler:
         self.turn_head_yaw(0)
 
     def reset_head_position(self) -> str:
-        self.turn_head_pitch(10)
+        self.turn_head_pitch(35)
         self.turn_head_yaw(0)
 
     def apply_wheel_modes(self) -> None:
