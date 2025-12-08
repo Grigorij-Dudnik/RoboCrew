@@ -9,7 +9,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 ## Features
 
 - 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
-- 🎤 **Voice** - Wake-word activated voice commands with TTS
+- 🎤 **Voice** - Wake-word activated voice commands and TTS responses
 - 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
 - 📚 **Memory** - Long-term memory to remember envinronment details
