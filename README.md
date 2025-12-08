@@ -103,7 +103,7 @@ grab_a_cup = create_vla_single_arm_manipulation(
 )
 ```
 
-## Udev Rules Setup
+## Give USB ports a constant names (Udev rules)
 To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
 
 ```bash
