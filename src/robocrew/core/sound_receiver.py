@@ -77,7 +77,11 @@ class SoundReceiver:
         return (None, pyaudio.paContinue)
 
     def _recorder_loop(self):
-        while self._listening:
+        while True:
+            # Wait if not listening
+            if not self._listening:
+                time.sleep(0.1)
+                continue
             loop_start_time = time.perf_counter()
             # print(f"rms: {self.get_rms()}")
             if not self._recording:
@@ -142,26 +146,46 @@ class SoundReceiver:
         print(f"Starting SoundReceiver on device index {self.DEVICE_INDEX}")
         if self._listening:
             return
-        try:
-            self._stream = self._p.open(format=self.FORMAT,
-                                       channels=self.CHANNELS,
-                                       rate=self.RATE,
-                                       input=True,
-                                       input_device_index=self.DEVICE_INDEX,
-                                       frames_per_buffer=self.frames_per_buffer,
-                                       stream_callback=self._buffer_write_callback)
-        except Exception as e:
-            raise RuntimeError(f"Failed to open input stream: {e}")
-        self._stream.start_stream()
+        # Start stream if not already open
+        if self._stream is None:
+            try:
+                self._stream = self._p.open(format=self.FORMAT,
+                                           channels=self.CHANNELS,
+                                           rate=self.RATE,
+                                           input=True,
+                                           input_device_index=self.DEVICE_INDEX,
+                                           frames_per_buffer=self.frames_per_buffer,
+                                           stream_callback=self._buffer_write_callback)
+            except Exception as e:
+                raise RuntimeError(f"Failed to open input stream: {e}")
+            self._stream.start_stream()
+            # Start the recorder thread only once
+            if not self.reciver_thread.is_alive():
+                self.reciver_thread.start()
+        else:
+            # Resume the stream if it was stopped
+            self._stream.start_stream()
         self._listening = True
-        self.reciver_thread.start()
 
-    def stop(self):
+    def stop_listening(self):
+        """Stop audio processing (used during TTS to avoid self-hearing)."""
         if not self._listening:
             return
+        self._listening = False
+        # Clear any ongoing recording to avoid capturing TTS audio
+        with self._lock:
+            self._recording = False
+            self.recorded_frames = []
+            self.first_timestamp_below_threshold = None
+        # Stop the stream but don't close it (allows restart)
+        if self._stream is not None:
+            self._stream.stop_stream()
+
+    def stop(self):
+        """Fully stop and terminate the audio system."""
+        self.stop_listening()
         try:
             if self._stream is not None:
-                self._stream.stop_stream()
                 self._stream.close()
                 self._stream = None
         finally:
@@ -169,7 +193,6 @@ class SoundReceiver:
                 self._p.terminate()
             except Exception:
                 pass
-            self._listening = False
 
     def is_listening(self):
         return self._listening

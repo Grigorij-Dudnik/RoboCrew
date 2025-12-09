@@ -1,5 +1,6 @@
 from robocrew.core.utils import horizontal_angle_grid , capture_image
 from robocrew.core.sound_receiver import SoundReceiver
+from robocrew.core.tools import create_say
 from dotenv import find_dotenv, load_dotenv
 import cv2
 import base64
@@ -11,7 +12,7 @@ load_dotenv(find_dotenv())
 
 
 class LLMAgent():
-    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False):
+    def __init__(self, model, tools, system_prompt=None, main_camera_usb_port=None, camera_fov=120, sounddevice_index=None, wakeword="robot", tts=False, history_len=None, debug_mode=False, use_memory=False):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -22,6 +23,7 @@ class LLMAgent():
         wakeword: custom wakeword hearing which robot will set your sentence as a task o do.
         history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
         use_memory: set to True to enable long-term memory (requires sqlite3).
+        tts: set to True to enable text-to-speech (robot can speak).
         """
         base_system_prompt = "You are a mobile robot with two arms."
         system_prompt = system_prompt or base_system_prompt
@@ -37,7 +39,26 @@ class LLMAgent():
             )
             system_prompt += memory_prompt
 
+        self.tts = tts
+        self.sound_receiver = None
+
         self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
+        
+        self.sounddevice_index = sounddevice_index
+        if self.sounddevice_index is not None:
+            self.task_queue = queue.Queue()
+            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
+
+        # Add TTS tool if enabled (after sound_receiver is created so we can pass it)
+        if tts:
+            say_tool = create_say(self.sound_receiver)
+            tools.append(say_tool)
+            tts_prompt = (
+                " You can speak to the user using the `say` tool. "
+                "Use it to communicate important updates, greet users, or answer their questions verbally."
+            )
+            system_prompt += tts_prompt
+
         llm = init_chat_model(model)
         self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
         self.tools = tools
@@ -50,11 +71,6 @@ class LLMAgent():
         if self.main_camera:
             self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             self.camera_fov = camera_fov
-        self.sounddevice_index = sounddevice_index
-        if self.sounddevice_index is not None:
-            self.task_queue = queue.Queue()
-            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
-            # self.task = ""
         self.debug = debug_mode
 
 
