@@ -1,5 +1,6 @@
 __pycache__/
 venv/
+pypi-robocrew/
 .env
 .clean_coder/
 .coderrules
@@ -12,3 +13,4 @@ debug/
 physical_path.sh
 robot_memory.db
 logs/
+requirements.txt
