@@ -38,12 +38,12 @@ DECISION PRIORITY:
 """
 
 class LLMAgent():
-    def __init__(self, model, tools, main_camera_usb_port, system_prompt=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False):
+    def __init__(self, model, tools, main_camera, system_prompt=None, camera_fov=120, sounddevice_index=None, wakeword="robot", history_len=None, debug_mode=False, use_memory=False):
         """
         model: name of the model to use
         tools: list of langchain tools
         system_prompt: custom system prompt - optional
-        main_camera_usb_port: provide usb port of your robot front camera if you want to use it.
+        main_camera: provide your robot front camera object if you want to use it.
         camera_fov: field of view (degrees) of your main camera.
         sounddevice_index: provide sounddevice index of your microphone if you want robot to hear.
         wakeword: custom wakeword hearing which robot will set your sentence as a task o do.
@@ -72,7 +72,7 @@ class LLMAgent():
         self.message_history = [self.system_message]
         self.history_len = history_len
         # cameras
-        self.main_camera = main_camera_usb_port
+        self.main_camera = main_camera
         self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.camera_fov = camera_fov
 

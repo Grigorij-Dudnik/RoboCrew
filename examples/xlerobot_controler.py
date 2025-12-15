@@ -11,14 +11,14 @@ main_camera = cv2.VideoCapture(main_camera_usb_port)
 main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
 #set up wheel movement tools
-wheel_arm_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
-head_arm_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /dev/ttyACM0
-wheel_controller = ServoControler(wheel_arm_usb, head_arm_usb)
+right_arm_wheel_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
+left_arm_head_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /dev/ttyACM0
+servo_controller = ServoControler(right_arm_wheel_usb, left_arm_head_usb)
 
-move_forward = create_move_forward(wheel_controller)
-turn_left = create_turn_left(wheel_controller)
-turn_right = create_turn_right(wheel_controller)
-look_around = create_look_around(wheel_controller, main_camera)
+move_forward = create_move_forward(servo_controller)
+turn_left = create_turn_left(servo_controller)
+turn_right = create_turn_right(servo_controller)
+look_around = create_look_around(servo_controller, main_camera)
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
     tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
@@ -26,8 +26,8 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     server_address="localhost:8080",
     policy_name="Grigorij/act_right_arm_grab_notebook",
     policy_type="act",
-    arm_port=wheel_arm_usb,
-    servo_controller=wheel_controller,
+    arm_port=right_arm_wheel_usb,
+    servo_controller=servo_controller,
     camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
     main_camera_usb_port=main_camera_usb_port,
@@ -41,8 +41,8 @@ give_notebook = create_vla_single_arm_manipulation(
     server_address="localhost:8080",
     policy_name="Grigorij/act_right_arm_give_notebook",
     policy_type="act",
-    arm_port=wheel_arm_usb,
-    servo_controller=wheel_controller,
+    arm_port=right_arm_wheel_usb,
+    servo_controller=servo_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "right_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object=main_camera,
     main_camera_usb_port=main_camera_usb_port,
@@ -61,7 +61,7 @@ agent = LLMAgent(
         give_notebook,
         #finish_task,
     ],
-    history_len=6,  # nr of last message-answer pairs to keep
+    history_len=8,  # nr of last message-answer pairs to keep
     main_camera_usb_port=main_camera,  # provide main camera.
     camera_fov=120,
     sounddevice_index=2,  # index of your microphone sounddevice
@@ -70,12 +70,12 @@ agent = LLMAgent(
 
 print("Agent initialized.")
 
-wheel_controller.reset_head_position()
+servo_controller.reset_head_position()
 
 # run agent with a sample task
 agent.task = "Grab notebook from the table and give it to human."
 agent.go()
 
 # clean up
-wheel_controller.disconnect()
+servo_controller.disconnect()
 main_camera.release()
