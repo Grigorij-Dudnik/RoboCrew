@@ -2,10 +2,10 @@ import cv2
 import math
 
 
-def capture_image(main_camera, camera_fov=120):
+def capture_image(main_camera, camera_fov=120, center_angle=0):
     main_camera.grab() # Clear the buffer
     _, frame = main_camera.read()
-    frame = horizontal_angle_grid(frame, h_fov=camera_fov)
+    frame = horizontal_angle_grid(frame, h_fov=camera_fov, center_angle=center_angle)
     _, buffer = cv2.imencode('.jpg', frame)
     return buffer.tobytes()
 

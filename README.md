@@ -4,7 +4,8 @@
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
-![xlerobot_schema](images/main-coming.png)
+![xlerobot_schema](images/main_img.png)
+
 
 ## Features
 
@@ -13,7 +14,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 - 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
 - 📚 **Memory** - Long-term memory to remember envinronment details
-- 🦾 **Manipulation** *(coming soon)* - VLA models as a tools for arms control
+- 🦾 **Manipulation** - VLA models as a tools for arms control
 - 🗺️ **Navigation** *(coming soon)* - Navigation features
 
 ## Supported Robots
@@ -81,6 +82,47 @@ sudo apt install portaudio19-dev
 
 Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the word "robot" anywhere in your command, it'll use the entire phrase as its new task.
 
+### Add VLA policy as a tool
+
+Let's make our robot to manipulate with its arms! First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html). After you have your policy, run the policy server in separate terminal.
+
+Let's create a tool for the agent to enable it to use a VLA policy:
+```python
+from robocrew.robots.XLeRobot.tools import create_vla_single_arm_manipulation
+
+grab_a_cup = create_vla_single_arm_manipulation(
+    tool_name="grab_a_cup",
+    tool_description="""Grab a cup in front of you and place it to the robot container""",
+    server_address="localhost:8080",
+    policy_name="Grigorij/act_right_arm_grab_notebook",
+    policy_type="act",
+    arm_port=right_arm_usb,
+    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
+    main_camera_object=main_camera,
+    main_camera_usb_port=main_camera_usb_port,
+    policy_device="cpu"
+)
+```
+
+## Give USB ports a constant names (Udev rules)
+To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
+
+```bash
+robocrew-find-components
+```
+
+This script will guide you through connecting each component one by one and will create the necessary udev rules to maintain consistent device naming.
+
+After running the script, you can check the generated rules at `/etc/udev/rules.d/99-robocrew.rules`, or check the symlinks:
+
+```bash
+pi@raspberrypi:~ $ ls -l /dev/arm*
+lrwxrwxrwx 1 root root 7 Dec  2 11:40 /dev/arm_left -> ttyACM4
+lrwxrwxrwx 1 root root 7 Dec  2 11:40 /dev/arm_right -> ttyACM2
+pi@raspberrypi:~ $ ls -l /dev/cam*
+lrwxrwxrwx 1 root root 6 Dec  2 11:40 /dev/camera_center -> video0
+lrwxrwxrwx 1 root root 6 Dec  2 11:40 /dev/camera_right -> video2
+```
 
 ## Key Parameters
 
@@ -92,23 +134,3 @@ Now just say something like **"Hey robot, bring me a beer."** — the robot list
 - **tts**: Enable text-to-speech so robot can speak (default: False)
 - **history_len**: How many conversation turns to remember (optional)
 - **use_memory**: Enable memory system to remember important things (optional)
-
-
-## Custom Tools
-
-Create your own tools easily:
-
-```python
-from langchain_core.tools import tool
-
-@tool
-def grab_object(name: str) -> str:
-    """Grab the specified object."""
-    # Your hardware code here
-    return f"Grabbed {name}"
-
-# Then just add to tools list
-agent = LLMAgent(tools=[grab_object, finish_task], ...)
-```
-
-
