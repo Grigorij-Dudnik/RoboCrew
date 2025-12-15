@@ -4,25 +4,25 @@ build-backend = "hatchling.build"
 
 [project]
 name = "robocrew"
-version = "0.1.2"
+version = "0.1.4"
 authors = [
   { name="Grigorij Dudnik", email="dudnikgrv@gmail.com" },
   { name="Konrad Suchodolski", email="konrad.suchodolski50@gmail.com" },
 ]
 description = "🦾Set up your embodied LLM agent same easiness as you set up normal agents in CrewAI or Autogen"
 dependencies = [
-    "langchain>=0.3.27,<1.0.0",
-    "langchain-google-genai>=2.0.10,<2.0.11",
-    "langchain-openai>=0.3.25,<0.3.26",
-    "lerobot>=0.4.2",
-    "opencv-python>=4.12.0.88",
-    "pyaudio>=0.2.14",
-    "python-dotenv>=1.2.1",
-    "openai>=1.86.0,<2.0.0",
-    "feetech-servo-sdk>=1.0.0",
-    "google-ai-generativelanguage>=0.6.15,<0.7.0",
-    "grpcio>=1.76.0",
-    "google-generativeai>=0.8.5",
+  "langchain==1.1.0",
+  "langchain-google-genai==3.2.0",
+  "langchain-openai==1.1.0",
+  "lerobot==0.4.2",
+  "lerobot[async]==0.4.2",
+  "opencv-python==4.10.0.84",
+  "pyaudio==0.2.14",
+  "python-dotenv==1.2.1",
+  "openai==2.8.1",
+  "feetech-servo-sdk==1.0.0",
+  "google-ai-generativelanguage==0.9.0",
+  "grpcio==1.73.1",
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,6 +39,3 @@ robocrew-find-components = "robocrew.scripts.robocrew_find_components:main"
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
-
-[tool.hatch.metadata]
-allow-direct-references = true
