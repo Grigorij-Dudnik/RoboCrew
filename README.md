@@ -10,7 +10,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 ## Features
 
 - 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
-- 🎤 **Voice** - Wake-word activated voice commands
+- 🎤 **Voice** - Wake-word activated voice commands and TTS responses
 - 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
 - 📚 **Memory** - Long-term memory to remember envinronment details
@@ -60,7 +60,7 @@ agent.go()  # Robot explores autonomously
 
 ### With Voice Commands
 
-Add a microphone to give your robot voice-activated tasks:
+Add a microphone and a speaker to give your robot voice-activated tasks:
 
 ```python
 agent = LLMAgent(
@@ -70,6 +70,7 @@ agent = LLMAgent(
     sounddevice_index=0,  # Your mic device
     wakeword="robot",  # The robot listens for this word in your speech
     history_len=4,
+    tts=True, # Text-to-speech
     use_memory=True, # memory system to remember important things
 )
 ```
@@ -130,5 +131,6 @@ lrwxrwxrwx 1 root root 6 Dec  2 11:40 /dev/camera_right -> video2
 - **main_camera_usb_port**: Your camera device (find with `ls /dev/video*`)
 - **sounddevice_index**: Microphone index (optional, for voice commands)
 - **wakeword**: Word that must appear in your speech to give robot a new task (default: "robot").
+- **tts**: Enable text-to-speech so robot can speak (default: False)
 - **history_len**: How many conversation turns to remember (optional)
 - **use_memory**: Enable memory system to remember important things (optional)
