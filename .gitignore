@@ -16,3 +16,4 @@ logs/
 requirements.txt
 constraints.txt
 test-req.txt
+robocrew_memory.db

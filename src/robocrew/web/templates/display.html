@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCS Display</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/display.css') }}">
+</head>
+
+<body>
+    <div class="display-container" id="display-container">
+        <!-- Animated Background -->
+        <div class="bg-particles" id="bg-particles"></div>
+        <div class="bg-glow" id="bg-glow"></div>
+
+        <!-- Blockage Warning Zones -->
+        <div class="warning-zone left" id="warn-left"></div>
+        <div class="warning-zone right" id="warn-right"></div>
+        <div class="warning-zone center" id="warn-center"></div>
+
+        <!-- Control Mode Badge -->
+        <div class="control-mode-badge" id="control-mode-badge">
+            <span class="mode-emoji" id="mode-emoji">😴</span>
+            <span class="mode-text" id="mode-text">Idle</span>
+        </div>
+
+        <!-- Eyes Container -->
+        <div class="eyes-container" id="eyes-container">
+            <div class="eye left-eye" id="left-eye">
+                <div class="eye-white">
+                    <div class="eye-iris" id="left-iris">
+                        <div class="eye-pupil"></div>
+                        <div class="eye-highlight"></div>
+                        <div class="eye-highlight small"></div>
+                    </div>
+                </div>
+                <div class="eyelid top-lid" id="left-top-lid"></div>
+                <div class="eyelid bottom-lid" id="left-bottom-lid"></div>
+                <div class="eye-sparkle"></div>
+            </div>
+
+            <div class="eye right-eye" id="right-eye">
+                <div class="eye-white">
+                    <div class="eye-iris" id="right-iris">
+                        <div class="eye-pupil"></div>
+                        <div class="eye-highlight"></div>
+                        <div class="eye-highlight small"></div>
+                    </div>
+                </div>
+                <div class="eyelid top-lid" id="right-top-lid"></div>
+                <div class="eyelid bottom-lid" id="right-bottom-lid"></div>
+                <div class="eye-sparkle"></div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="status-dot"></div>
+                <span class="status-label" id="status-label">Initializing...</span>
+            </div>
+            <div class="task-display" id="task-display">Ready to help!</div>
+        </div>
+
+        <!-- System Status Panel -->
+        <div class="branding-watermark">
+            ARCS
+        </div>
+        <div class="system-status-panel" id="system-status-panel">
+            <div class="system-item" id="system-controller">
+                <div class="system-dot"></div>
+                <span class="system-label">Controller</span>
+            </div>
+            <div class="system-item" id="system-camera">
+                <div class="system-dot"></div>
+                <span class="system-label">Camera</span>
+            </div>
+            <div class="system-item" id="system-arm">
+                <div class="system-dot"></div>
+                <span class="system-label">Arm</span>
+            </div>
+            <div class="system-item" id="system-ai">
+                <div class="system-dot"></div>
+                <span class="system-label">AI</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/display.js') }}"></script>
+</body>
+
+</html>
