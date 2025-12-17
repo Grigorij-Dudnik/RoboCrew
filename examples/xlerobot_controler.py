@@ -1,7 +1,7 @@
 from robocrew.core.camera import RobotCamera
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.tools import create_move_forward, create_move_backward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation, create_go_to_precision_mode, create_go_to_normal_mode
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_move_backward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation, create_go_to_precision_mode, create_go_to_normal_mode, create_strafe_right, create_strafe_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
@@ -14,11 +14,18 @@ left_arm_head_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /
 servo_controller = ServoControler(right_arm_wheel_usb, left_arm_head_usb)
 
 move_forward = create_move_forward(servo_controller)
+move_backward = create_move_backward(servo_controller)
+
 turn_left = create_turn_left(servo_controller)
 turn_right = create_turn_right(servo_controller)
+
+strafe_left = create_strafe_left(servo_controller)
+strafe_right = create_strafe_right(servo_controller)
+
 look_around = create_look_around(servo_controller, main_camera)
 go_to_precision_mode = create_go_to_precision_mode(servo_controller)
 go_to_normal_mode = create_go_to_normal_mode(servo_controller)
+
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
     tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
@@ -52,6 +59,9 @@ agent = LLMAgent(
     model="google_genai:gemini-robotics-er-1.5-preview",
     tools=[
         move_forward,
+        move_backward,
+        strafe_left,
+        strafe_right,
         turn_left,
         turn_right,
         look_around,
@@ -63,7 +73,7 @@ agent = LLMAgent(
     ],
     history_len=8,  # nr of last message-answer pairs to keep
     main_camera=main_camera,  # provide main camera.
-    camera_fov=120,
+    camera_fov=90,
     sounddevice_index=2,  # index of your microphone sounddevice
 )
 
@@ -73,6 +83,7 @@ servo_controller.reset_head_position()
 
 # run agent with a sample task
 agent.task = "Grab notebook from the table and give it to human."
+#agent.task = "Strafe right all the time."
 agent.go()
 
 # clean up

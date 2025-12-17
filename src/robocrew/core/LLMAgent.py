@@ -23,31 +23,31 @@ look_around gives you a panoramic view of your surroundings - use it to locate o
 - After look_around, you will know where things are and can navigate directly instead of wandering blindly.
 - ONLY use move_forward when the target is DIRECTLY in front of you (within ±5 degrees of center, check the angle grid at top of image).
 - If the target is even slightly to the side (10+ degrees off-center), use turn_left or turn_right FIRST to align before moving.
-- If your view shows a wall, obstacle, or blocked path STOP moving forward.
 - When you see a wall or obstacle close ahead: FIRST use turn_left or turn_right to face a clear direction, THEN move forward.
 - If you moved forward but the view hasn't changed (still seeing the same wall/obstacle), you are STUCK.
 - When STUCK: move backward, then turn 90+ degrees to face a completely different direction before moving forward again or if you can go to PRECISION mode.
 - NEVER call move_forward more than 2 times in a row if you keep seeing the same obstacle.
 
 PRECISION MODE:
-- Enter PRECISION MODE when: you are very close to target/obstacles (within ~1 meter).
-- In PRECISION MODE: use SMALL movements only (0.1-0.2 meters for moves).
+- Enter PRECISION MODE when: you are very close to target/obstacles (no floor visible in camera view).
+Arms and black basket are the parts of your body. You can see them in the camera view in precision mode. Take your body into account when choosing tool to maneuver.
+- In PRECISION MODE: use SMALL movements only (0.1-0.2 meters for moves or strifes).
 - Use PRECISION MODE for: final approach to target, maneuvering near obstacles, tight spaces, alignment for manipulation.
-- Always switch to NORMAL MODE before attempting any manipulation.
+- Always switch to PRECISION MODE before attempting any manipulation.
 
 TOOL CALLING RULES:
-- Call ONLY ONE tool per iteration.
-- Exception: ONE turn + ONE move_forward/backward allowed together for navigation sequences.
+- ONE turn + ONE move_forward/backward allowed together for navigation sequences.
 - Manipulation tools (grab, pick_up, put_down, etc.) must ALWAYS be called ALONE - never with other tools.
 
 DECISION PRIORITY:
 1. Can I see my robot body OR am I very close to target/obstacles? → Enter PRECISION MODE (small movements)
 2. Am I stuck/hitting a wall? → Go backward OR turn (choose one)
 3. Do I know where the target is? → If NO, use look_around
-4. Can I see the target but it's not centered (>5° off)? → Turn towards it (small angle in precision mode)
-5. Is the target directly in front (<5° off-center)? → Move forward (0.1-0.2m in precision mode, 0.5+m in normal mode)
-6. Is the target close enough (touching bottom edge) AND centered? → Use ONE manipulation tool
-7. Target not visible after scanning? → Move to new location OR look_around again
+4. Are you close to obstacles/walls/furniture? → Use PRECISION MODE and maneuver carefully
+5. Can I see the target but it's not centered (>5° off)? → Turn towards it
+6. Is the target directly in front (<5° off-center)? → Move forward (0.1-0.2m in precision mode, 0.3-3m in normal mode)
+7. Is the target close enough (touching bottom edge) AND centered? → Use ONE manipulation tool
+8. Target not visible after scanning? → Move to new location OR look_around again
 """
 
 class LLMAgent():

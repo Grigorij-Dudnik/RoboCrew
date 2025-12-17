@@ -11,13 +11,15 @@ from lerobot.motors.feetech import FeetechMotorsBus, OperatingMode
 DEFAULT_BAUDRATE = 1_000_000
 DEFAULT_SPEED = 10_000
 LINEAR_MPS = 0.25
-ANGULAR_DPS = 100.0
+ANGULAR_DPS = 90.0
 
 ACTION_MAP = {
-    "up": {7: 1, 8: 0, 9: -1},
-    "down": {7: -1, 8: 0, 9: 1},
-    "left": {7: 1, 8: 1, 9: 1},
-    "right": {7: -1, 8: -1, 9: -1},
+    "forward": {7: 1.0, 8: 0.0, 9: -1.0},
+    "backward": {7: -1.0, 8: 0.0, 9: 1.0},
+    "strafe_left": {7: 0.15, 8: -1.0, 9: 0.15},
+    "strafe_right": {7: -0.15, 8: 1.0, 9: -0.15},
+    "turn_left": {7: 1.0, 8: 1.0, 9: 1.0},
+    "turn_right": {7: -1.0, 8: -1.0, 9: -1.0},
 }
 
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
@@ -32,7 +34,7 @@ class ServoControler:
         left_arm_head_usb: str = None,
         *,
         speed: int = DEFAULT_SPEED,
-        action_map: Optional[Mapping[str, Mapping[int, int]]] = None,
+        action_map: Optional[Mapping[str, Mapping[int, float]]] = None,
     ) -> None:
         self.right_arm_wheel_usb = right_arm_wheel_usb
         self.left_arm_head_usb = left_arm_head_usb
@@ -90,8 +92,9 @@ class ServoControler:
                 self._head_positions.setdefault(sid, 2048)
 
     def _wheels_write(self, action: str) -> Dict[int, int]:
-        multipliers = self.action_map[action.lower()]
-        payload = {wid: self.speed * factor for wid, factor in multipliers.items()}
+        multipliers = self.action_map[action]
+        payload = {wid: int(self.speed * factor) for wid, factor in multipliers.items()}
+        print(payload)
         self.wheel_bus.sync_write("Goal_Velocity", payload)
         return payload
 
@@ -109,17 +112,23 @@ class ServoControler:
         return payload
 
     def go_forward(self, meters: float) -> Dict[int, int]:
-        return self._wheels_run("up", float(meters) / LINEAR_MPS)
+        return self._wheels_run("forward", float(meters) / LINEAR_MPS)
 
     def go_backward(self, meters: float) -> Dict[int, int]:
-        return self._wheels_run("down", float(meters) / LINEAR_MPS)
+        return self._wheels_run("backward", float(meters) / LINEAR_MPS)
 
     def turn_left(self, degrees: float) -> Dict[int, int]:
-        return self._wheels_run("left", float(degrees) / ANGULAR_DPS)
+        return self._wheels_run("turn_left", float(degrees) / ANGULAR_DPS)
 
     def turn_right(self, degrees: float) -> Dict[int, int]:
-        return self._wheels_run("right", float(degrees) / ANGULAR_DPS)
+        return self._wheels_run("turn_right", float(degrees) / ANGULAR_DPS)
     
+    def strafe_left(self, meters: float) -> Dict[int, int]:
+        return self._wheels_run("strafe_left", float(meters) / LINEAR_MPS)
+    
+    def strafe_right(self, meters: float) -> Dict[int, int]:
+        return self._wheels_run("strafe_right", float(meters) / LINEAR_MPS)
+
     def turn_head_to_vla_position(self, pitch_deg=45) -> str:
         self.turn_head_pitch(pitch_deg)
         self.turn_head_yaw(0)

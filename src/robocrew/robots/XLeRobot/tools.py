@@ -47,6 +47,50 @@ def create_turn_right(servo_controller):
 
     return turn_right
 
+def create_turn_left(servo_controller):
+    @tool
+    def turn_left(angle_degrees: float) -> str:
+        """Turns the robot left by angle in degrees."""
+        angle = float(angle_degrees)
+        servo_controller.turn_left(angle)
+        time.sleep(0.4)  # wait a bit after turn for stabilization
+        return f"Turned left by {angle} degrees."
+
+    return turn_left
+
+def create_turn_left(servo_controller):
+    @tool
+    def turn_left(angle_degrees: float) -> str:
+        """Turns the robot left by angle in degrees."""
+        angle = float(angle_degrees)
+        servo_controller.turn_left(angle)
+        time.sleep(0.4)  # wait a bit after turn for stabilization
+        return f"Turned left by {angle} degrees."
+
+    return turn_left
+
+def create_strafe_left(servo_controller):
+    @tool
+    def strafe_left(distance_meters: float) -> str:
+        """Strafes the robot left by a specific distance in meters."""
+        distance = float(distance_meters)
+        servo_controller.strafe_left(distance)
+        time.sleep(0.4)  # wait a bit after turn for stabilization
+        return f"Strafed left by {distance} meters."
+
+    return strafe_left
+
+def create_strafe_right(servo_controller):
+    @tool
+    def strafe_right(distance_meters: float) -> str:
+        """Strafes the robot right by a specific distance in meters."""
+        distance = float(distance_meters)
+        servo_controller.strafe_right(distance)
+        time.sleep(0.4)  # wait a bit after turn for stabilization
+        return f"Strafed right by {distance} meters."
+
+    return strafe_right
+
 def create_go_to_precision_mode(servo_controller):
     @tool
     def go_to_precision_mode() -> str:
@@ -66,16 +110,6 @@ def create_go_to_normal_mode(servo_controller):
     return go_to_normal_mode
 
 
-def create_turn_left(servo_controller):
-    @tool
-    def turn_left(angle_degrees: float) -> str:
-        """Turns the robot left by angle in degrees."""
-        angle = float(angle_degrees)
-        servo_controller.turn_left(angle)
-        time.sleep(0.4)  # wait a bit after turn for stabilization
-        return f"Turned left by {angle} degrees."
-
-    return turn_left
 
 def create_look_around(servo_controller, main_camera):
     @tool
