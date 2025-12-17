@@ -61,7 +61,6 @@ agent = LLMAgent(
     main_camera=main_camera,  # provide main camera.
     camera_fov=120,
     sounddevice_index=2,  # index of your microphone sounddevice
-    debug_mode=False,
 )
 
 print("Agent initialized.")

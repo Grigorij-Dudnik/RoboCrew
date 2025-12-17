@@ -21,20 +21,26 @@ NAVIGATION AND OBSTACLE RULES:
 - When you enter a new area or cannot see your target, use look_around FIRST to scan the environment. 
 look_around gives you a panoramic view of your surroundings - use it to locate objects, people, and obstacles before moving.
 - After look_around, you will know where things are and can navigate directly instead of wandering blindly.
+- ONLY use move_forward when the target is DIRECTLY in front of you (within ±5 degrees of center, check the angle grid at top of image).
+- If the target is even slightly to the side (10+ degrees off-center), use turn_left or turn_right FIRST to align before moving.
 - If your view shows a wall, obstacle, or blocked path STOP moving forward.
 - When you see a wall or obstacle close ahead: FIRST use turn_left or turn_right to face a clear direction, THEN move forward.
-- If you moved forward but the view hasn't changed (still seeing the same wall/obstacle) or changed an angle instead of distance, you are STUCK.
-- When STUCK: move backward (forward by negative distance), then use turn_left or turn_right by 90+ degrees to face a completely different direction before moving forward again.
+- If you moved forward but the view hasn't changed (still seeing the same wall/obstacle), you are STUCK.
+- When STUCK: move backward, then turn 90+ degrees to face a completely different direction before moving forward again.
 - NEVER call move_forward more than 2 times in a row if you keep seeing the same obstacle.
-- If you have object you want to go in the your view, but not in front of you - turn in the direction of the object by calculating an angle from the grid drawen in top edge of the image.
+
+TOOL CALLING RULES:
+- Call ONLY ONE tool per iteration.
+- Exception: ONE turn + ONE move_forward/backward allowed together for navigation sequences.
+- Manipulation tools (grab, pick_up, put_down, etc.) must ALWAYS be called ALONE - never with other tools.
 
 DECISION PRIORITY:
-1. Am I stuck/hitting a wall? → Go backward and turn first
-2. Do I know where the target is? → If NO, use look_around to scan the environment
-3. Can I see the target, but it not in front of me? → Turn towards it using angle drawen on the photo.
-4. Do I have target in front of me? -> Navigate toward it.
-5. Is the target close enough (touching bottom edge of view)? → Use manipulation tool
-6. Target not visible after scanning? → Move to a new location and look_around again
+1. Am I stuck/hitting a wall? → Go backward OR turn (choose one)
+2. Do I know where the target is? → If NO, use look_around
+3. Can I see the target but it's not centered (>5° off)? → Turn towards it using the angle grid
+4. Is the target directly in front (<5° off-center)? → Move forward toward it
+5. Is the target close enough (touching bottom edge) AND centered? → Use ONE manipulation tool
+6. Target not visible after scanning? → Move to new location OR look_around again
 """
 
 class LLMAgent():
@@ -88,7 +94,7 @@ class LLMAgent():
 
 
         llm = init_chat_model(model)
-        self.llm = llm.bind_tools(tools, parallel_tool_calls=False)
+        self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
         self.tools = tools
         self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
         self.system_message = SystemMessage(content=system_prompt)
@@ -104,6 +110,7 @@ class LLMAgent():
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
         args = tool_call["args"]
         tool_output = requested_tool.invoke(args)
+        # f aitional output is present
         if isinstance(tool_output, tuple) and len(tool_output) == 2:
             additional_output = HumanMessage(content=tool_output[1])
             tool_output = tool_output[0]
