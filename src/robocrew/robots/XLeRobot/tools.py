@@ -47,6 +47,24 @@ def create_turn_right(servo_controller):
 
     return turn_right
 
+def create_go_to_precision_mode(servo_controller):
+    @tool
+    def go_to_precision_mode() -> str:
+        """Sets the robot to precision movement mode. Use it when close to obstacles."""
+        servo_controller.turn_head_to_vla_position(50)
+        return "Robot set to precision movement mode."
+
+    return go_to_precision_mode
+
+def create_go_to_normal_mode(servo_controller):
+    @tool
+    def go_to_normal_mode() -> str:
+        """Sets the robot to normal movement mode."""
+        servo_controller.reset_head_position()
+        return "Robot set to normal movement mode."
+
+    return go_to_normal_mode
+
 
 def create_turn_left(servo_controller):
     @tool

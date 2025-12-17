@@ -26,8 +26,14 @@ look_around gives you a panoramic view of your surroundings - use it to locate o
 - If your view shows a wall, obstacle, or blocked path STOP moving forward.
 - When you see a wall or obstacle close ahead: FIRST use turn_left or turn_right to face a clear direction, THEN move forward.
 - If you moved forward but the view hasn't changed (still seeing the same wall/obstacle), you are STUCK.
-- When STUCK: move backward, then turn 90+ degrees to face a completely different direction before moving forward again.
+- When STUCK: move backward, then turn 90+ degrees to face a completely different direction before moving forward again or if you can go to PRECISION mode.
 - NEVER call move_forward more than 2 times in a row if you keep seeing the same obstacle.
+
+PRECISION MODE:
+- Enter PRECISION MODE when: you are very close to target/obstacles (within ~1 meter).
+- In PRECISION MODE: use SMALL movements only (0.1-0.2 meters for moves).
+- Use PRECISION MODE for: final approach to target, maneuvering near obstacles, tight spaces, alignment for manipulation.
+- Always switch to NORMAL MODE before attempting any manipulation.
 
 TOOL CALLING RULES:
 - Call ONLY ONE tool per iteration.
@@ -35,16 +41,17 @@ TOOL CALLING RULES:
 - Manipulation tools (grab, pick_up, put_down, etc.) must ALWAYS be called ALONE - never with other tools.
 
 DECISION PRIORITY:
-1. Am I stuck/hitting a wall? → Go backward OR turn (choose one)
-2. Do I know where the target is? → If NO, use look_around
-3. Can I see the target but it's not centered (>5° off)? → Turn towards it using the angle grid
-4. Is the target directly in front (<5° off-center)? → Move forward toward it
-5. Is the target close enough (touching bottom edge) AND centered? → Use ONE manipulation tool
-6. Target not visible after scanning? → Move to new location OR look_around again
+1. Can I see my robot body OR am I very close to target/obstacles? → Enter PRECISION MODE (small movements)
+2. Am I stuck/hitting a wall? → Go backward OR turn (choose one)
+3. Do I know where the target is? → If NO, use look_around
+4. Can I see the target but it's not centered (>5° off)? → Turn towards it (small angle in precision mode)
+5. Is the target directly in front (<5° off-center)? → Move forward (0.1-0.2m in precision mode, 0.5+m in normal mode)
+6. Is the target close enough (touching bottom edge) AND centered? → Use ONE manipulation tool
+7. Target not visible after scanning? → Move to new location OR look_around again
 """
 
 class LLMAgent():
-    def __init__(self, model, tools, main_camera, system_prompt=None, camera_fov=120, sounddevice_index=None, wakeword="robot", tts=False, history_len=None, debug_mode=False, use_memory=False):
+    def __init__(self, model, tools, main_camera, system_prompt=None, camera_fov=90, sounddevice_index=None, wakeword="robot", tts=False, history_len=None, debug_mode=False, use_memory=False):
         """
         model: name of the model to use
         tools: list of langchain tools

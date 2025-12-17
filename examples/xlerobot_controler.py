@@ -1,7 +1,7 @@
 from robocrew.core.camera import RobotCamera
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.tools import create_move_forward, create_move_backward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_move_backward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation, create_go_to_precision_mode, create_go_to_normal_mode
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
@@ -17,6 +17,8 @@ move_forward = create_move_forward(servo_controller)
 turn_left = create_turn_left(servo_controller)
 turn_right = create_turn_right(servo_controller)
 look_around = create_look_around(servo_controller, main_camera)
+go_to_precision_mode = create_go_to_precision_mode(servo_controller)
+go_to_normal_mode = create_go_to_normal_mode(servo_controller)
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
     tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
@@ -55,6 +57,8 @@ agent = LLMAgent(
         look_around,
         pick_up_notebook,
         give_notebook,
+        go_to_precision_mode,
+        go_to_normal_mode,
         #finish_task,
     ],
     history_len=8,  # nr of last message-answer pairs to keep
