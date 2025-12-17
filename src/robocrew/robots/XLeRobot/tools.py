@@ -25,6 +25,16 @@ def create_move_forward(servo_controller):
 
     return move_forward
 
+def create_move_backward(servo_controller):
+    @tool
+    def move_backward(distance_meters: float) -> str:
+        """Drives the robot forward (or backward) for a specific distance."""
+
+        distance = float(distance_meters)
+        servo_controller.go_backward(distance)
+        return f"Moved backward {distance} meters."
+
+    return move_backward
 
 def create_turn_right(servo_controller):
     @tool
@@ -90,19 +100,25 @@ def create_vla_single_arm_manipulation(
         servo_controller, 
         camera_config: dict[str, dict], 
         main_camera_object,
-        main_camera_usb_port: str,
         execution_time: int = 30,
-        policy_device: str = "cuda"
-
+        policy_device: str = "cuda",
+        fps: int = 30,
+        actions_per_chunk: int = 50,
     ):
     """Creates a tool that makes the robot pick up a cup using its arm.
     Args:
+        tool_name (str): The name of the tool AI agent will see.
+        tool_description (str): The description of the tool AI agent will see.
+        task_prompt (str): The task prompt to give to the VLA policy.
         server_address (str): The address of the server to connect to.
         policy_name (str): The name or path of the pretrained policy.
         policy_type (str): The type of policy to use.
         arm_port (str): The USB port of the robot's arm.
         camera_config (dict, optional): Lerobot-type camera configuration. (E.g., "{ main: {type: opencv, index_or_path: /dev/video2, width: 640, height: 480, fps: 30}, left_arm: {type: opencv, index_or_path: /dev/video0, width: 640, height: 480, fps: 30}}")
+        execution_time (int, optional): Time in seconds to run the manipulation.
         policy_device (str, optional): The device to run the policy on. Defaults to "cuda".
+        fps (int, optional): The fps to run the policy at.
+        actions_per_chunk (int, optional): Number of actions VLA calculates at once.
     """
     configured_cameras = {}
     for cam_name, cam_settings in camera_config.items():
@@ -130,9 +146,9 @@ def create_vla_single_arm_manipulation(
         policy_type=policy_type,
         pretrained_name_or_path=policy_name,
         policy_device=policy_device,
-        actions_per_chunk=50,
+        actions_per_chunk=actions_per_chunk,
         chunk_size_threshold=0.5,
-        fps=30
+        fps=fps
     )
     
     @tool
@@ -158,8 +174,7 @@ def create_vla_single_arm_manipulation(
         finally:
             # Re-open main camera for agent use. 
             time.sleep(1)
-            main_camera_object.open(main_camera_usb_port)
-            main_camera_object.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            main_camera_object.reopen()
             servo_controller.reset_head_position()
         
         return "Arm manipulation done"

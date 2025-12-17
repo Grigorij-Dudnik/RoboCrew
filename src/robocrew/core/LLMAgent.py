@@ -43,7 +43,7 @@ class LLMAgent():
         model: name of the model to use
         tools: list of langchain tools
         system_prompt: custom system prompt - optional
-        main_camera: provide your robot front camera object if you want to use it.
+        main_camera: provide your robot front camera object.
         camera_fov: field of view (degrees) of your main camera.
         sounddevice_index: provide sounddevice index of your microphone if you want robot to hear.
         wakeword: custom wakeword hearing which robot will set your sentence as a task o do.
@@ -96,7 +96,6 @@ class LLMAgent():
         self.history_len = history_len
         # cameras
         self.main_camera = main_camera
-        self.main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.camera_fov = camera_fov
 
 
@@ -128,7 +127,7 @@ class LLMAgent():
 
     def go(self):
         while True:
-            image_bytes = capture_image(self.main_camera, camera_fov=self.camera_fov)
+            image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov)
             image_base64 = base64.b64encode(image_bytes).decode('utf-8')
             if self.debug:
                 open(f"debug/latest_view.jpg", "wb").write(image_bytes)

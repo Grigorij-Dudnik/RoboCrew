@@ -1,14 +1,12 @@
-import cv2
+from robocrew.core.camera import RobotCamera
 from robocrew.core.tools import finish_task
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_move_backward, create_turn_left, create_turn_right, create_look_around, create_vla_single_arm_manipulation
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
-# set up main camera for head tools
-main_camera_usb_port = "/dev/video0" # camera usb port Eg: /dev/video0
-main_camera = cv2.VideoCapture(main_camera_usb_port)
-main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+# set up main camera
+main_camera = RobotCamera("/dev/video0") # camera usb port Eg: /dev/video0
 
 #set up wheel movement tools
 right_arm_wheel_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
@@ -30,7 +28,6 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     servo_controller=servo_controller,
     camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
-    main_camera_usb_port=main_camera_usb_port,
     policy_device="cpu",
     execution_time=45
 )
@@ -45,7 +42,6 @@ give_notebook = create_vla_single_arm_manipulation(
     servo_controller=servo_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "right_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object=main_camera,
-    main_camera_usb_port=main_camera_usb_port,
     policy_device="cpu",
     execution_time=45
 )
