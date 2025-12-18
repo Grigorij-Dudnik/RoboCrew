@@ -91,6 +91,10 @@ class ServoControler:
             for sid in self._head_ids:
                 self._head_positions.setdefault(sid, 2048)
 
+    def _wheels_stop(self) -> None:
+        payload = {wid: 0 for wid in self._wheel_ids}
+        self.wheel_bus.sync_write("Goal_Velocity", payload)
+
     def _wheels_run(self, action: str, duration: float) -> Dict[int, int]:
         if duration > 0:
             multipliers = self.action_map[action]
