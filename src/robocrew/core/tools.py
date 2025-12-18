@@ -60,3 +60,13 @@ def create_say(sound_receiver=None):
         return f"Said: {query}"
     
     return say
+
+@tool
+def save_checkpoint(checkpont_query: str):
+    """
+    Call this tool when you complete an important step in the task to not forget about it.
+    For example, if your task is to go to kitchen and cook a dinner, call this tool with "Reached kitchen" when you are in the kitchen.
+    This tool will add the checkpoint info to the agent's system message for future context.
+    """
+    # The actual logic is handled in LLMAgent.invoke_tool
+    return f"Checkpoint saved: {checkpont_query}"

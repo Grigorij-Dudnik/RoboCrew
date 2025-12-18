@@ -171,6 +171,10 @@ class LLMAgent():
                 self.message_history.append(tool_response)
                 if additional_response:
                     self.message_history.append(additional_response)
+                        # Special handling for save_checkpoint
+                if tool_call["name"] == "save_checkpoint":
+                    checkpoint_info = tool_call["args"].get("checkpont_query")
+                    self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
                 if tool_call["name"] == "finish_task":
                     print("Task finished, going idle.")
                     return "Task finished, going idle."
