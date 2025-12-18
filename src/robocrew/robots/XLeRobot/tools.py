@@ -114,7 +114,7 @@ def create_look_around(servo_controller, main_camera):
     @tool
     def look_around() -> list:
         """Look around yourself to find a thing you looking for or to understand an envinronment."""
-        movement_delay = 1  # seconds
+        movement_delay = 0.8  # seconds
         print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
@@ -132,6 +132,8 @@ def create_look_around(servo_controller, main_camera):
         time.sleep(movement_delay)
         image_4 = capture_image(main_camera.capture, center_angle=120)
         image_4_64 = base64.b64encode(image_4).decode('utf-8')
+        servo_controller.turn_head_yaw(0)  # look forward again
+        time.sleep(movement_delay)
 
         return "Looked around", [
             {"type": "text", "text": "Left"},
