@@ -5,6 +5,23 @@ from robocrew.robots.XLeRobot.tools import create_move_forward, create_move_back
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
+
+# --- FIX START: Force all incoming tensors to CPU ---
+# This prevents the "RuntimeError: Attempting to deserialize object on a CUDA device"
+# by intercepting the load call and redirecting it to 'cpu'.
+import torch
+
+_original_restore = torch.serialization.default_restore_location
+
+def force_cpu_restore(storage, location):
+    # Regardless of what device the server said (e.g., 'cuda:0'), 
+    # we force it to load on 'cpu'
+    return _original_restore(storage, "cpu")
+
+torch.serialization.default_restore_location = force_cpu_restore
+# --- FIX END ---
+
+
 # set up main camera
 main_camera = RobotCamera("/dev/video0") # camera usb port Eg: /dev/video0
 
@@ -30,29 +47,33 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
     tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
     task_prompt="Grab a notebook.",
-    server_address="localhost:8080",
+    server_address="100.86.155.83:8080",
     policy_name="Grigorij/act_right_arm_grab_notebook",
     policy_type="act",
     arm_port=right_arm_wheel_usb,
     servo_controller=servo_controller,
     camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
-    policy_device="cpu",
-    execution_time=45
+    policy_device="cuda",
+    execution_time=45,
+    fps=15,
+    actions_per_chunk=20,
 )
 give_notebook = create_vla_single_arm_manipulation(
     tool_name="Give_a_notebook_to_a_human",
     tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human, and look straingt on him.",
     task_prompt="Grab a notebook and give it to a human.",
-    server_address="localhost:8080",
+    server_address="100.86.155.83:8080",
     policy_name="Grigorij/act_right_arm_give_notebook",
     policy_type="act",
     arm_port=right_arm_wheel_usb,
     servo_controller=servo_controller,
     camera_config={"main": {"index_or_path": "/dev/video0"}, "right_arm": {"index_or_path": "/dev/video2"}},
     main_camera_object=main_camera,
-    policy_device="cpu",
-    execution_time=45
+    policy_device="cuda",
+    execution_time=45,
+    fps=15,
+    actions_per_chunk=20,
 )
 # init agent
 agent = LLMAgent(
@@ -83,7 +104,7 @@ print("Agent initialized.")
 servo_controller.reset_head_position()
 
 # run agent with a sample task
-agent.task = "Grab notebook from the table and give it to human."
+agent.task = "Grab blue notebook from the table and give it to human."
 #agent.task = "Strafe right all the time."
 try:
     agent.go()
