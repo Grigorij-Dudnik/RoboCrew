@@ -152,7 +152,7 @@ class ServoControler:
         self._head_positions.update(payload)
 
     def get_head_position(self) -> Dict[int, float]:
-        self.head_bus.sync_read("Present_Position", list(self._head_ids))
+        return self.head_bus.sync_read("Present_Position", list(self._head_ids))
 
     def disconnect(self) -> None:
         self._wheels_stop()
