@@ -72,7 +72,7 @@ def create_turn_left(servo_controller):
 def create_strafe_left(servo_controller):
     @tool
     def strafe_left(distance_meters: float) -> str:
-        """Strafes the robot left by a specific distance in meters."""
+        """Moves the robot sideways left by a specific distance in meters."""
         distance = float(distance_meters)
         servo_controller.strafe_left(distance)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -83,7 +83,7 @@ def create_strafe_left(servo_controller):
 def create_strafe_right(servo_controller):
     @tool
     def strafe_right(distance_meters: float) -> str:
-        """Strafes the robot right by a specific distance in meters."""
+        """Moves the robot sideways right by a specific distance in meters."""
         distance = float(distance_meters)
         servo_controller.strafe_right(distance)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -108,7 +108,6 @@ def create_go_to_normal_mode(servo_controller):
         return "Robot set to normal movement mode."
 
     return go_to_normal_mode
-
 
 
 def create_look_around(servo_controller, main_camera):
