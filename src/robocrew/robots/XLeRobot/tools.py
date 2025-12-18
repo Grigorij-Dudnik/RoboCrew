@@ -50,7 +50,7 @@ def create_turn_right(servo_controller):
 def create_turn_left(servo_controller):
     @tool
     def turn_left(angle_degrees: float) -> str:
-        """Turns the robot left by angle in degrees."""
+        """Turns the robot left by angle in degrees. Use only when robot body not toches any obstacle."""
         angle = float(angle_degrees)
         servo_controller.turn_left(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -61,7 +61,7 @@ def create_turn_left(servo_controller):
 def create_turn_left(servo_controller):
     @tool
     def turn_left(angle_degrees: float) -> str:
-        """Turns the robot left by angle in degrees."""
+        """Turns the robot left by angle in degrees. Use only when robot body not toches any obstacle."""
         angle = float(angle_degrees)
         servo_controller.turn_left(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -114,7 +114,7 @@ def create_look_around(servo_controller, main_camera):
     @tool
     def look_around() -> list:
         """Look around yourself to find a thing you looking for or to understand an envinronment."""
-        movement_delay = 0.8  # seconds
+        movement_delay = 0.9  # seconds
         print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)

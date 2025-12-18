@@ -57,11 +57,11 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     policy_device="cuda",
     execution_time=45,
     fps=15,
-    actions_per_chunk=20,
+    actions_per_chunk=30,
 )
 give_notebook = create_vla_single_arm_manipulation(
     tool_name="Give_a_notebook_to_a_human",
-    tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human, and look straingt on him.",
+    tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human (base of human is below green line), and look straingt on him.",
     task_prompt="Grab a notebook and give it to a human.",
     server_address="100.86.155.83:8080",
     policy_name="Grigorij/act_right_arm_give_notebook",
@@ -73,7 +73,7 @@ give_notebook = create_vla_single_arm_manipulation(
     policy_device="cuda",
     execution_time=45,
     fps=15,
-    actions_per_chunk=20,
+    actions_per_chunk=30,
 )
 # init agent
 agent = LLMAgent(

@@ -16,8 +16,8 @@ ANGULAR_DPS = 90.0
 ACTION_MAP = {
     "forward": {7: 1.0, 8: 0.0, 9: -1.0},
     "backward": {7: -1.0, 8: 0.0, 9: 1.0},
-    "strafe_left": {7: 0.15, 8: -1.0, 9: 0.15},
-    "strafe_right": {7: -0.15, 8: 1.0, 9: -0.15},
+    "strafe_left": {7: -0.15, 8: 1.0, 9: -0.15},
+    "strafe_right": {7: 0.15, 8: -1.0, 9: 0.15},
     "turn_left": {7: 1.0, 8: 1.0, 9: 1.0},
     "turn_right": {7: -1.0, 8: -1.0, 9: -1.0},
 }
@@ -125,10 +125,12 @@ class ServoControler:
     def turn_head_to_vla_position(self, pitch_deg=45) -> str:
         self.turn_head_pitch(pitch_deg)
         self.turn_head_yaw(0)
+        time.sleep(0.9)
 
     def reset_head_position(self) -> str:
         self.turn_head_pitch(20)
         self.turn_head_yaw(0)
+        time.sleep(0.9)
 
     def apply_wheel_modes(self) -> None:
         for wid in self._wheel_ids:
