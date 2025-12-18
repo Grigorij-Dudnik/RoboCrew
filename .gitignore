@@ -16,5 +16,6 @@ logs/
 requirements.txt
 constraints.txt
 test-req.txt
+debug/
 
 examples/xlerobot_controler_elevator.py
