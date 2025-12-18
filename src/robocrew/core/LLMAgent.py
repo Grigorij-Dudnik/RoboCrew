@@ -93,6 +93,7 @@ class LLMAgent():
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
             # self.task = ""
         self.debug = debug_mode
+        self.navigation_mode = "normal"  # or "precision"
 
         # Add TTS tool if enabled (after sound_receiver is created so we can pass it)
         if tts:
@@ -180,6 +181,10 @@ class LLMAgent():
                 if tool_call["name"] == "save_checkpoint":
                     checkpoint_info = tool_call["args"].get("checkpont_query")
                     self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
+                if tool_call["name"] == "go_to_precision_mode":
+                    self.navigation_mode = "precision"
+                elif tool_call["name"] == "go_to_normal_mode":
+                    self.navigation_mode = "normal"
                 if tool_call["name"] == "finish_task":
                     print("Task finished, going idle.")
                     return "Task finished, going idle."

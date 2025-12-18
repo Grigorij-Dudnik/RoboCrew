@@ -37,11 +37,14 @@ def horizontal_angle_grid(image, h_fov=120, center_angle=0):
     # put right/left text
     cv2.putText(image, "<=LEFT", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, orange, 2)
     cv2.putText(image, "RIGHT=>", (width - 145, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
+
+    # range of arms horizontalline
+    cv2.line(image, (int(width/2 - (30/(h_fov/width))*width), height - 40), (int(width/2 + (30/(h_fov/width))*width), height - 40), (255, 0, 0), 4)
     return image
 
 if __name__ == "__main__":
     # Test the function with a sample image
-    img = cv2.imread("img.png")
+    img = cv2.imread("debug/image.png")
     img_with_grid = horizontal_angle_grid(img, h_fov=118)
     # write to file
     cv2.imwrite("img_with_grid.jpg", img_with_grid)
