@@ -91,43 +91,32 @@ class ServoControler:
             for sid in self._head_ids:
                 self._head_positions.setdefault(sid, 2048)
 
-    def _wheels_write(self, action: str) -> Dict[int, int]:
-        multipliers = self.action_map[action]
-        payload = {wid: int(self.speed * factor) for wid, factor in multipliers.items()}
-        print(payload)
-        self.wheel_bus.sync_write("Goal_Velocity", payload)
-        return payload
-
-    def _wheels_stop(self) -> Dict[int, int]:
-        payload = {wid: 0 for wid in self._wheel_ids}
-        self.wheel_bus.sync_write("Goal_Velocity", payload)
-        return payload
-
     def _wheels_run(self, action: str, duration: float) -> Dict[int, int]:
-        if duration <= 0:
-            return {}
-        payload = self._wheels_write(action)
-        time.sleep(duration)
-        self._wheels_stop()
-        return payload
+        if duration > 0:
+            multipliers = self.action_map[action]
+            payload = {wid: int(self.speed * factor) for wid, factor in multipliers.items()}
+            self.wheel_bus.sync_write("Goal_Velocity", payload)
+            time.sleep(duration)
+            payload = {wid: 0 for wid in self._wheel_ids}
+            self.wheel_bus.sync_write("Goal_Velocity", payload)
 
     def go_forward(self, meters: float) -> Dict[int, int]:
-        return self._wheels_run("forward", float(meters) / LINEAR_MPS)
+        self._wheels_run("forward", float(meters) / LINEAR_MPS)
 
     def go_backward(self, meters: float) -> Dict[int, int]:
-        return self._wheels_run("backward", float(meters) / LINEAR_MPS)
+        self._wheels_run("backward", float(meters) / LINEAR_MPS)
 
     def turn_left(self, degrees: float) -> Dict[int, int]:
-        return self._wheels_run("turn_left", float(degrees) / ANGULAR_DPS)
+        self._wheels_run("turn_left", float(degrees) / ANGULAR_DPS)
 
     def turn_right(self, degrees: float) -> Dict[int, int]:
-        return self._wheels_run("turn_right", float(degrees) / ANGULAR_DPS)
+        self._wheels_run("turn_right", float(degrees) / ANGULAR_DPS)
     
     def strafe_left(self, meters: float) -> Dict[int, int]:
-        return self._wheels_run("strafe_left", float(meters) / LINEAR_MPS)
+        self._wheels_run("strafe_left", float(meters) / LINEAR_MPS)
     
     def strafe_right(self, meters: float) -> Dict[int, int]:
-        return self._wheels_run("strafe_right", float(meters) / LINEAR_MPS)
+        self._wheels_run("strafe_right", float(meters) / LINEAR_MPS)
 
     def turn_head_to_vla_position(self, pitch_deg=45) -> str:
         self.turn_head_pitch(pitch_deg)
@@ -146,23 +135,20 @@ class ServoControler:
     def apply_head_modes(self) -> None:
         for id in self._head_ids:
             self.head_bus.write("Operating_Mode", id, OperatingMode.POSITION.value)
-
         self.head_bus.enable_torque()
 
     def turn_head_yaw(self, degrees: float) -> Dict[int, float]:
         payload = {HEAD_SERVO_MAP["yaw"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
         self._head_positions.update(payload)
-        return payload
 
     def turn_head_pitch(self, degrees: float) -> Dict[int, float]:
         payload = {HEAD_SERVO_MAP["pitch"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
         self._head_positions.update(payload)
-        return payload
 
     def get_head_position(self) -> Dict[int, float]:
-        return self.head_bus.sync_read("Present_Position", list(self._head_ids))
+        self.head_bus.sync_read("Present_Position", list(self._head_ids))
 
     def disconnect(self) -> None:
         self._wheels_stop()

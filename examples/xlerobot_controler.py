@@ -85,8 +85,11 @@ servo_controller.reset_head_position()
 # run agent with a sample task
 agent.task = "Grab notebook from the table and give it to human."
 #agent.task = "Strafe right all the time."
-agent.go()
-
-# clean up
-servo_controller.disconnect()
-main_camera.release()
+try:
+    agent.go()
+except KeyboardInterrupt:
+    print("Interrupted by user, shutting down...")
+finally:
+    # clean up
+    servo_controller.disconnect()
+    main_camera.release()
