@@ -115,28 +115,34 @@ def create_look_around(servo_controller, main_camera):
     @tool
     def look_around() -> list:
         """Look around yourself to find a thing you looking for or to understand an envinronment."""
-        movement_delay = 1.5  # seconds
+        movement_delay = 1  # seconds
         print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
-        image_left = capture_image(main_camera.capture, center_angle=-120)
-        image_left64 = base64.b64encode(image_left).decode('utf-8')
+        image_1 = capture_image(main_camera.capture, center_angle=-120)
+        image_1_64 = base64.b64encode(image_1).decode('utf-8')
+        servo_controller.turn_head_yaw(-40)
+        time.sleep(movement_delay)
+        image_2 = capture_image(main_camera.capture, center_angle=-40)
+        image_2_64 = base64.b64encode(image_2).decode('utf-8')  
+        servo_controller.turn_head_yaw(40)
+        time.sleep(movement_delay)
+        image_3 = capture_image(main_camera.capture, center_angle=40)
+        image_3_64 = base64.b64encode(image_3).decode('utf-8')
         servo_controller.turn_head_yaw(120)
         time.sleep(movement_delay)
-        image_right = capture_image(main_camera.capture, center_angle=120)
-        image_right64 = base64.b64encode(image_right).decode('utf-8')  
-        servo_controller.turn_head_yaw(0)
-        time.sleep(movement_delay)
-        image_center = capture_image(main_camera.capture)
-        image_center64 = base64.b64encode(image_center).decode('utf-8')
+        image_4 = capture_image(main_camera.capture, center_angle=120)
+        image_4_64 = base64.b64encode(image_4).decode('utf-8')
 
         return "Looked around", [
             {"type": "text", "text": "Left"},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_left64}",}},
-            {"type": "text", "text": "Center"},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_center64}"}},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_1_64}",}},
+            {"type": "text", "text": "Left-Center"},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_2_64}"}},
+            {"type": "text", "text": "Right-Center"},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_3_64}"}},
             {"type": "text", "text": "Right"},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_right64}"}},         
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_4_64}"}},         
         ]
     return look_around
 
