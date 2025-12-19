@@ -10,7 +10,7 @@ from robocrew.scripts import robocrew_generate_udev_rules as base_rules
 MODE = os.environ.get("MODE", getattr(base_rules, "MODE", "0660"))
 GROUP = os.environ.get("GROUP", getattr(base_rules, "GROUP", "dialout"))
 
-default_devices = ["camera_center", "camera_left", "camera_right", "arm_right", "arm_left"]
+default_devices = ["camera_center", "camera_right", "camera_left", "arm_right", "arm_left"]
 
 
 def capture_devices():
