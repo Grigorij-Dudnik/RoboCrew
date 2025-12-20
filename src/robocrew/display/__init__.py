@@ -1,4 +1,8 @@
-from flask import Blueprint, render_template, jsonify, current_app
+try:
+    from flask import Blueprint, render_template, jsonify, current_app
+except ImportError:
+    raise ImportError("The 'robocrew.display' module requires Flask. Please install it using: pip install 'robocrew[gui]'")
+
 import pkg_resources
 import os
 
