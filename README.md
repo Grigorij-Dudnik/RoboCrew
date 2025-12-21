@@ -113,6 +113,13 @@ grab_a_cup = create_vla_single_arm_manipulation(
 )
 ```
 
+That's how robot can combine movement and manipulation to find, grab and bring a notebook:
+<video width="100%" controls>
+  <source src="https://github.com/user-attachments/assets/faf375cf-d29a-4b1b-b0b1-da474c7006fe" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+
 ## Give USB ports a constant names (Udev rules)
 To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
 
