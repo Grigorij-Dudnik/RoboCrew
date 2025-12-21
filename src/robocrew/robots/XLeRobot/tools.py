@@ -294,7 +294,7 @@ def create_vla_two_arm_manipulation(
     
     @tool
     def tool_name_to_override() -> str:
-        """Tood description to override."""
+        """Tool description to override."""
         print("Manipulation tool activated")
         servo_controller.turn_head_pitch(45)
         servo_controller.turn_head_yaw(0)
