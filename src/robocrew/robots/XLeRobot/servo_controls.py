@@ -159,6 +159,8 @@ class ServoControler:
     def disconnect(self) -> None:
         self._wheels_stop()
         time.sleep(0.5)
-        self.wheel_bus.disconnect()
-        self.head_bus.disconnect()
+        if hasattr(self, 'wheel_bus'):
+            self.wheel_bus.disconnect()
+        if hasattr(self, 'head_bus'):
+            self.head_bus.disconnect()
 
