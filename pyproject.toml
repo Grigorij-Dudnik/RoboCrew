@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "robocrew"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name="Grigorij Dudnik", email="dudnikgrv@gmail.com" },
   { name="Konrad Suchodolski", email="konrad.suchodolski50@gmail.com" },
@@ -36,7 +36,7 @@ license-files = ["LICEN[CS]E*", ".github/LICEN[CS]E*"]
 
 [project.scripts]
 robocrew-generate-udev-rules = "robocrew.scripts.robocrew_generate_udev_rules:main"
-robocrew-find-components = "robocrew.scripts.robocrew_find_components:main"
+robocrew-setup-usb-modules = "robocrew.scripts.robocrew_setup_usb_modules:main"
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"

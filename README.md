@@ -4,7 +4,7 @@
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
-![xlerobot_schema](images/main_img.png)
+![xlerobot_schema](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/master/images/main_img.png)
 
 
 ## Features
@@ -50,9 +50,9 @@ left_arm_head_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /
 servo_controller = ServoControler(right_arm_wheel_usb, left_arm_head_usb)
 
 # Create movement tools
-move_forward = create_move_forward(wheel_controller)
-turn_left = create_turn_left(wheel_controller)
-turn_right = create_turn_right(wheel_controller)
+move_forward = create_move_forward(servo_controller)
+turn_left = create_turn_left(servo_controller)
+turn_right = create_turn_right(servo_controller)
 look_around = create_look_around(servo_controller, main_camera)
 
 # Create agent

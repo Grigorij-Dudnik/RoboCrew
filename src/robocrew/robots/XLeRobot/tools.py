@@ -5,6 +5,7 @@ from langchain_core.tools import tool  # type: ignore[import]
 from lerobot.async_inference.robot_client import RobotClient 
 from lerobot.async_inference.configs import RobotClientConfig
 from lerobot.robots.so101_follower.config_so101_follower import SO101FollowerConfig
+from lerobot.robots.bi_so100_follower.config_bi_so100_follower import BI_SO100FollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 from robocrew.core.utils import capture_image
 import time
@@ -58,16 +59,6 @@ def create_turn_left(servo_controller):
 
     return turn_left
 
-def create_turn_left(servo_controller):
-    @tool
-    def turn_left(angle_degrees: float) -> str:
-        """Turns the robot left by angle in degrees. Use only when robot body not toches any obstacle."""
-        angle = float(angle_degrees)
-        servo_controller.turn_left(angle)
-        time.sleep(0.4)  # wait a bit after turn for stabilization
-        return f"Turned left by {angle} degrees."
-
-    return turn_left
 
 def create_strafe_left(servo_controller):
     @tool
@@ -75,7 +66,6 @@ def create_strafe_left(servo_controller):
         """Moves the robot sideways left by a specific distance in meters."""
         distance = float(distance_meters)
         servo_controller.strafe_left(distance)
-        time.sleep(0.4)  # wait a bit after turn for stabilization
         return f"Strafed left by {distance} meters."
 
     return strafe_left
@@ -86,7 +76,6 @@ def create_strafe_right(servo_controller):
         """Moves the robot sideways right by a specific distance in meters."""
         distance = float(distance_meters)
         servo_controller.strafe_right(distance)
-        time.sleep(0.4)  # wait a bit after turn for stabilization
         return f"Strafed right by {distance} meters."
 
     return strafe_right
@@ -192,6 +181,101 @@ def create_vla_single_arm_manipulation(
 
     robot_config = SO101FollowerConfig(
         port=arm_port,
+        cameras=configured_cameras,
+        id="robot_arms",
+        # TODO: Figure out calibration loading/saving issues
+        # calibration_dir=Path("/home/pi/RoboCrew/calibrations")
+    )
+
+    cfg = RobotClientConfig(
+        robot=robot_config,
+        task=task_prompt,
+        server_address=server_address,
+        policy_type=policy_type,
+        pretrained_name_or_path=policy_name,
+        policy_device=policy_device,
+        actions_per_chunk=actions_per_chunk,
+        chunk_size_threshold=0.5,
+        fps=fps
+    )
+    
+    @tool
+    def tool_name_to_override() -> str:
+        """Tood description to override."""
+        print("Manipulation tool activated")
+        servo_controller.turn_head_pitch(45)
+        servo_controller.turn_head_yaw(0)
+        # release main camera from agent, so arm policy can use it
+        main_camera_object.release()
+        time.sleep(1)  # give some time to release camera
+
+        try:
+            client = RobotClient(cfg)
+            if not client.start():
+                return "Failed to connect to robot server."
+
+            threading.Thread(target=client.receive_actions, daemon=True).start()
+            threading.Timer(execution_time, client.stop).start()
+            client.control_loop(task=task_prompt)
+            
+        
+        finally:
+            # Re-open main camera for agent use. 
+            time.sleep(1)
+            main_camera_object.reopen()
+            servo_controller.reset_head_position()
+        
+        return "Arm manipulation done"
+    
+    tool_name_to_override.name = tool_name
+    tool_name_to_override.description = tool_description
+
+    return tool_name_to_override
+
+
+def create_vla_two_arm_manipulation(
+        tool_name: str,
+        tool_description: str,
+        task_prompt: str,
+        server_address: str,
+        policy_name: str, 
+        policy_type: str, 
+        servo_controller, 
+        camera_config: dict[str, dict], 
+        main_camera_object,
+        execution_time: int = 30,
+        policy_device: str = "cuda",
+        fps: int = 30,
+        actions_per_chunk: int = 50,
+    ):
+    """Creates a tool that makes the robot pick up a cup using its arm.
+    Args:
+        tool_name (str): The name of the tool AI agent will see.
+        tool_description (str): The description of the tool AI agent will see.
+        task_prompt (str): The task prompt to give to the VLA policy.
+        server_address (str): The address of the server to connect to.
+        policy_name (str): The name or path of the pretrained policy.
+        policy_type (str): The type of policy to use.
+        camera_config (dict, optional): Lerobot-type camera configuration. (E.g., "{ main: {type: opencv, index_or_path: /dev/video2, width: 640, height: 480, fps: 30}, left_arm: {type: opencv, index_or_path: /dev/video0, width: 640, height: 480, fps: 30}}")
+        execution_time (int, optional): Time in seconds to run the manipulation.
+        policy_device (str, optional): The device to run the policy on. Defaults to "cuda".
+        fps (int, optional): The fps to run the policy at.
+        actions_per_chunk (int, optional): Number of actions VLA calculates at once.
+    """
+    configured_cameras = {}
+    for cam_name, cam_settings in camera_config.items():
+        # Unpack the dictionary settings directly into the Config class
+        configured_cameras[cam_name] = OpenCVCameraConfig(
+            index_or_path=cam_settings["index_or_path"],
+            width=cam_settings.get("width", 640),
+            height=cam_settings.get("height", 480),
+            fps=cam_settings.get("fps", 30)
+        )
+
+
+    robot_config = BI_SO100FollowerConfig(
+        left_arm_port=servo_controller.left_arm_head_usb,
+        right_arm_port=servo_controller.right_arm_wheel_usb,
         cameras=configured_cameras,
         id="robot_arms",
         # TODO: Figure out calibration loading/saving issues
