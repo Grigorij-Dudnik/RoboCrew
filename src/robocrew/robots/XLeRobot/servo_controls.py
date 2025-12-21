@@ -162,5 +162,3 @@ class ServoControler:
         self.wheel_bus.disconnect()
         self.head_bus.disconnect()
 
-    def __del__(self) -> None:
-        self.disconnect()

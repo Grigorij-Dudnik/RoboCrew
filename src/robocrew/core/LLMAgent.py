@@ -170,6 +170,10 @@ class LLMAgent():
         self.camera_fov = camera_fov
         self.servo_controler = servo_controler
 
+        #TODO: Tidy this up, propably when we restructure LLMAgent
+        if self.servo_controler:
+            self.servo_controler.reset_head_position()
+
 
     def invoke_tool(self, tool_call):
         # convert string to real function
@@ -250,4 +254,4 @@ class LLMAgent():
         finally:
             if self.servo_controler:
                 print("Disconnecting servo controller...")
-                self.servo_controler.__del__()
+                self.servo_controler.disconnect()
