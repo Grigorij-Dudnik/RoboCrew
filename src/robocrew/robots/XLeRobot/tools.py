@@ -94,7 +94,7 @@ def create_strafe_right(servo_controller):
 def create_go_to_precision_mode(servo_controller):
     @tool
     def go_to_precision_mode() -> str:
-        """Sets the robot to precision movement mode. Use it when close to obstacles."""
+        """Sets the robot to precision movement mode. Use it when close to obstacles or target."""
         servo_controller.turn_head_to_vla_position(50)
         return "Robot set to precision movement mode."
 
@@ -103,7 +103,7 @@ def create_go_to_precision_mode(servo_controller):
 def create_go_to_normal_mode(servo_controller):
     @tool
     def go_to_normal_mode() -> str:
-        """Sets the robot to normal movement mode."""
+        """Sets the robot to normal movement mode for long distance rides."""
         servo_controller.reset_head_position()
         return "Robot set to normal movement mode."
 

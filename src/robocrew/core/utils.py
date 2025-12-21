@@ -38,8 +38,8 @@ def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
     cv2.putText(image, "<=LEFT", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, orange, 2)
     cv2.putText(image, "RIGHT=>", (width - 145, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
 
-    #if navigation_mode == "normal":
-    #    image = draw_normal_mode_aug(image, width, height)
+    if navigation_mode == "normal":
+        image = draw_normal_mode_aug(image, width, height)
 
     # range of arms horizontalline
     if navigation_mode == "precision":
@@ -65,9 +65,9 @@ def draw_normal_mode_aug(image, width, height):
 
 def draw_precision_mode_aug(image, width, height):
     # draw arms range lines
-    cv2.line(image, (int(width*0.10), int(0.38*height)), (int(width*0.25), int(0.28*height)), (0, 255, 0), 4)
-    cv2.line(image, (int(width*0.25), int(0.28*height)), (int(width*0.75), int(0.28*height)), (0, 255, 0), 4)
-    cv2.line(image, (int(width*0.75), int(0.28*height)), (int(width*0.90), int(0.38*height)), (0, 255, 0), 4)
+    cv2.line(image, (int(width*0.15), int(0.40*height)), (int(width*0.30), int(0.28*height)), (0, 255, 0), 4)
+    cv2.line(image, (int(width*0.30), int(0.28*height)), (int(width*0.70), int(0.28*height)), (0, 255, 0), 4)
+    cv2.line(image, (int(width*0.70), int(0.28*height)), (int(width*0.85), int(0.40*height)), (0, 255, 0), 4)
     cv2.putText(image, "arm range", (int(width*0.65), int(0.28*height) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
     
     # body continuation lines
@@ -84,4 +84,3 @@ if __name__ == "__main__":
     img_with_grid = augment_image(img, h_fov=118, navigation_mode="precision")
     # write to file
     cv2.imwrite("img_with_grid.jpg", img_with_grid)
-

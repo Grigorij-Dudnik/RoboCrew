@@ -7,8 +7,6 @@ from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 
 # --- FIX START: Force all incoming tensors to CPU ---
-# This prevents the "RuntimeError: Attempting to deserialize object on a CUDA device"
-# by intercepting the load call and redirecting it to 'cpu'.
 import torch
 
 _original_restore = torch.serialization.default_restore_location
@@ -32,10 +30,8 @@ servo_controller = ServoControler(right_arm_wheel_usb, left_arm_head_usb)
 
 move_forward = create_move_forward(servo_controller)
 move_backward = create_move_backward(servo_controller)
-
 turn_left = create_turn_left(servo_controller)
 turn_right = create_turn_right(servo_controller)
-
 strafe_left = create_strafe_left(servo_controller)
 strafe_right = create_strafe_right(servo_controller)
 
@@ -45,10 +41,27 @@ go_to_normal_mode = create_go_to_normal_mode(servo_controller)
 
 pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
-    tool_description="Grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
+    tool_description="Manipulation tool to grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
     task_prompt="Grab a notebook.",
     server_address="100.86.155.83:8080",
-    policy_name="Grigorij/act_right_arm_grab_notebook",
+    policy_name="Grigorij/smolvla_right_arm_grab_notebook2",
+    policy_type="smolvla",
+    arm_port=right_arm_wheel_usb,
+    servo_controller=servo_controller,
+    #camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
+    camera_config={"camera1": {"index_or_path": "/dev/camera_center"}, "camera2": {"index_or_path": "/dev/camera_right"}},   # for smolvla
+    main_camera_object=main_camera,
+    policy_device="cuda",
+    execution_time=45,
+    fps=15,
+    actions_per_chunk=30,
+)
+give_notebook = create_vla_single_arm_manipulation(
+    tool_name="Give_a_notebook_to_a_human",
+    tool_description="Manipulation tool to take a notebook from your basket and give it to human. Use the tool only when you are close to the human (base of human is below green line), and look straingt on him.",
+    task_prompt="Grab a notebook and give it to a human.",
+    server_address="100.86.155.83:8080",
+    policy_name="Grigorij/act_right_arm_give_notebook",
     policy_type="act",
     arm_port=right_arm_wheel_usb,
     servo_controller=servo_controller,
@@ -59,25 +72,10 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     fps=15,
     actions_per_chunk=30,
 )
-give_notebook = create_vla_single_arm_manipulation(
-    tool_name="Give_a_notebook_to_a_human",
-    tool_description="Take a notebook from your basket and give it to human. Use the tool only when you are close to the human (base of human is below green line), and look straingt on him.",
-    task_prompt="Grab a notebook and give it to a human.",
-    server_address="100.86.155.83:8080",
-    policy_name="Grigorij/act_right_arm_give_notebook",
-    policy_type="act",
-    arm_port=right_arm_wheel_usb,
-    servo_controller=servo_controller,
-    camera_config={"main": {"index_or_path": "/dev/video0"}, "right_arm": {"index_or_path": "/dev/video2"}},
-    main_camera_object=main_camera,
-    policy_device="cuda",
-    execution_time=45,
-    fps=15,
-    actions_per_chunk=30,
-)
 # init agent
 agent = LLMAgent(
-    model="google_genai:gemini-robotics-er-1.5-preview",
+    model="google_genai:gemini-3-flash-preview",
+    #model="google_genai:gemini-robotics-er-1.5-preview",
     tools=[
         move_forward,
         move_backward,
@@ -105,7 +103,7 @@ print("Agent initialized.")
 servo_controller.reset_head_position()
 
 # run agent with a sample task
-agent.task = "Grab blue notebook from the table and give it to human."
+agent.task = "Approach blue notebook, grab it from the table and give it to human. Do not approach human until you grabbed a notebook."
 #agent.task = "Strafe right all the time."
 try:
     agent.go()
