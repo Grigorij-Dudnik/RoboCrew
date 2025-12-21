@@ -1,11 +1,9 @@
 import base64
-import cv2
-from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
 from lerobot.async_inference.robot_client import RobotClient 
 from lerobot.async_inference.configs import RobotClientConfig
 from lerobot.robots.so101_follower.config_so101_follower import SO101FollowerConfig
-from lerobot.robots.bi_so100_follower.config_bi_so100_follower import BI_SO100FollowerConfig
+from lerobot.robots.bi_so100_follower.config_bi_so100_follower import BiSO100FollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 from robocrew.core.utils import capture_image
 import time
@@ -145,7 +143,7 @@ def create_vla_single_arm_manipulation(
         policy_name: str, 
         policy_type: str, 
         arm_port: str,
-        servo_controller, 
+        servo_controler, 
         camera_config: dict[str, dict], 
         main_camera_object,
         execution_time: int = 30,
@@ -203,8 +201,8 @@ def create_vla_single_arm_manipulation(
     def tool_name_to_override() -> str:
         """Tood description to override."""
         print("Manipulation tool activated")
-        servo_controller.turn_head_pitch(45)
-        servo_controller.turn_head_yaw(0)
+        servo_controler.turn_head_pitch(45)
+        servo_controler.turn_head_yaw(0)
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
@@ -223,7 +221,7 @@ def create_vla_single_arm_manipulation(
             # Re-open main camera for agent use. 
             time.sleep(1)
             main_camera_object.reopen()
-            servo_controller.reset_head_position()
+            servo_controler.reset_head_position()
         
         return "Arm manipulation done"
     

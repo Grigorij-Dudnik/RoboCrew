@@ -1,7 +1,7 @@
 from robocrew.core.utils import capture_image
 from robocrew.core.sound_receiver import SoundReceiver
+from robocrew.core.tools import create_say
 from dotenv import find_dotenv, load_dotenv
-import cv2
 import base64
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
@@ -108,7 +108,7 @@ base_system_prompt = """
 """
 
 class LLMAgent():
-    def __init__(self, model, tools, main_camera, system_prompt=None, camera_fov=90, sounddevice_index=None, wakeword="robot", tts=False, history_len=None, debug_mode=False, use_memory=False):
+    def __init__(self, model, tools, main_camera, system_prompt=None, camera_fov=90, sounddevice_index=None, servo_controler=None, wakeword="robot", tts=False, history_len=None, debug_mode=False, use_memory=False):
         """
         model: name of the model to use
         tools: list of langchain tools
@@ -168,6 +168,7 @@ class LLMAgent():
         # cameras
         self.main_camera = main_camera
         self.camera_fov = camera_fov
+        self.servo_controler = servo_controler
 
 
     def invoke_tool(self, tool_call):
@@ -198,49 +199,55 @@ class LLMAgent():
             self.task = self.task_queue.get()
 
     def go(self):
-        while True:
-            image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
-            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-            if self.debug:
-                open(f"debug/latest_view.jpg", "wb").write(image_bytes)
-            
-            message = HumanMessage(
-                content=[
-                    {"type": "text", "text": "Main camera view:"},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
-                    },
-                    {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
-                ]
-            )
-               
-            self.message_history.append(message)
-            response = self.llm.invoke(self.message_history)
-            print(response.content)
-            print(response.tool_calls)
-            
-            self.message_history.append(response)
-            if self.history_len:
-                self.cut_off_context(self.history_len)
-            # execute tool
-            for tool_call in response.tool_calls:
-                tool_response, additional_response = self.invoke_tool(tool_call)
-                self.message_history.append(tool_response)
-                if additional_response:
-                    self.message_history.append(additional_response)
-                        # Special handling for save_checkpoint
-                if tool_call["name"] == "save_checkpoint":
-                    checkpoint_info = tool_call["args"].get("checkpont_query")
-                    self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
-                if tool_call["name"] == "go_to_precision_mode":
-                    self.navigation_mode = "precision"
-                elif tool_call["name"] == "go_to_normal_mode":
-                    self.navigation_mode = "normal"
-                if tool_call["name"] == "finish_task":
-                    print("Task finished, going idle.")
-                    return "Task finished, going idle."
+        try:
+            while True:
+                image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
+                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                if self.debug:
+                    open(f"debug/latest_view.jpg", "wb").write(image_bytes)
                 
-            if self.sounddevice_index:
-                self.check_for_new_task()
-            
+                message = HumanMessage(
+                    content=[
+                        {"type": "text", "text": "Main camera view:"},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                        },
+                        {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
+                    ]
+                )
+                
+                self.message_history.append(message)
+                response = self.llm.invoke(self.message_history)
+                print(response.content)
+                print(response.tool_calls)
+                
+                self.message_history.append(response)
+                if self.history_len:
+                    self.cut_off_context(self.history_len)
+                # execute tool
+                for tool_call in response.tool_calls:
+                    tool_response, additional_response = self.invoke_tool(tool_call)
+                    self.message_history.append(tool_response)
+                    if additional_response:
+                        self.message_history.append(additional_response)
+                            # Special handling for save_checkpoint
+                    if tool_call["name"] == "save_checkpoint":
+                        checkpoint_info = tool_call["args"].get("checkpont_query")
+                        self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
+                    if tool_call["name"] == "go_to_precision_mode":
+                        self.navigation_mode = "precision"
+                    elif tool_call["name"] == "go_to_normal_mode":
+                        self.navigation_mode = "normal"
+                    if tool_call["name"] == "finish_task":
+                        print("Task finished, going idle.")
+                        return "Task finished, going idle."
+                    
+                if self.sounddevice_index:
+                    self.check_for_new_task()
+        except KeyboardInterrupt:
+            print("Interrupted by user, shutting down.")
+        finally:
+            if self.servo_controler:
+                print("Disconnecting servo controller...")
+                self.servo_controler.__del__()
