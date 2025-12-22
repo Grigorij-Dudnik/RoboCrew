@@ -1,9 +1,23 @@
 """
-The example of an advanced movement control of XLeRobot using RoboCrew.
  - The normal mode allows faster movement, while camera is looking higher.
- - The precision mode allows slower movement, while camera is looking lower for better precision.
+ - The precision mode allows slower movement, while camera is looking lower for better movement precision and ability to see its own body.
  - Looking around tool uses the main camera to look left and right to find objects of interest.
+ - Strafe movement is for going sideways without turning robot body.
 """
+
+from robocrew.core.camera import RobotCamera
+from robocrew.core.LLMAgent import LLMAgent
+from robocrew.robots.XLeRobot.tools import \
+    create_go_to_precision_mode, \
+    create_go_to_normal_mode, \
+    create_move_backward, \
+    create_move_forward, \
+    create_strafe_right, \
+    create_strafe_left, \
+    create_look_around, \
+    create_turn_right, \
+    create_turn_left
+from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 system_prompt = """
 ## ROBOT SPECS
@@ -41,21 +55,6 @@ system_prompt = """
 5. In PRECISION, target above green line? → Move forward until below line
 6. Stuck or lost target? → PRECISION mode + move_backward/strafe OR switch to NORMAL + look_around
 """
-
-
-from robocrew.core.camera import RobotCamera
-from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.tools import \
-    create_go_to_precision_mode, \
-    create_go_to_normal_mode, \
-    create_move_backward, \
-    create_move_forward, \
-    create_strafe_right, \
-    create_strafe_left, \
-    create_look_around, \
-    create_turn_right, \
-    create_turn_left
-from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 # set up main camera
 main_camera = RobotCamera("/dev/camera_center") # camera usb port Eg: /dev/video0
