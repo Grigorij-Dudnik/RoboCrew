@@ -6,8 +6,11 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 
 ![xlerobot_schema](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/master/images/main_img.png)
 
-[![Docs](https://img.shields.io/badge/docs-latest-red)](RoboCrewDocslinkhere)
+<div align="center">
+
+[![Docs](https://img.shields.io/badge/docs-latest-red)](https://grigorij-dudnik.github.io/RoboCrew/)
 [![Discord](https://img.shields.io/static/v1?logo=discord&label=discord&message=Join&color=brightgreen)](https://discord.gg/BAe59y93)
+</div>
 
 ## Features
 
