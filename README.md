@@ -9,13 +9,14 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 
 ## Features
 
+- 🚗 **Movement** - Pre-built wheel controls for mobile robots
+- 🦾 **Manipulation** - VLA models as a tools for arms control
 - 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
 - 🎤 **Voice** - Wake-word activated voice commands and TTS responses
 - 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
-- 🚗 **Movement** - Pre-built wheel controls for mobile robots
-- 📚 **Memory** - Long-term memory to remember envinronment details
-- 🦾 **Manipulation** - VLA models as a tools for arms control
+- 📚 **Memory** - Long-term memory to remember environment details
 - 🗺️ **Navigation** *(coming soon)* - Navigation features
+
 
 ## Supported Robots
 
@@ -40,13 +41,13 @@ from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
 # set up main camera for head tools
-main_camera_usb_port = "/dev/video0" # camera usb port Eg: /dev/video0
+main_camera_usb_port = "/dev/video0" # camera usb port E.g.: /dev/video0
 main_camera = cv2.VideoCapture(main_camera_usb_port)
 main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
 #set up wheel movement tools
-right_arm_wheel_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
-left_arm_head_usb = "/dev/arm_left"      # provide your left arm usb port. Eg: /dev/ttyACM0
+right_arm_wheel_usb = "/dev/arm_right"    # provide your right arm usb port. E.g.: /dev/ttyACM1
+left_arm_head_usb = "/dev/arm_left"      # provide your left arm usb port. E.g.: /dev/ttyACM0
 servo_controller = ServoControler(right_arm_wheel_usb, left_arm_head_usb)
 
 # Create movement tools
@@ -68,7 +69,7 @@ agent.go()  # Robot explores autonomously
 
 ### With Voice Commands
 
-Add a microphone and a speaker to give your robot voice commands and enable him to speak back to you:
+Add a microphone and a speaker to give your robot voice commands and enable it to speak back to you:
 
 ```python
 agent = LLMAgent(
@@ -94,7 +95,7 @@ Find out [full example here](examples/2_xlerobot_bare_minimum.py).
 
 ### Add VLA policy as a tool
 
-Let's make our robot to manipulate with its arms! First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html). After you have your policy, run the policy server in separate terminal.
+Let's make our robot manipulate with its arms! First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html). After you have your policy, run the policy server in a separate terminal.
 
 Let's create a tool for the agent to enable it to use a VLA policy:
 ```python
@@ -117,11 +118,13 @@ grab_a_cup = create_vla_single_arm_manipulation(
 
 Find out [full example here](examples/3_xlerobot_bare_minimum.py).
 
-## Give USB ports a constant names (Udev rules)
+
+## Give to USB ports a constant names (Udev rules)
+
 To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
 
 ```bash
-robocrew-find-components
+robocrew-setup-usb-modules
 ```
 
 This script will guide you through connecting each component one by one and will create the necessary udev rules to maintain consistent device naming.
@@ -136,14 +139,3 @@ pi@raspberrypi:~ $ ls -l /dev/cam*
 lrwxrwxrwx 1 root root 6 Dec  2 11:40 /dev/camera_center -> video0
 lrwxrwxrwx 1 root root 6 Dec  2 11:40 /dev/camera_right -> video2
 ```
-
-## Key Parameters
-
-- **model**: Any LangChain model
-- **tools**: List of functions your robot can call (movement, manipulation)
-- **main_camera_usb_port**: Your camera device (find with `ls /dev/video*`)
-- **sounddevice_index**: Microphone index (optional, for voice commands)
-- **wakeword**: Word that must appear in your speech to give robot a new task (default: "robot").
-- **tts**: Enable text-to-speech so robot can speak (default: False)
-- **history_len**: How many conversation turns to remember (optional)
-- **use_memory**: Enable memory system to remember important things (optional)
