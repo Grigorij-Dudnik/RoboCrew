@@ -6,6 +6,8 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 
 ![xlerobot_schema](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/master/images/main_img.png)
 
+[![Docs](https://img.shields.io/badge/docs-latest-red)](RoboCrewDocslinkhere)
+[![Discord](https://img.shields.io/static/v1?logo=discord&label=discord&message=Join&color=brightgreen)](https://discord.gg/BAe59y93)
 
 ## Features
 
@@ -34,37 +36,34 @@ pip install robocrew
 ### Mobile Robot (XLeRobot)
 
 ```python
-import cv2
-from robocrew.core.tools import finish_task
+from robocrew.core.camera import RobotCamera
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right, create_look_around
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_right, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
-# set up main camera for head tools
-main_camera_usb_port = "/dev/video0" # camera usb port E.g.: /dev/video0
-main_camera = cv2.VideoCapture(main_camera_usb_port)
-main_camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+# set up main camera
+main_camera = RobotCamera("/dev/camera_center") # camera usb port Eg: /dev/video0
 
-#set up wheel movement tools
-right_arm_wheel_usb = "/dev/arm_right"    # provide your right arm usb port. E.g.: /dev/ttyACM1
-left_arm_head_usb = "/dev/arm_left"      # provide your left arm usb port. E.g.: /dev/ttyACM0
-servo_controller = ServoControler(right_arm_wheel_usb, left_arm_head_usb)
+#set up servo controler
+right_arm_wheel_usb = "/dev/arm_right"    # provide your right arm usb port. Eg: /dev/ttyACM1
+servo_controler = ServoControler(right_arm_wheel_usb=right_arm_wheel_usb)
 
-# Create movement tools
-move_forward = create_move_forward(servo_controller)
-turn_left = create_turn_left(servo_controller)
-turn_right = create_turn_right(servo_controller)
-look_around = create_look_around(servo_controller, main_camera)
+#set up tools
+move_forward = create_move_forward(servo_controler)
+turn_left = create_turn_left(servo_controler)
+turn_right = create_turn_right(servo_controler)
 
-# Create agent
+# init agent
 agent = LLMAgent(
-    model="google_genai:gemini-robotics-er-1.5-preview",
-    tools=[move_forward, turn_left, turn_right, look_around, finish_task],
+    model="google_genai:gemini-3-flash-preview",
+    tools=[move_forward, turn_left, turn_right],
     main_camera=main_camera,
+    servo_controler=servo_controler,
 )
-agent.task = "Find kitchen in my house and go there."
 
-agent.go()  # Robot explores autonomously
+agent.task = "Approach a human."
+
+agent.go()
 ```
 
 ### With Voice Commands
@@ -91,32 +90,33 @@ sudo apt install portaudio19-dev
 
 Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the wakeword "robot" anywhere in your command, it'll use the entire phrase as its new task.
 
-Find out [full example here](examples/2_xlerobot_bare_minimum.py).
+Find out full example at [examples/2_xlerobot_listening_and_speaking.py](examples/2_xlerobot_listening_and_speaking.py).
 
 ### Add VLA policy as a tool
 
 Let's make our robot manipulate with its arms! First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html). After you have your policy, run the policy server in a separate terminal.
 
 Let's create a tool for the agent to enable it to use a VLA policy:
+
 ```python
 from robocrew.robots.XLeRobot.tools import create_vla_single_arm_manipulation
 
-grab_a_cup = create_vla_single_arm_manipulation(
-    tool_name="grab_a_cup",
-    tool_description="""Grab a cup in front of you and place it to the robot container""",
-    task_prompt="Grab a notebook and give it to a human.",
-    server_address="localhost:8080",
-    policy_name="Grigorij/act_right_arm_grab_notebook",
+pick_up_notebook = create_vla_single_arm_manipulation(
+    tool_name="Grab_a_notebook",
+    tool_description="Manipulation tool to grab a notebook from the table and put it to your basket.",
+    task_prompt="Grab a notebook.",
+    server_address="0.0.0.0:8080",
+    policy_name="Grigorij/act_right-arm-grab-notebook-2",
     policy_type="act",
-    arm_port=right_arm_usb,
-    camera_config={"main": {"index_or_path": "/dev/video0"}, "left_arm": {"index_or_path": "/dev/video2"}},
+    arm_port=right_arm_wheel_usb,
+    servo_controler=servo_controler,
+    camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
-    main_camera_usb_port=main_camera_usb_port,
-    policy_device="cpu"
+    policy_device="cpu",
 )
 ```
 
-Find out [full example here](examples/3_xlerobot_bare_minimum.py).
+Find out full example at [examples/3_xlerobot_arm_manipulation.py](examples/3_xlerobot_arm_manipulation.py).
 
 
 ## Give to USB ports a constant names (Udev rules)
