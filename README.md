@@ -20,7 +20,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 ## Supported Robots
 
 - **XLeRobot**
-- **LeKiwi** (not tested, but we assume XLeRobot code will work for it as platforms are similar. Please try to run repo on your LeKiwi and open an issue with info if it works)
+- **LeKiwi** (use XLeRobot code for it)
 - More robot platforms coming soon!
 
 
@@ -90,6 +90,8 @@ sudo apt install portaudio19-dev
 
 Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the wakeword "robot" anywhere in your command, it'll use the entire phrase as its new task.
 
+Find out [full example here](examples/2_xlerobot_bare_minimum.py).
+
 ### Add VLA policy as a tool
 
 Let's make our robot to manipulate with its arms! First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html). After you have your policy, run the policy server in separate terminal.
@@ -112,6 +114,8 @@ grab_a_cup = create_vla_single_arm_manipulation(
     policy_device="cpu"
 )
 ```
+
+Find out [full example here](examples/3_xlerobot_bare_minimum.py).
 
 ## Give USB ports a constant names (Udev rules)
 To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
