@@ -72,14 +72,13 @@ Add a microphone and a speaker to give your robot voice commands and enable it t
 
 ```python
 agent = LLMAgent(
-    model="google_genai:gemini-robotics-er-1.5-preview",
-    tools=[move_forward, turn_left, turn_right, look_around],
-    main_camera=main_camera,  # provide usb port main camera connected to
-    sounddevice_index=0,  # Your mic device
-    wakeword="robot",  # The robot listens for this word in your speech
-    history_len=4,
-    tts=True, # Text-to-speech
-    use_memory=True, # memory system to remember important things
+    model="google_genai:gemini-3-flash-preview",
+    tools=[move_forward, turn_left, turn_right],
+    main_camera=main_camera,
+    servo_controler=servo_controler,
+    sounddevice_index=2,    # provide your microphone device index.
+    tts=True,               # enable text-to-speech (robot can speak).
+    use_memory=True,        # enable long-term memory (requires sqlite3).
 )
 ```
 
