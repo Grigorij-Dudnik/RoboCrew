@@ -30,7 +30,7 @@ agent = LLMAgent(
     main_camera=main_camera,
     servo_controler=servo_controler,
     sounddevice_index=1,    # provide your microphone device index.
-    tts=True,               # enable text-to-speech (robot can speak).
+    # tts=True,               # uncomment for text-to-speech, to make robot speak (work in progress).
 )
 
 agent.task = "Wait for the task"
