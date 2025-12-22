@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 from robocrew.core.memory import Memory
+import pyttsx3
 
 
 @tool
@@ -41,9 +42,7 @@ def create_say(sound_receiver=None):
         Speak a sentence aloud to the user.
         Use this to communicate verbally with the user, for example to greet them,
         answer questions, or provide status updates.
-        """
-        import pyttsx3
-        
+        """        
         # Stop listening if sound receiver is active (to avoid hearing ourselves)
         if sound_receiver is not None:
             sound_receiver.stop_listening()
