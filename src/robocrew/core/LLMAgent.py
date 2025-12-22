@@ -23,7 +23,21 @@ base_system_prompt = """
 """
 
 class LLMAgent():
-    def __init__(self, model, tools, main_camera, system_prompt=None, camera_fov=90, sounddevice_index=None, servo_controler=None, wakeword="robot", tts=False, history_len=None, debug_mode=False, use_memory=False):
+    def __init__(
+            self, \
+            model, \
+            tools, \
+            main_camera, \
+            system_prompt=None, \
+            camera_fov=90, \
+            sounddevice_index=None, \
+            servo_controler=None, \
+            wakeword="robot", \
+            tts=False, \
+            history_len=None, \
+            debug_mode=False, \
+            use_memory=False
+        ):
         """
         model: name of the model to use
         tools: list of langchain tools

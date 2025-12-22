@@ -106,9 +106,6 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
     policy_device="cpu",
-    execution_time=45,
-    fps=15,
-    actions_per_chunk=30,
 )
 
 give_notebook = create_vla_single_arm_manipulation(
@@ -124,8 +121,6 @@ give_notebook = create_vla_single_arm_manipulation(
     main_camera_object=main_camera,
     policy_device="cpu",
     execution_time=45,
-    fps=15,
-    actions_per_chunk=30,
 )
 
 # init agent
