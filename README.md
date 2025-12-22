@@ -78,7 +78,6 @@ agent = LLMAgent(
     servo_controler=servo_controler,
     sounddevice_index=2,    # provide your microphone device index.
     tts=True,               # enable text-to-speech (robot can speak).
-    use_memory=True,        # enable long-term memory (requires sqlite3).
 )
 ```
 
