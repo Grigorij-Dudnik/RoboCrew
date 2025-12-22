@@ -20,3 +20,4 @@ test-req.txt
 debug/
 
 examples/xlerobot_controler_elevator.py
+examples/xlerobot_controler.py
