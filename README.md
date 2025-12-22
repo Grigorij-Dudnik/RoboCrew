@@ -91,7 +91,7 @@ sudo apt install portaudio19-dev
 
 Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the wakeword "robot" anywhere in your command, it'll use the entire phrase as its new task.
 
-Find out full example at [examples/2_xlerobot_listening_and_speaking.py](examples/2_xlerobot_listening_and_speaking.py).
+You can find the full example at [examples/2_xlerobot_listening_and_speaking.py](examples/2_xlerobot_listening_and_speaking.py).
 
 ### Add VLA policy as a tool
 
@@ -117,7 +117,7 @@ pick_up_notebook = create_vla_single_arm_manipulation(
 )
 ```
 
-Find out full example at [examples/3_xlerobot_arm_manipulation.py](examples/3_xlerobot_arm_manipulation.py).
+You can find the full example at [examples/3_xlerobot_arm_manipulation.py](examples/3_xlerobot_arm_manipulation.py).
 
 
 ## Give to USB ports a constant names (Udev rules)
