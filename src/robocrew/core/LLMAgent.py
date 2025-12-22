@@ -72,7 +72,6 @@ class LLMAgent():
         if self.sounddevice_index is not None:
             self.task_queue = queue.Queue()
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
-            # self.task = ""
         self.debug = debug_mode
         self.navigation_mode = "normal"  # or "precision"
 

@@ -1,5 +1,5 @@
 """
-The simplest example of agent that can drive XLeRobot.
+The simplest example of agent that can listen and speak, aside from driving XLeRobot.
 """
 
 from robocrew.core.camera import RobotCamera
@@ -29,11 +29,10 @@ agent = LLMAgent(
     ],
     main_camera=main_camera,
     servo_controler=servo_controler,
-    sounddevice_index=2,    # provide your microphone device index.
+    sounddevice_index=1,    # provide your microphone device index.
     tts=True,               # enable text-to-speech (robot can speak).
-    use_memory=True,        # enable long-term memory (requires sqlite3).
 )
 
-agent.task = "Approach a human."
+agent.task = "Wait for the task"
 
 agent.go()
