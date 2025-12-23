@@ -40,8 +40,8 @@ class ServoControler:
         self.left_arm_head_usb = left_arm_head_usb
         self.speed = speed
         self.action_map = ACTION_MAP if action_map is None else action_map
-        self._wheel_ids = tuple(sorted(next(iter(self.action_map.values())).keys()))
-        self._head_ids = tuple(sorted(HEAD_SERVO_MAP.values()))
+        self._wheel_ids = tuple(list(self.action_map.values())[0].keys())
+        self._head_ids = tuple(HEAD_SERVO_MAP.values())
 
         # Initialize FeetechMotorsBus with the three wheel motors
         if right_arm_wheel_usb:
@@ -87,9 +87,8 @@ class ServoControler:
             )
             self.head_bus.connect()
             self.apply_head_modes()
-            self._head_positions = self.get_head_position()
-            for sid in self._head_ids:
-                self._head_positions.setdefault(sid, 2048)
+            self._head_positions = None
+
 
     def _wheels_stop(self) -> None:
         payload = {wid: 0 for wid in self._wheel_ids}
@@ -152,9 +151,6 @@ class ServoControler:
         payload = {HEAD_SERVO_MAP["pitch"]: float(degrees)}
         self.head_bus.sync_write("Goal_Position", payload)
         self._head_positions.update(payload)
-
-    def get_head_position(self) -> Dict[int, float]:
-        return self.head_bus.sync_read("Present_Position", list(self._head_ids))
 
     def disconnect(self) -> None:
         self._wheels_stop()
