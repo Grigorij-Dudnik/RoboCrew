@@ -87,7 +87,7 @@ class ServoControler:
             )
             self.head_bus.connect()
             self.apply_head_modes()
-            self._head_positions = None
+            self._head_positions = {HEAD_SERVO_MAP["yaw"]: 0.0, HEAD_SERVO_MAP["pitch"]: 0.0}
 
 
     def _wheels_stop(self) -> None:
