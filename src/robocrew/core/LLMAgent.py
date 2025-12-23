@@ -3,6 +3,7 @@ from robocrew.core.sound_receiver import SoundReceiver
 from robocrew.core.tools import create_say
 from dotenv import find_dotenv, load_dotenv
 import base64
+import lidar
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 import queue
@@ -24,19 +25,20 @@ base_system_prompt = """
 
 class LLMAgent():
     def __init__(
-            self, \
-            model, \
-            tools, \
-            main_camera, \
-            system_prompt=None, \
-            camera_fov=90, \
-            sounddevice_index=None, \
-            servo_controler=None, \
-            wakeword="robot", \
-            tts=False, \
-            history_len=None, \
-            debug_mode=False, \
-            use_memory=False
+            self,
+            model,
+            tools,
+            main_camera,
+            system_prompt=None,
+            camera_fov=90,
+            sounddevice_index=None,
+            servo_controler=None,
+            wakeword="robot",
+            tts=False,
+            history_len=None,
+            debug_mode=False,
+            use_memory=False,
+            lidar_usb_port=None,
         ):
         """
         model: name of the model to use
@@ -49,6 +51,7 @@ class LLMAgent():
         history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
         use_memory: set to True to enable long-term memory (requires sqlite3).
         tts: set to True to enable text-to-speech (robot can speak).
+        lidar_usb_port: provide usb port of your lidar if you want robot to support your navigation with lidar.
         """
         system_prompt = system_prompt or base_system_prompt
         
@@ -98,6 +101,11 @@ class LLMAgent():
         self.camera_fov = camera_fov
         self.servo_controler = servo_controler
 
+        # lidar
+        self.lidar = None
+        if lidar_usb_port:
+            self.lidar = lidar.init_lidar(lidar_usb_port)
+
         #TODO: Tidy this up, propably when we restructure LLMAgent
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
@@ -138,16 +146,35 @@ class LLMAgent():
                 if self.debug:
                     open(f"debug/latest_view.jpg", "wb").write(image_bytes)
                 
-                message = HumanMessage(
-                    content=[
-                        {"type": "text", "text": "Main camera view:"},
-                        {
+                content=[
+                    {"type": "text", "text": "Main camera view:"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                    },
+                    {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
+                ]
+
+                if self.lidar:
+                    lidar_buf, lidar_dist = lidar.run_scanner(self.lidar, max_range_m=3, save_to_disc=False)
+                    
+                    if lidar_buf:
+                        lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
+                        
+                        content.append({
+                            "type": "text", 
+                            "text": f"LiDAR Sensor: Distance to nearest obstacle in front: {lidar_dist:.1f} cm."
+                        })
+                        content.append({
+                            "type": "text", 
+                            "text": "LiDAR Map (Top-down view):"
+                        })
+                        content.append({
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
-                        },
-                        {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
-                    ]
-                )
+                            "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
+                        })
+
+                message = HumanMessage(content=content)
                 
                 self.message_history.append(message)
                 response = self.llm.invoke(self.message_history)
@@ -183,3 +210,7 @@ class LLMAgent():
             if self.servo_controler:
                 print("Disconnecting servo controller...")
                 self.servo_controler.disconnect()
+            if self.lidar:
+                print("Stopping and disconnecting LiDAR...")
+                self.lidar.stop()
+                self.lidar.disconnect()
