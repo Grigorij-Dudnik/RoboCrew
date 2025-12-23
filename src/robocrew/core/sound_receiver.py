@@ -137,7 +137,7 @@ class SoundReceiver:
         )
         if transcription.text:  # If transcription is not ""
             print(f"transcription: {transcription.text}")
-            if self.wakeword in transcription.text.lower():
+            if self.wakeword.lower() in transcription.text.lower():
                 self.task_queue.put(transcription.text)
 
 

@@ -29,8 +29,8 @@ agent = LLMAgent(
     ],
     main_camera=main_camera,
     servo_controler=servo_controler,
-    sounddevice_index=1,    # provide your microphone device index.
-    wakeword="hey robot",   # set custom wakeword (default is "robot").
+    sounddevice_index=2,    # provide your microphone device index.
+    wakeword="Bob",         # set custom wakeword (default is "robot").
     # tts=True,               # uncomment for text-to-speech, to make robot speak (work in progress).
 )
 
