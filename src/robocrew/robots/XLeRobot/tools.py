@@ -271,13 +271,11 @@ def create_vla_two_arm_manipulation(
         )
 
 
-    robot_config = BI_SO100FollowerConfig(
+    robot_config = BiSO100FollowerConfig(
         left_arm_port=servo_controller.left_arm_head_usb,
         right_arm_port=servo_controller.right_arm_wheel_usb,
         cameras=configured_cameras,
         id="robot_arms",
-        # TODO: Figure out calibration loading/saving issues
-        # calibration_dir=Path("/home/pi/RoboCrew/calibrations")
     )
 
     cfg = RobotClientConfig(

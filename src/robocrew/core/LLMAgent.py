@@ -98,7 +98,7 @@ class LLMAgent():
         self.camera_fov = camera_fov
         self.servo_controler = servo_controler
 
-        #TODO: Tidy this up, propably when we restructure LLMAgent
+        #TODO: Tidy this up, probably when we restructure LLMAgent
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
 
@@ -177,9 +177,12 @@ class LLMAgent():
                     
                 if self.sounddevice_index:
                     self.check_for_new_task()
+
         except KeyboardInterrupt:
             print("Interrupted by user, shutting down.")
+
         finally:
             if self.servo_controler:
                 print("Disconnecting servo controller...")
                 self.servo_controler.disconnect()
+                
