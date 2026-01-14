@@ -130,20 +130,25 @@ class LLMAgent():
         if not self.task_queue.empty():
             self.task = self.task_queue.get()
 
+    def fetch_camera_images_base64(self):
+        """Fetch all camera views from Earth Rover SDK in a single request."""
+        image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
+        if self.debug:
+            open(f"debug/latest_view.jpg", "wb").write(image_bytes)
+        return [base64.b64encode(image_bytes).decode('utf-8')]
+
+
     def go(self):
         try:
             while True:
-                image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
-                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                if self.debug:
-                    open(f"debug/latest_view.jpg", "wb").write(image_bytes)
+                camera_images = self.fetch_camera_images_base64()
                 
                 message = HumanMessage(
                     content=[
                         {"type": "text", "text": "Main camera view:"},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                            "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"}
                         },
                         {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
                     ]
