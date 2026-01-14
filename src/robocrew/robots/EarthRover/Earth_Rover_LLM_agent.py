@@ -89,7 +89,7 @@ class EarthRoverAgent(LLMAgent):
                 camera_views = self.fetch_camera_images_base64()
 
                 # Create messages for all camera views
-                messages = [
+                message = [
                     HumanMessage(
                         content=[
                             {"type": "text", "text": "Front camera view:"},
@@ -112,26 +112,25 @@ class EarthRoverAgent(LLMAgent):
                     )
                 ]
 
-                # Add all messages to history
-                self.message_history.extend(messages)
-
-                # Trim history if needed
-                if self.history_len and len(self.message_history) > self.history_len + 1:
-                    self.message_history = [self.system_message] + self.message_history[-self.history_len:]
-
-                # Get LLM response
+                self.message_history.append(message)
                 response = self.llm.invoke(self.message_history)
+                print(response.content)
+                print(response.tool_calls)
+                
+                self.message_history.append(response)
+                if self.history_len:
+                    self.cut_off_context(self.history_len)
+                # execute tool
+                for tool_call in response.tool_calls:
+                    tool_response, additional_response = self.invoke_tool(tool_call)
+                    self.message_history.append(tool_response)
+                    if additional_response:
+                        self.message_history.append(additional_response)
+                    # Special handling for special tools
+                    if tool_call["name"] == "finish_task":
+                        print("Task finished, going idle.")
+                        return "Task finished, going idle."
 
-                # Process tool calls if any
-                if hasattr(response, 'tool_calls') and response.tool_calls:
-                    for tool_call in response.tool_calls:
-                        tool_response, additional_output = self.invoke_tool(tool_call)
-                        self.message_history.append(tool_response)
-                        if additional_output:
-                            self.message_history.append(additional_output)
-
-                # Check for new tasks from sound (if enabled)
-                self.check_for_new_task()
 
         except KeyboardInterrupt:
             print("Earth Rover agent stopped by user")

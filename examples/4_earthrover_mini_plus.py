@@ -22,7 +22,6 @@ agent = EarthRoverAgent(
         go_forward_with_turning_right,
         go_forward_with_turning_left,
     ],
-    sdk_url="http://localhost:8000",  # Earth Rover SDK URL
     history_len=8,              # nr of last message-answer pairs to keep
     camera_fov=90,
 )
