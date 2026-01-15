@@ -26,6 +26,6 @@ agent = EarthRoverAgent(
     camera_fov=90,
 )
 
-agent.task = "Go forward for 3 meters, and then turn right in endless."
+agent.task = "gturn right 90 deg"
 
 agent.go()
