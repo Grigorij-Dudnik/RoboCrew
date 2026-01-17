@@ -156,23 +156,18 @@ class LLMAgent():
                 ]
 
                 if self.lidar:
-                    lidar_buf, lidar_dist = lidar.run_scanner(self.lidar, max_range_m=3, save_to_disc=False)
+                    lidar_buf, lidar_front_dist = lidar.run_scanner(self.lidar, max_range_m=3, save_to_disc=False)
+                    lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
                     
-                    if lidar_buf:
-                        lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
-                        
-                        content.append({
-                            "type": "text", 
-                            "text": f"LiDAR Sensor: Distance to nearest obstacle in front: {lidar_dist:.1f} cm."
-                        })
-                        content.append({
-                            "type": "text", 
-                            "text": "LiDAR Map (Top-down view):"
-                        })
-                        content.append({
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
-                        })
+                    content.extend([{
+                        "type": "text", 
+                        "text": f"LiDAR Sensor: Distance to nearest obstacle in front: {lidar_front_dist:.1f} cm."
+                    },
+                    {"type": "text", "text": "LiDAR Map (Top-down view):"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
+                    }])
 
                 message = HumanMessage(content=content)
                 

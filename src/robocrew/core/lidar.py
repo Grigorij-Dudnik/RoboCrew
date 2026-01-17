@@ -132,6 +132,3 @@ def run_scanner(lidar, max_range_m = 3, rotations = 5, save_to_disc = True):
     finally:
         lidar.stop()
     return buf, dist_0
-
-lidar = init_lidar('COM6')
-run_scanner(lidar, max_range_m=3, save_to_disc=True)
