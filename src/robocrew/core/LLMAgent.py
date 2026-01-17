@@ -1,6 +1,6 @@
 from robocrew.core.utils import capture_image
 from robocrew.core.sound_receiver import SoundReceiver
-from robocrew.core.tools import create_say
+from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
 import base64
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
@@ -53,7 +53,7 @@ class LLMAgent():
         system_prompt = system_prompt or base_system_prompt
         
         if use_memory:
-            from robocrew.core.tools import remember_thing, recall_thing
+            
             tools.append(remember_thing)
             tools.append(recall_thing)
             memory_prompt = (

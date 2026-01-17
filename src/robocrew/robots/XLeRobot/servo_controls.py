@@ -11,7 +11,7 @@ from lerobot.motors.feetech import FeetechMotorsBus, OperatingMode
 DEFAULT_BAUDRATE = 1_000_000
 DEFAULT_SPEED = 10_000
 LINEAR_MPS = 0.25
-ANGULAR_DPS = 90.0
+ANGULAR_DPS = 100.0
 
 ACTION_MAP = {
     "forward": {7: 1.0, 8: 0.0, 9: -1.0},
