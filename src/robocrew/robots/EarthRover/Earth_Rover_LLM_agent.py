@@ -20,7 +20,6 @@ class EarthRoverAgent(LLMAgent):
         system_prompt=None,
         camera_fov=90,
         history_len=None,
-        debug_mode=False,
         use_memory=False
     ):
         """
@@ -32,7 +31,6 @@ class EarthRoverAgent(LLMAgent):
             system_prompt: custom system prompt - optional (uses Earth Rover default if None)
             camera_fov: field of view (degrees) of your main camera
             history_len: if you want agent to have messages history cutoff
-            debug_mode: enable debug mode for additional logging
             use_memory: set to True to enable long-term memory
         """
         # Use Earth Rover specific system prompt if none provided
@@ -70,7 +68,6 @@ class EarthRoverAgent(LLMAgent):
             wakeword=None,  # No wakeword detection
             tts=False,  # No text-to-speech
             history_len=history_len,
-            debug_mode=debug_mode,
             use_memory=use_memory
         )
         

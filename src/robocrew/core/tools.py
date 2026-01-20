@@ -5,7 +5,7 @@ import pyttsx3
 
 @tool
 def finish_task():
-    """Claim that task is finished and go idle. You need to ensure the task is actually finished before calling this tool."""
+    """Claim that task is finished and go idle. Call this tool when you 200% sure the task is complete."""
     return "Task finished"
 
 

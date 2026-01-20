@@ -10,14 +10,12 @@ pypi-robocrew/
 dist/
 old_sdk.py
 uv.lock
-debug/
 physical_path.sh
 robot_memory.db
 logs/
 requirements.txt
 constraints.txt
 test-req.txt
-debug/
 *.rules
 *.log
 

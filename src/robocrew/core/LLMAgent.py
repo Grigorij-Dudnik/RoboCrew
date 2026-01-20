@@ -1,7 +1,7 @@
 from robocrew.core.utils import capture_image
-from robocrew.core.sound_receiver import SoundReceiver
 from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
+import time
 import base64
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
@@ -35,7 +35,6 @@ class LLMAgent():
             wakeword="robot", \
             tts=False, \
             history_len=None, \
-            debug_mode=False, \
             use_memory=False
         ):
         """
@@ -66,13 +65,13 @@ class LLMAgent():
         self.tts = tts
         self.sound_receiver = None
 
-        self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
+        self.task = None
         
         self.sounddevice_index = sounddevice_index
         if self.sounddevice_index is not None:
+            from robocrew.core.sound_receiver import SoundReceiver
             self.task_queue = queue.Queue()
             self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
-        self.debug = debug_mode
         self.navigation_mode = "normal"  # or "precision"
 
         # Add TTS tool if enabled (after sound_receiver is created so we can pass it)
@@ -101,7 +100,6 @@ class LLMAgent():
         #TODO: Tidy this up, probably when we restructure LLMAgent
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
-
 
     def invoke_tool(self, tool_call):
         # convert string to real function
@@ -133,52 +131,59 @@ class LLMAgent():
     def fetch_camera_images_base64(self):
         """Fetch all camera views from Earth Rover SDK in a single request."""
         image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
-        if self.debug:
-            open(f"debug/latest_view.jpg", "wb").write(image_bytes)
         return [base64.b64encode(image_bytes).decode('utf-8')]
+    
+    def main_loop_content(self):
+        camera_images = self.fetch_camera_images_base64()
+        
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": "Main camera view:"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"}
+                },
+                {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
+            ]
+        )
+        
+        self.message_history.append(message)
+        response = self.llm.invoke(self.message_history)
+        print(response.content)
+        print(response.tool_calls)
+        
+        self.message_history.append(response)
+        if self.history_len:
+            self.cut_off_context(self.history_len)
+        # execute tool
+        for tool_call in response.tool_calls:
+            tool_response, additional_response = self.invoke_tool(tool_call)
+            self.message_history.append(tool_response)
+            if additional_response:
+                self.message_history.append(additional_response)
+            # Special handling for special tools
+            if tool_call["name"] == "save_checkpoint":
+                checkpoint_info = tool_call["args"].get("checkpont_query")
+                self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
+            if tool_call["name"] == "go_to_precision_mode":
+                self.navigation_mode = "precision"
+            elif tool_call["name"] == "go_to_normal_mode":
+                self.navigation_mode = "normal"
+            if tool_call["name"] == "finish_task":
+                self.task = None
+                print("Task finished, going idle.")
+                return "Task finished, going idle."
 
 
     def go(self):
         try:
             while True:
-                camera_images = self.fetch_camera_images_base64()
-                
-                message = HumanMessage(
-                    content=[
-                        {"type": "text", "text": "Main camera view:"},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"}
-                        },
-                        {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
-                    ]
-                )
-                
-                self.message_history.append(message)
-                response = self.llm.invoke(self.message_history)
-                print(response.content)
-                print(response.tool_calls)
-                
-                self.message_history.append(response)
-                if self.history_len:
-                    self.cut_off_context(self.history_len)
-                # execute tool
-                for tool_call in response.tool_calls:
-                    tool_response, additional_response = self.invoke_tool(tool_call)
-                    self.message_history.append(tool_response)
-                    if additional_response:
-                        self.message_history.append(additional_response)
-                    # Special handling for special tools
-                    if tool_call["name"] == "save_checkpoint":
-                        checkpoint_info = tool_call["args"].get("checkpont_query")
-                        self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
-                    if tool_call["name"] == "go_to_precision_mode":
-                        self.navigation_mode = "precision"
-                    elif tool_call["name"] == "go_to_normal_mode":
-                        self.navigation_mode = "normal"
-                    if tool_call["name"] == "finish_task":
-                        print("Task finished, going idle.")
-                        return "Task finished, going idle."
+                a = time.perf_counter()
+                if self.task:
+                    self.main_loop_content()
+                else:
+                    # idle mode
+                    time.sleep(0.5)
                     
                 if self.sounddevice_index:
                     self.check_for_new_task()
