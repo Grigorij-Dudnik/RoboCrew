@@ -1,9 +1,9 @@
 from robocrew.core.utils import capture_image
-from robocrew.core.sound_receiver import SoundReceiver
+#from robocrew.core.sound_receiver import SoundReceiver
 from robocrew.core.tools import create_say
 from dotenv import find_dotenv, load_dotenv
 import base64
-import lidar
+from . import lidar
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 import queue
@@ -67,14 +67,14 @@ class LLMAgent():
             system_prompt += memory_prompt
 
         self.tts = tts
-        self.sound_receiver = None
+        #self.sound_receiver = None
 
         self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
         
         self.sounddevice_index = sounddevice_index
         if self.sounddevice_index is not None:
             self.task_queue = queue.Queue()
-            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
+            #self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
         self.debug = debug_mode
         self.navigation_mode = "normal"  # or "precision"
 

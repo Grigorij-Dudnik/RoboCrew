@@ -17,7 +17,6 @@ dependencies = [
   "lerobot>=0.4.2",
   "lerobot[async]==0.4.2",
   "opencv-python==4.10.0.84",
-  "pyaudio==0.2.14",
   "python-dotenv==1.2.1",
   "openai==2.8.1",
   "feetech-servo-sdk==1.0.0",
