@@ -5,8 +5,8 @@ import time
 import io
 
 BAUD_RATE = 115200
-ROBOT_WIDTH = 500
-ROBOT_LENGTH = 350
+ROBOT_WIDTH = 440
+ROBOT_LENGTH = 360
 UI_STYLE = {
     'bg_color': 'white',
     'grid_color': '#333333',
@@ -14,7 +14,6 @@ UI_STYLE = {
     'text_color': '#333333',
     'text_bg_color': 'white',
     'robot_color': 'gray',
-    'robot_alpha': 0.9,
     'grid_linewidth': 1.5,
     'point_size': 4
 }
@@ -30,14 +29,6 @@ def draw_robot_outline(width, length):
         theta = np.arctan2(x, y)
         polar_corners.append((theta, r))
     return polar_corners
-
-def is_inside_robot(angle_rad, distance_mm):
-    x = distance_mm * np.sin(angle_rad)
-    y = distance_mm * np.cos(angle_rad)
-    
-    in_x = -ROBOT_WIDTH / 2 <= x <= ROBOT_WIDTH / 2
-    in_y = -ROBOT_LENGTH / 2 <= y <= ROBOT_LENGTH / 2
-    return in_x and in_y
 
 def init_lidar(port):
     lidar = RPLidar(port, baudrate=BAUD_RATE, timeout=3)
@@ -60,12 +51,11 @@ def fetch_scan_data(lidar, rotations, max_range_mm):
                 
             rad = np.radians(angle)
             
-            if not is_inside_robot(rad, distance):
-                raw_angles.append(rad)
-                raw_distances.append(distance)
+            raw_angles.append(rad)
+            raw_distances.append(distance)
                 
-                if angle < 2 or angle > 358:
-                    front_sector_distances.append(distance)
+            if (angle < 4 or angle > 356) and len(front_sector_distances) < 5:
+                front_sector_distances.append(distance)
         
         count += 1
         if count >= rotations: 
@@ -83,7 +73,7 @@ def generate_lidar_plot(angles, distances, max_range_m):
     ax.scatter(angles, distances, s=UI_STYLE['point_size'], c=UI_STYLE['point_color'], zorder=2)
     
     ax.add_patch(plt.Polygon(draw_robot_outline(ROBOT_WIDTH, ROBOT_LENGTH), 
-                            closed=True, color=UI_STYLE['robot_color'], alpha=UI_STYLE['robot_alpha'], zorder=3))
+                            closed=True, color=UI_STYLE['robot_color'], zorder=3))
                
     ax.set_ylim(0, max_range_mm)
     
@@ -120,11 +110,11 @@ def save_plot(fig, filename=None):
     plt.close(fig)
     return buf
 
-def run_scanner(lidar, max_range_m = 3, rotations = 5, save_to_disc = True):
+def run_scanner(lidar, max_range_m = 3, rotations = 1, front_edge_dist = 195, save_to_disc = None):
     max_range_mm = max_range_m * 1000
     try:
         angles, distances, front_sector = fetch_scan_data(lidar, rotations, max_range_mm)
-        dist_0 = np.mean(front_sector) / 10 if front_sector else 0.0
+        dist_0 = (np.min(front_sector) - front_edge_dist) / 10 if front_sector else 0.0
         fig = generate_lidar_plot(angles, distances, max_range_m)
         output_file = "xlerobot_map.png" if save_to_disc else None
         buf = save_plot(fig, output_file)
