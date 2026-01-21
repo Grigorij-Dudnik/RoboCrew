@@ -1,0 +1,31 @@
+# ONNX model files (not owned, user must provide their own)
+*.onnx
+*.onnx.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Audio output files
+*.wav
+output.wav
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

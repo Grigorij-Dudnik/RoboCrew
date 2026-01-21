@@ -1,6 +1,6 @@
 from langchain_core.tools import tool
 from robocrew.core.memory import Memory
-import pyttsx3
+import polly
 
 
 @tool
@@ -47,10 +47,10 @@ def create_say(sound_receiver=None):
         if sound_receiver is not None:
             sound_receiver.stop_listening()
         
+        MODEL_PATH = "tts/voices/pl_PL-gosia-medium.onnx"
+
         try:
-            engine = pyttsx3.init()
-            engine.say(query)
-            engine.runAndWait()
+            polly.say(query, model_path=MODEL_PATH)
         finally:
             # Resume listening after speech
             if sound_receiver is not None:
