@@ -38,7 +38,7 @@ def create_move_backward(servo_controller):
 def create_turn_right(servo_controller):
     @tool
     def turn_right(angle_degrees: float) -> str:
-        """Turns the robot right by angle in degrees."""
+        """Turns the robot right by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
         servo_controller.turn_right(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -49,7 +49,7 @@ def create_turn_right(servo_controller):
 def create_turn_left(servo_controller):
     @tool
     def turn_left(angle_degrees: float) -> str:
-        """Turns the robot left by angle in degrees. Use only when robot body not toches any obstacle."""
+        """Turns the robot left by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
         servo_controller.turn_left(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -271,13 +271,11 @@ def create_vla_two_arm_manipulation(
         )
 
 
-    robot_config = BI_SO100FollowerConfig(
+    robot_config = BiSO100FollowerConfig(
         left_arm_port=servo_controller.left_arm_head_usb,
         right_arm_port=servo_controller.right_arm_wheel_usb,
         cameras=configured_cameras,
         id="robot_arms",
-        # TODO: Figure out calibration loading/saving issues
-        # calibration_dir=Path("/home/pi/RoboCrew/calibrations")
     )
 
     cfg = RobotClientConfig(

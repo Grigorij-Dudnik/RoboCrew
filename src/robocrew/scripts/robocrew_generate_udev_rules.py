@@ -66,6 +66,7 @@ def scan(pattern, subsystem, devices, serial_counts, camera_ids):
 
 		phys_dir = os.path.dirname(os.path.dirname(sysfs_path))
 		phys_path = os.path.basename(phys_dir).split(":", 1)[0]
+		id_path = props.get("ID_PATH") or phys_path
 		serial = props.get("ID_SERIAL_SHORT") or props.get("ID_SERIAL") or None
 
 		devices.append(
@@ -74,6 +75,7 @@ def scan(pattern, subsystem, devices, serial_counts, camera_ids):
 				"serial": serial,
 				"vendor": vendor_id,
 				"product": product_id,
+				"id_path": id_path,
 				"phys": phys_path,
 				"subsystem": subsystem,
 			}

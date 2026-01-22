@@ -1,9 +1,9 @@
 from robocrew.core.utils import capture_image
-#from robocrew.core.sound_receiver import SoundReceiver
-from robocrew.core.tools import create_say
+from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
+import time
 import base64
-from . import lidar
+import lidar import initliar, run_scanner
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 import queue
@@ -56,7 +56,7 @@ class LLMAgent():
         system_prompt = system_prompt or base_system_prompt
         
         if use_memory:
-            from robocrew.core.tools import remember_thing, recall_thing
+            
             tools.append(remember_thing)
             tools.append(recall_thing)
             memory_prompt = (
@@ -69,13 +69,14 @@ class LLMAgent():
         self.tts = tts
         #self.sound_receiver = None
 
-        self.task = "You are standing in a room. Explore the environment, find a backpack and approach it."
+        self.task = None
         
         self.sounddevice_index = sounddevice_index
         if self.sounddevice_index is not None:
+            from robocrew.core.sound_receiver import SoundReceiver
             self.task_queue = queue.Queue()
-            #self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
-        self.debug = debug_mode
+            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
+            
         self.navigation_mode = "normal"  # or "precision"
 
         # Add TTS tool if enabled (after sound_receiver is created so we can pass it)
@@ -107,12 +108,9 @@ class LLMAgent():
         self.lidar_scale = None
         
         if lidar_usb_port:
-            self.lidar, self.lidar_bg, self.lidar_scale = lidar.init_lidar(lidar_usb_port)
-
-        #TODO: Tidy this up, propably when we restructure LLMAgent
+            self.lidar, self.lidar_bg, self.lidar_scale = init_lidar(lidar_usb_port)
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
-
 
     def invoke_tool(self, tool_call):
         # convert string to real function
@@ -138,7 +136,7 @@ class LLMAgent():
 
     def check_for_new_task(self):
         """Non-blockingly checks the queue for a new task."""
-        if not self.task_queue.empty():
+        if self.sounddevice_index and not self.task_queue.empty():
             self.task = self.task_queue.get()
             
     def lidar_content(self, content):
@@ -156,63 +154,121 @@ class LLMAgent():
         }])
         return content
 
+    def fetch_camera_images_base64(self):
+        """Fetch all camera views from Earth Rover SDK in a single request."""
+        image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
+        return [base64.b64encode(image_bytes).decode('utf-8')]
+    
+    def main_loop_content(self):
+        camera_images = self.fetch_camera_images_base64()
+        
+        content=[
+                {"type": "text", "text": "Main camera view:"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"}
+                },
+                {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
+        ]
+        
+        if self.lidar:
+              content = self.lidar_content(content)
+        message = HumanMessage(content)
+        
+        self.message_history.append(message)
+        response = self.llm.invoke(self.message_history)
+        print(response.content)
+        print(response.tool_calls)
+        
+        self.message_history.append(response)
+        if self.history_len:
+            self.cut_off_context(self.history_len)
+        # execute tool
+        for tool_call in response.tool_calls:
+            tool_response, additional_response = self.invoke_tool(tool_call)
+            self.message_history.append(tool_response)
+            if additional_response:
+                self.message_history.append(additional_response)
+            # Special handling for special tools
+            if tool_call["name"] == "save_checkpoint":
+                checkpoint_info = tool_call["args"].get("checkpont_query")
+                self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
+            if tool_call["name"] == "go_to_precision_mode":
+                self.navigation_mode = "precision"
+            elif tool_call["name"] == "go_to_normal_mode":
+                self.navigation_mode = "normal"
+            if tool_call["name"] == "finish_task":
+                self.task = None
+                print("Task finished, going idle.")
+                return "Task finished, going idle."
+
+              
+    def fetch_camera_images_base64(self):
+        """Fetch all camera views from Earth Rover SDK in a single request."""
+        image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
+        return [base64.b64encode(image_bytes).decode('utf-8')]
+    
+    def main_loop_content(self):
+        camera_images = self.fetch_camera_images_base64()
+        
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": "Main camera view:"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"}
+                },
+                {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
+            ]
+        )
+        
+        if self.lidar:
+            content = self.lidar_content(content)
+        
+        self.message_history.append(message)
+        response = self.llm.invoke(self.message_history)
+        print(response.content)
+        print(response.tool_calls)
+        
+        self.message_history.append(response)
+        if self.history_len:
+            self.cut_off_context(self.history_len)
+        # execute tool
+        for tool_call in response.tool_calls:
+            tool_response, additional_response = self.invoke_tool(tool_call)
+            self.message_history.append(tool_response)
+            if additional_response:
+                self.message_history.append(additional_response)
+            # Special handling for special tools
+            if tool_call["name"] == "save_checkpoint":
+                checkpoint_info = tool_call["args"].get("checkpont_query")
+                self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
+            if tool_call["name"] == "go_to_precision_mode":
+                self.navigation_mode = "precision"
+            elif tool_call["name"] == "go_to_normal_mode":
+                self.navigation_mode = "normal"
+            if tool_call["name"] == "finish_task":
+                self.task = None
+                print("Task finished, going idle.")
+                return "Task finished, going idle."
+
+
     def go(self):
         try:
             while True:
-                image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
-                image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                if self.debug:
-                    open(f"debug/latest_view.jpg", "wb").write(image_bytes)
-                
-                content=[
-                    {"type": "text", "text": "Main camera view:"},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
-                    },
-                    {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
-                ]
-
-                if self.lidar:
-                    content = self.lidar_content(content)
-                    
-                message = HumanMessage(content=content)
-                
-                self.message_history.append(message)
-                response = self.llm.invoke(self.message_history)
-                print(response.content)
-                print(response.tool_calls)
-                
-                self.message_history.append(response)
-                if self.history_len:
-                    self.cut_off_context(self.history_len)
-                # execute tool
-                for tool_call in response.tool_calls:
-                    tool_response, additional_response = self.invoke_tool(tool_call)
-                    self.message_history.append(tool_response)
-                    if additional_response:
-                        self.message_history.append(additional_response)
-                            # Special handling for save_checkpoint
-                    if tool_call["name"] == "save_checkpoint":
-                        checkpoint_info = tool_call["args"].get("checkpont_query")
-                        self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
-                    if tool_call["name"] == "go_to_precision_mode":
-                        self.navigation_mode = "precision"
-                    elif tool_call["name"] == "go_to_normal_mode":
-                        self.navigation_mode = "normal"
-                    if tool_call["name"] == "finish_task":
-                        print("Task finished, going idle.")
-                        return "Task finished, going idle."
+                if self.task:
+                    self.main_loop_content()
+                else:
+                    # idle mode
+                    time.sleep(0.5)
                     
                 if self.sounddevice_index:
                     self.check_for_new_task()
+
         except KeyboardInterrupt:
             print("Interrupted by user, shutting down.")
+
         finally:
             if self.servo_controler:
                 print("Disconnecting servo controller...")
-                self.servo_controler.disconnect()
-            if self.lidar:
-                print("Stopping and disconnecting LiDAR...")
-                self.lidar.stop()
-                self.lidar.disconnect()
+     

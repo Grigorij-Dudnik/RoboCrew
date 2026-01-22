@@ -36,21 +36,15 @@ def wait_for_device(known):
 		time.sleep(1)
 
 
-def build_rule(dev, alias, serial_counts):
-	rule = (
-		f'SUBSYSTEM=="{dev["subsystem"]}", '
-		f'ATTRS{{idVendor}}=="{dev["vendor"]}", '
-		f'ATTRS{{idProduct}}=="{dev["product"]}"'
-	)
+def build_rule(dev, alias):
+	rule = f'SUBSYSTEM=="{dev["subsystem"]}"'
 	if dev["subsystem"] == "video4linux":
 		rule += ', ATTR{index}=="0"'
+	id_path = dev.get("id_path") or dev["phys"]
+	rule += f', ENV{{ID_PATH}}=="{id_path}"'
 	serial = dev.get("serial")
 	if serial and serial != "00000000":
 		rule += f', ATTRS{{serial}}=="{serial}"'
-		if serial_counts.get(serial, 0) > 1:
-			rule += f', KERNELS=="{dev["phys"]}"'
-	else:
-		rule += f', KERNELS=="{dev["phys"]}"'
 	rule += f', MODE="{MODE}", GROUP="{GROUP}", SYMLINK+="{alias}"'
 	return rule
 
@@ -85,13 +79,7 @@ def main():
 		print("No devices registered, nothing to emit.")
 		return
 
-	serial_counts = {}
-	for entry in assignments:
-		serial = entry["device"].get("serial")
-		if serial:
-			serial_counts[serial] = serial_counts.get(serial, 0) + 1
-	
-	rules = [build_rule(entry["device"], entry["alias"], serial_counts) for entry in assignments]
+	rules = [build_rule(entry["device"], entry["alias"]) for entry in assignments]
 	rules_path = "/etc/udev/rules.d/99-robocrew.rules"
 	with open(rules_path, "w", encoding="ascii") as fh:
 		fh.write("\n\n".join(rules) + "\n")

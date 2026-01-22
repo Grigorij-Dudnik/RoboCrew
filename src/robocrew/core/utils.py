@@ -38,9 +38,6 @@ def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
     cv2.putText(image, "<=LEFT", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, orange, 2)
     cv2.putText(image, "RIGHT=>", (width - 145, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
 
-    if navigation_mode == "normal":
-        image = draw_normal_mode_aug(image, width, height)
-
     # range of arms horizontalline
     if navigation_mode == "precision":
         image = draw_precision_mode_aug(image, width, height)
