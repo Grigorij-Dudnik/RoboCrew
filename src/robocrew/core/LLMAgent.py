@@ -103,8 +103,11 @@ class LLMAgent():
 
         # lidar
         self.lidar = None
+        self.lidar_bg = None
+        self.lidar_scale = None
+        
         if lidar_usb_port:
-            self.lidar = lidar.init_lidar(lidar_usb_port)
+            self.lidar, self.lidar_bg, self.lidar_scale = lidar.init_lidar(lidar_usb_port)
 
         #TODO: Tidy this up, propably when we restructure LLMAgent
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
@@ -137,6 +140,21 @@ class LLMAgent():
         """Non-blockingly checks the queue for a new task."""
         if not self.task_queue.empty():
             self.task = self.task_queue.get()
+            
+    def lidar_content(self, content):
+        lidar_buf, lidar_front_dist = lidar.run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
+        lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
+        
+        content.extend([{
+            "type": "text", 
+            "text": f"\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm."
+        },
+        {"type": "text", "text": "\n\nLiDAR Map (Top-down view, obstacles are marked in red):"},
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
+        }])
+        return content
 
     def go(self):
         try:
@@ -156,19 +174,8 @@ class LLMAgent():
                 ]
 
                 if self.lidar:
-                    lidar_buf, lidar_front_dist = lidar.run_scanner(self.lidar)
-                    lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
+                    content = self.lidar_content(content)
                     
-                    content.extend([{
-                        "type": "text", 
-                        "text": f"\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm."
-                    },
-                    {"type": "text", "text": "\n\nLiDAR Map (Top-down view, obstacles are marked in red):"},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
-                    }])
-
                 message = HumanMessage(content=content)
                 
                 self.message_history.append(message)

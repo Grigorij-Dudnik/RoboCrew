@@ -1,124 +1,149 @@
-import matplotlib.pyplot as plt
+import cv2
 import numpy as np
-from rplidar import RPLidar
 import time
+from rplidar import RPLidar
 import io
 
 BAUD_RATE = 115200
-ROBOT_WIDTH = 440
-ROBOT_LENGTH = 360
+ROBOT_WIDTH = 440 # mm
+ROBOT_LENGTH = 360 # mm
+
 UI_STYLE = {
-    'bg_color': 'white',
-    'grid_color': '#333333',
-    'point_color': '#B22222',
-    'text_color': '#333333',
-    'text_bg_color': 'white',
-    'robot_color': 'gray',
-    'grid_linewidth': 1.5,
-    'point_size': 4
+    'bg_color': (255, 255, 255),
+    'grid_color': (51, 51, 51),
+    'point_color': (34, 34, 178),
+    'text_color': (51, 51, 51),
+    'robot_color': (128, 128, 128),
+    'grid_linewidth': 2,
+    'point_size': 2,
+    'img_size': 1000
 }
 
-def draw_robot_outline(width, length):
-    x_left, x_right = -width / 2, width / 2
-    y_back, y_front = -length / 2, length / 2
-    corners_x = [x_left, x_right, x_right, x_left]
-    corners_y = [y_front, y_front, y_back, y_back]
-    polar_corners = []
-    for x, y in zip(corners_x, corners_y):
-        r = np.sqrt(x**2 + y**2)
-        theta = np.arctan2(x, y)
-        polar_corners.append((theta, r))
-    return polar_corners
-
-def init_lidar(port):
+def init_lidar(port, max_range_m=3):
     lidar = RPLidar(port, baudrate=BAUD_RATE, timeout=3)
     time.sleep(1.5)
     print(f"--- Lidar initialized ---")
-    return lidar
-
+    bg_img, scale = generate_plot_background(max_range_m)
+    return lidar, bg_img, scale
+    
 def fetch_scan_data(lidar, rotations, max_range_mm):
     lidar.stop()
     lidar.clear_input()
-
-    raw_angles, raw_distances = [], []
-    front_sector_distances = []
+    raw_data = []
     count = 0
-    
-    for scan in lidar.iter_scans(max_buf_meas=1500):
-        for (_, angle, distance) in scan:
-            if distance > max_range_mm:
-                continue
-                
-            rad = np.radians(angle)
-            
-            raw_angles.append(rad)
-            raw_distances.append(distance)
-                
-            if (angle < 4 or angle > 356) and len(front_sector_distances) < 5:
-                front_sector_distances.append(distance)
-        
+    for scan in lidar.iter_scans(max_buf_meas=800):
+        raw_data.extend(scan)
         count += 1
-        if count >= rotations: 
-            break          
-    return raw_angles, raw_distances, front_sector_distances
+        if count >= rotations:
+            break
+    if not raw_data:
+        return [], [], []
+    
+    np_data = np.array(raw_data)
+    angles_deg = np_data[:, 1]
+    distances = np_data[:, 2]
 
-def generate_lidar_plot(angles, distances, max_range_m):
+    valid_mask = (distances > 0) & (distances <= max_range_mm)
+    valid_angles_deg = angles_deg[valid_mask]
+    valid_distances = distances[valid_mask]
+
+    valid_angles_rad = np.radians(valid_angles_deg)
+
+    front_mask = (valid_angles_deg < 4) | (valid_angles_deg > 356)
+    front_sector_distances = valid_distances[front_mask]
+    front_sector_distances = front_sector_distances[:5]
+    
+    return valid_angles_rad, valid_distances, front_sector_distances
+
+def generate_plot_background(max_range_m):
     max_range_mm = max_range_m * 1000
-    fig = plt.figure(figsize=(10, 10), facecolor=UI_STYLE['bg_color'])
-    fig.subplots_adjust(left=0.10, right=0.90, top=0.90, bottom=0.10)
-    ax = fig.add_subplot(111, projection='polar')
-    ax.set_theta_zero_location('N') 
-    ax.set_theta_direction(-1)      
-    
-    ax.scatter(angles, distances, s=UI_STYLE['point_size'], c=UI_STYLE['point_color'], zorder=2)
-    
-    ax.add_patch(plt.Polygon(draw_robot_outline(ROBOT_WIDTH, ROBOT_LENGTH), 
-                            closed=True, color=UI_STYLE['robot_color'], zorder=3))
-               
-    ax.set_ylim(0, max_range_mm)
-    
-    ticks = [m * 1000 for m in range(1, max_range_m + 1) if m <= 4 or m % 2 == 0]
-    ax.set_rticks(ticks)
-    ax.set_yticklabels([f"{int(t/1000)}m" for t in ticks], fontsize=11, fontweight='bold')
 
-    angles_deg = np.arange(0, 360, 45)
-    labels = [f"{a}°" if a <= 180 else f"{a-360}°" for a in angles_deg]
-    ax.set_thetagrids(angles_deg, labels=labels, fontsize=12, fontweight='bold')
+    img_size = UI_STYLE['img_size']
+    img_center = img_size // 2
+    scale = (img_center * 0.75) / max_range_mm
+    img = np.full((img_size, img_size, 3), UI_STYLE['bg_color'], dtype=np.uint8)
 
-    ax.grid(True, linestyle='-', color=UI_STYLE['grid_color'], 
-            linewidth=UI_STYLE['grid_linewidth'], zorder=1)
-    
-    ax.spines['polar'].set_color(UI_STYLE['grid_color'])
-    ax.spines['polar'].set_linewidth(UI_STYLE['grid_linewidth'])
+    to_xy = lambda r, theta: (
+        int(img_center + r * scale * np.sin(theta)),
+        int(img_center - r * scale * np.cos(theta))
+    )
 
-    label_cfg = dict(transform=fig.transFigure, fontsize=12, fontweight='bold', 
-                    color=UI_STYLE['text_color'], ha="center")
+    step_mm = 1000
+    for r in range(step_mm, max_range_mm + 1, step_mm):
+        radius_px = int(r * scale)
+        cv2.circle(img, (img_center, img_center), radius_px, UI_STYLE['grid_color'], UI_STYLE['grid_linewidth'], cv2.LINE_AA)
+        cv2.putText(img, f"{r//1000}m", (img_center + 5, img_center - radius_px + 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, UI_STYLE['grid_color'], 2, cv2.LINE_AA)
 
-    plt.text(0.5, 0.95, "FRONT", **label_cfg, va="top")
-    plt.text(0.5, 0.05, "BACK", **label_cfg, va="bottom")
-    plt.text(0.05, 0.5, "LEFT", rotation=90, **label_cfg, va="center")
-    plt.text(0.95, 0.5, "RIGHT", rotation=-90, **label_cfg, va="center")
-    return fig
+    for deg in range(0, 360, 45):
+        rad = np.radians(deg)
+        p_end = to_xy(max_range_mm, rad)
+        cv2.line(img, (img_center, img_center), p_end, UI_STYLE['grid_color'], UI_STYLE['grid_linewidth'], cv2.LINE_AA)
 
-def save_plot(fig, filename=None):
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', dpi=120)
-    buf.seek(0)
-    if filename:
-        with open(filename, "wb") as f:
-            f.write(buf.getbuffer())
-    plt.close(fig)
-    return buf
+        deg_label = f"{deg}deg" if deg <= 180 else f"{deg - 360}deg"
+        deg_label_pos = to_xy(max_range_mm + 400, rad)
+        deg_label_size = cv2.getTextSize(deg_label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+        cv2.putText(img, deg_label, (deg_label_pos[0] - deg_label_size[0] // 2, deg_label_pos[1] + deg_label_size[1] // 2),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, UI_STYLE['text_color'], 2, cv2.LINE_AA)
+        
+    robot_width_px = int(ROBOT_WIDTH * scale / 2)
+    robot_length_px = int(ROBOT_LENGTH * scale / 2)
+    cv2.rectangle(img, (img_center - robot_width_px, img_center - robot_length_px),
+                    (img_center + robot_width_px, img_center + robot_length_px), UI_STYLE['robot_color'], -1)
 
-def run_scanner(lidar, max_range_m = 3, rotations = 1, front_edge_dist = 195, save_to_disc = None):
+    direction_labels = [("FRONT", (img_center, 40)), ("BACK", (img_center, img_size - 20)), ("LEFT", (40, img_center - 50)), ("RIGHT", (img_size - 40, img_center - 50))]
+    for label, (x,y) in direction_labels:
+        label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+        cv2.putText(img, label, (x - label_size[0] // 2, y + label_size[1] // 2),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, UI_STYLE['text_color'], 2, cv2.LINE_AA)
+    return img, scale
+
+def update_plot(bg_img, scale, angles_rad, distances, flip_x):
+    img = bg_img.copy()
+    img_size = img.shape[0]
+    img_center = img_size // 2
+
+    if angles_rad.size > 0:
+        xs = (img_center + distances * scale * np.sin(angles_rad)).astype(int)
+        ys = (img_center - distances * scale * np.cos(angles_rad)).astype(int)
+
+        if flip_x:
+            xs = UI_STYLE['img_size'] - xs
+
+        mask = (xs >= 0) & (xs < img_size) & (ys >= 0) & (ys < img_size)
+
+        w_px = int(ROBOT_WIDTH * scale / 2) 
+        l_px = int(ROBOT_LENGTH * scale / 2)
+
+        is_inside_robot = (xs >= img_center - w_px) & (xs <= img_center + w_px) & \
+                          (ys >= img_center - l_px) & (ys <= img_center + l_px)
+        
+        final_mask = mask & (~is_inside_robot)
+
+        xs = xs[final_mask]
+        ys = ys[final_mask]
+
+        for x, y in zip(xs, ys):
+            cv2.circle(img, (x, y), UI_STYLE['point_size'], UI_STYLE['point_color'], -1)
+    return img
+
+def save_plot(img):
+    _, buf = cv2.imencode(".png", img)
+    io_buf = io.BytesIO(buf)
+    return io_buf
+
+def run_scanner(lidar, bg_img, scale, rotations=5, max_range_m=3, front_edge_dist=195, flip_x=False):
     max_range_mm = max_range_m * 1000
     try:
-        angles, distances, front_sector = fetch_scan_data(lidar, rotations, max_range_mm)
-        dist_0 = (np.min(front_sector) - front_edge_dist) / 10 if front_sector else 0.0
-        fig = generate_lidar_plot(angles, distances, max_range_m)
-        output_file = "xlerobot_map.png" if save_to_disc else None
-        buf = save_plot(fig, output_file)
-        print(f"Front: {dist_0:.1f} cm | Points: {len(distances)}")
+        angles_rad, distances, front_sector = fetch_scan_data(lidar, rotations, max_range_mm)
+        if front_sector.size > 0:
+            dist_front_cm = (np.min(front_sector) - front_edge_dist) / 10 # cm
+        else:
+            print("LIDAR: Not enough front sector data. Increase number of rotations.")
+            dist_front_cm = 0.0
+
+        img = update_plot(bg_img, scale, angles_rad, distances, flip_x)
+        buf = save_plot(img)
     finally:
         lidar.stop()
-    return buf, dist_0
+    return buf, dist_front_cm
