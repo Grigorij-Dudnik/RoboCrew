@@ -22,7 +22,6 @@ UI_STYLE = {
 def init_lidar(port, max_range_m=3):
     lidar = RPLidar(port, baudrate=BAUD_RATE, timeout=3)
     time.sleep(1.5)
-    print(f"--- Lidar initialized ---")
     bg_img, scale = generate_plot_background(max_range_m)
     return lidar, bg_img, scale
     

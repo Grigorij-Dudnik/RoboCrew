@@ -16,23 +16,9 @@ class XLeRobotAgent(LLMAgent):
 		sounddevice_index=None,
 		servo_controler=None,
 		wakeword=None,
-		tts=False
+		tts=False,
+		lidar_usb_port=None,
 	):
-		"""
-		Initialize XLeRobot LLM agent with XLeRobot prompt.
-		Args:
-			model: name of the model to use
-			tools: list of langchain tools
-			system_prompt: custom system prompt - optional (uses XLeRobot default if None)
-			camera_fov: field of view (degrees) of your main camera
-			history_len: if you want agent to have messages history cutoff
-			use_memory: set to True to enable long-term memory
-			main_camera: provide your robot front camera object
-			sounddevice_index: provide sounddevice index of your microphone if you want robot to hear
-			servo_controler: servo controller for robot movement
-			wakeword: custom wakeword for task setting
-			tts: enable text-to-speech
-		"""
 		# Use XLeRobot specific system prompt if none provided
 		if system_prompt is None:
 			prompt_path = os.path.join(os.path.dirname(__file__), "xlerobot.prompt")
@@ -52,7 +38,8 @@ class XLeRobotAgent(LLMAgent):
 			wakeword=wakeword,
 			tts=tts,
 			history_len=history_len,
-			use_memory=use_memory
+			use_memory=use_memory,
+			lidar_usb_port=lidar_usb_port
 		)
 
 	# No new features or methods; inherits all behavior from LLMAgent

@@ -1,9 +1,8 @@
-from robocrew.core.utils import capture_image
 from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
 import time
 import base64
-import lidar import initliar, run_scanner
+from robocrew.core.lidar import init_lidar, run_scanner
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 import queue
@@ -36,7 +35,6 @@ class LLMAgent():
             wakeword="robot",
             tts=False,
             history_len=None,
-            debug_mode=False,
             use_memory=False,
             lidar_usb_port=None,
         ):
@@ -140,12 +138,15 @@ class LLMAgent():
             self.task = self.task_queue.get()
             
     def lidar_content(self, content):
-        lidar_buf, lidar_front_dist = lidar.run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
+        lidar_buf, lidar_front_dist = run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
         lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
         
         content.extend([{
             "type": "text", 
-            "text": f"\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm."
+            "text": f"""\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm.
+            
+            Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles above or below that plane may not be detected.
+            """
         },
         {"type": "text", "text": "\n\nLiDAR Map (Top-down view, obstacles are marked in red):"},
         {
@@ -156,7 +157,7 @@ class LLMAgent():
 
     def fetch_camera_images_base64(self):
         """Fetch all camera views from Earth Rover SDK in a single request."""
-        image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
+        image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
         return [base64.b64encode(image_bytes).decode('utf-8')]
     
     def main_loop_content(self):
@@ -201,57 +202,6 @@ class LLMAgent():
                 self.task = None
                 print("Task finished, going idle.")
                 return "Task finished, going idle."
-
-              
-    def fetch_camera_images_base64(self):
-        """Fetch all camera views from Earth Rover SDK in a single request."""
-        image_bytes = capture_image(self.main_camera.capture, camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
-        return [base64.b64encode(image_bytes).decode('utf-8')]
-    
-    def main_loop_content(self):
-        camera_images = self.fetch_camera_images_base64()
-        
-        message = HumanMessage(
-            content=[
-                {"type": "text", "text": "Main camera view:"},
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"}
-                },
-                {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
-            ]
-        )
-        
-        if self.lidar:
-            content = self.lidar_content(content)
-        
-        self.message_history.append(message)
-        response = self.llm.invoke(self.message_history)
-        print(response.content)
-        print(response.tool_calls)
-        
-        self.message_history.append(response)
-        if self.history_len:
-            self.cut_off_context(self.history_len)
-        # execute tool
-        for tool_call in response.tool_calls:
-            tool_response, additional_response = self.invoke_tool(tool_call)
-            self.message_history.append(tool_response)
-            if additional_response:
-                self.message_history.append(additional_response)
-            # Special handling for special tools
-            if tool_call["name"] == "save_checkpoint":
-                checkpoint_info = tool_call["args"].get("checkpont_query")
-                self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
-            if tool_call["name"] == "go_to_precision_mode":
-                self.navigation_mode = "precision"
-            elif tool_call["name"] == "go_to_normal_mode":
-                self.navigation_mode = "normal"
-            if tool_call["name"] == "finish_task":
-                self.task = None
-                print("Task finished, going idle.")
-                return "Task finished, going idle."
-
 
     def go(self):
         try:
