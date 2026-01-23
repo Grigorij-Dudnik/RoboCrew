@@ -1,8 +1,8 @@
 __pycache__/
 venv/
 .venv/
-pypi-robocrew/
 .env
+pypi-robocrew/
 .clean_coder/
 .coderrules
 .wav
@@ -10,16 +10,13 @@ pypi-robocrew/
 dist/
 old_sdk.py
 uv.lock
-debug/
 physical_path.sh
 robot_memory.db
 logs/
 requirements.txt
 constraints.txt
 test-req.txt
-debug/
 *.rules
 *.log
 
-examples/xlerobot_controler_elevator.py
 examples/xlerobot_controler.py

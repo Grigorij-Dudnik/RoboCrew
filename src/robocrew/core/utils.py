@@ -2,13 +2,6 @@ import cv2
 import math
 
 
-def capture_image(main_camera, camera_fov=120, center_angle=0, navigation_mode="normal"):
-    main_camera.grab() # Clear the buffer
-    _, frame = main_camera.read()
-    frame = augment_image(frame, h_fov=camera_fov, center_angle=center_angle, navigation_mode=navigation_mode)
-    _, buffer = cv2.imencode('.jpg', frame)
-    return buffer.tobytes()
-
 def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
     """Draw horizontal angle markers on the bottom of the image."""
     height, width = image.shape[:2]
@@ -38,30 +31,11 @@ def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
     cv2.putText(image, "<=LEFT", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, orange, 2)
     cv2.putText(image, "RIGHT=>", (width - 145, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, yellow, 2)
 
-    if navigation_mode == "normal":
-        image = draw_normal_mode_aug(image, width, height)
-
     # range of arms horizontalline
     if navigation_mode == "precision":
         image = draw_precision_mode_aug(image, width, height)
     return image
-    
-def draw_normal_mode_aug(image, width, height):
-    c, t = (0, 165, 255), 2  # orange, thickness
 
-    # 2 side lines (hard coded)
-    cv2.line(image, (int(width*0.22), int(height*0.96)),
-                    (int(width*0.32), int(height*0.70)), c, t)
-    cv2.line(image, (int(width*0.78), int(height*0.96)),
-                    (int(width*0.68), int(height*0.70)), c, t)
-
-    cx = width // 2
-    for y, txt, half in [(0.86, "1m", 30), (0.78, "2m", 18), (0.73, "3m", 10)]:
-        y = int(height * y)
-        cv2.line(image, (cx - half, y), (cx + half, y), c, t)
-        cv2.putText(image, txt, (cx + half + 10, y + 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, c, 2)
-    return image
 
 def draw_precision_mode_aug(image, width, height):
     # draw arms range lines

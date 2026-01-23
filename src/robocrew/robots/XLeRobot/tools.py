@@ -5,7 +5,6 @@ from lerobot.async_inference.configs import RobotClientConfig
 from lerobot.robots.so101_follower.config_so101_follower import SO101FollowerConfig
 from lerobot.robots.bi_so100_follower.config_bi_so100_follower import BiSO100FollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
-from robocrew.core.utils import capture_image
 import time
 import threading
 
@@ -38,7 +37,7 @@ def create_move_backward(servo_controller):
 def create_turn_right(servo_controller):
     @tool
     def turn_right(angle_degrees: float) -> str:
-        """Turns the robot right by angle in degrees."""
+        """Turns the robot right by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
         servo_controller.turn_right(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -49,7 +48,7 @@ def create_turn_right(servo_controller):
 def create_turn_left(servo_controller):
     @tool
     def turn_left(angle_degrees: float) -> str:
-        """Turns the robot left by angle in degrees. Use only when robot body not toches any obstacle."""
+        """Turns the robot left by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
         servo_controller.turn_left(angle)
         time.sleep(0.4)  # wait a bit after turn for stabilization
@@ -105,19 +104,19 @@ def create_look_around(servo_controller, main_camera):
         print("Looking around...")
         servo_controller.turn_head_yaw(-120)
         time.sleep(movement_delay)
-        image_1 = capture_image(main_camera.capture, center_angle=-120)
+        image_1 = main_camera.capture_image(center_angle=-120)
         image_1_64 = base64.b64encode(image_1).decode('utf-8')
         servo_controller.turn_head_yaw(-40)
         time.sleep(movement_delay)
-        image_2 = capture_image(main_camera.capture, center_angle=-40)
+        image_2 = main_camera.capture_image(center_angle=-40)
         image_2_64 = base64.b64encode(image_2).decode('utf-8')  
         servo_controller.turn_head_yaw(40)
         time.sleep(movement_delay)
-        image_3 = capture_image(main_camera.capture, center_angle=40)
+        image_3 = main_camera.capture_image(center_angle=40)
         image_3_64 = base64.b64encode(image_3).decode('utf-8')
         servo_controller.turn_head_yaw(120)
         time.sleep(movement_delay)
-        image_4 = capture_image(main_camera.capture, center_angle=120)
+        image_4 = main_camera.capture_image(center_angle=120)
         image_4_64 = base64.b64encode(image_4).decode('utf-8')
         servo_controller.turn_head_yaw(0)  # look forward again
         time.sleep(movement_delay)
