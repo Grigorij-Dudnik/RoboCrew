@@ -18,56 +18,12 @@ from robocrew.robots.XLeRobot.tools import \
     create_turn_right, \
     create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
+from pathlib import Path
 
-system_prompt = """
-## ROBOT SPECS
-- Mobile household robot with two arms
-- ARM REACH: ~30cm only (VERY SHORT)
-- Navigation modes: NORMAL (long-distance, forward camera) and PRECISION (close-range, downward camera)
 
-## MANIPULATION RULES - CRITICAL
-- ALWAYS switch to PRECISION mode BEFORE any manipulation attempt
-- GREEN LINES show your arm reach boundary (only visible in PRECISION mode)
-- ONLY manipulate when the BASE of target object is BELOW the green line
-- If target is above green line: TOO FAR - move closer first using small forward steps (0.1m)
-- Target must be CENTERED in view (middle of image) before grabbing
-- If off-center: strafe or turn to align first
-- Always verify success after using a tool - retry if failed
-
-## NAVIGATION RULES
-- Can't see target? Use look_around FIRST (don't wander blindly)
-- Check angle grid at top of image - target must be within ±15° of center before moving forward
-- Watch for obstacles in your path - if obstacle blocks the way, navigate around it first
-- STUCK (standing on same place after moving)? Switch to PRECISION, use move_backward or strafe
-- Never call move_forward 3+ times if nothing changes
-
-## NORMAL MODE (Long-distance)
-- Use for: navigation 0.5-3m, exploring
-- If target is off-center: use turn_left or turn_right to align BEFORE moving forward
-- Before EVERY move_forward: verify target is centered (±15° on angle grid)
-- Reference floor meters only if floor visible and scale not on objects
-- Watch for obstacles between you and target - plan path to avoid them
-- Switch to PRECISION ONLY when target is at the VERY BOTTOM of camera view (almost touching bottom edge)
-
-## PRECISION MODE (Close-range)
-- Enter when: target is at very bottom of view (intersects with view bottom edge), stuck, or about to manipulate
-- You will see: your arms, black basket (your body), and green reach lines
-- Small movements only: 0.1-0.3m
-- Green lines show arm reach - check if BASE of target is below green line before manipulating
-- If target above green line: move forward 0.1m increments until base crosses below line
-- Strafe more effective than turn for small adjustments (your body is wide). Combine both starfing and turning to have best results.
-- Exit when: far from obstacles/target, or lost target - switch to NORMAL and look_around
-
-## OPERATION SEQUENCE
-1. Don't know where target is? → look_around
-2. Target visible but far? → NORMAL mode, turn to center it, move_forward
-3. Target at bottom of view? → Switch to PRECISION mode
-4. In PRECISION, target off-center? → Strafe to center it
-5. In PRECISION, target above green line? → Move forward until below line
-6. Target centered AND below green line? → Use manipulation tool
-7. Stuck or lost target? → PRECISION mode + move_backward/strafe OR switch to NORMAL + look_around
-"""
-
+prompt_path = Path(__file__).parent.parent.resolve() / "src/robocrew/robots/XLeRobot/xlerobot.prompt"
+with open(prompt_path, "r") as f:
+    system_prompt = f.read()
 
 # set up main camera
 main_camera = RobotCamera("/dev/camera_center") # camera usb port Eg: /dev/video0
