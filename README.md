@@ -114,6 +114,7 @@ Then install Portaudio and Pyaudio for audio support:
 ```bash
 sudo apt install portaudio19-dev
 pip install pyaudio
+pip install audioop-lts
 ```
 
 Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the wakeword "robot" anywhere in your command, it'll use the entire phrase as its new task.
