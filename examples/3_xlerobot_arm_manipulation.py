@@ -5,7 +5,7 @@ vla_single_arm_manipulation tools allow XLeRobot to use its arm for manipulating
 
 from robocrew.core.camera import RobotCamera
 from robocrew.core.tools import save_checkpoint
-from robocrew.core.LLMAgent import LLMAgent
+from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import \
     create_vla_single_arm_manipulation, \
     create_go_to_precision_mode, \
@@ -124,7 +124,7 @@ give_notebook = create_vla_single_arm_manipulation(
 )
 
 # init agent
-agent = LLMAgent(
+agent = XLeRobotAgent(
     model="google_genai:gemini-3-flash-preview",
     system_prompt=system_prompt,
     tools=[

@@ -6,7 +6,7 @@
 """
 
 from robocrew.core.camera import RobotCamera
-from robocrew.core.LLMAgent import LLMAgent
+from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import \
     create_go_to_precision_mode, \
     create_go_to_normal_mode, \
@@ -77,7 +77,7 @@ go_to_precision_mode = create_go_to_precision_mode(servo_controler)
 go_to_normal_mode = create_go_to_normal_mode(servo_controler)
 
 # init agent
-agent = LLMAgent(
+agent = XLeRobotAgent(
     model="google_genai:gemini-3-flash-preview",
     tools=[
         move_forward,

@@ -1,8 +1,8 @@
 __pycache__/
 venv/
 .venv/
-pypi-robocrew/
 .env
+pypi-robocrew/
 .clean_coder/
 .coderrules
 .wav
@@ -19,5 +19,4 @@ test-req.txt
 *.rules
 *.log
 
-examples/xlerobot_controler_elevator.py
 examples/xlerobot_controler.py

@@ -3,7 +3,7 @@ The simplest example of agent that can listen and speak, aside from driving XLeR
 """
 
 from robocrew.core.camera import RobotCamera
-from robocrew.core.LLMAgent import LLMAgent
+from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_right, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
@@ -20,7 +20,7 @@ turn_left = create_turn_left(servo_controler)
 turn_right = create_turn_right(servo_controler)
 
 # init agent
-agent = LLMAgent(
+agent = XLeRobotAgent(
     model="google_genai:gemini-3-flash-preview",
     tools=[
         move_forward,

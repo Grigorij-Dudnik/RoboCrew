@@ -145,7 +145,7 @@ class LLMAgent():
             "type": "text", 
             "text": f"""\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm.
             
-            Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles above or below that plane may not be detected.
+Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles above or below that plane may not be detected.
             """
         },
         {"type": "text", "text": "\n\nLiDAR Map (Top-down view, obstacles are marked in red):"},
