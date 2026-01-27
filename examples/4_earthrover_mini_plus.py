@@ -11,7 +11,7 @@ from robocrew.robots.EarthRover.tools import \
     go_forward_with_turning_right, \
     go_forward_with_turning_left
 
-# init Earth Rover agent with SDK URL
+# init Earth Rover agent
 agent = EarthRoverAgent(
     model="google_genai:gemini-3-flash-preview",
     tools=[
@@ -22,10 +22,10 @@ agent = EarthRoverAgent(
         go_forward_with_turning_right,
         go_forward_with_turning_left,
     ],
-    history_len=8,              # nr of last message-answer pairs to keep
+    history_len=8,
     camera_fov=90,
 )
 
-agent.task = "gturn right 90 deg"
+agent.task = "go north along the road"
 
 agent.go()

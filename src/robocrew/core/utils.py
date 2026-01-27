@@ -2,7 +2,7 @@ import cv2
 import math
 
 
-def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
+def basic_augmentation(image, h_fov=120, center_angle=0, navigation_mode="normal"):
     """Draw horizontal angle markers on the bottom of the image."""
     height, width = image.shape[:2]
     yellow = (0, 255, 255)

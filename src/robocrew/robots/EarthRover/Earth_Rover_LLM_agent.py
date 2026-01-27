@@ -1,7 +1,7 @@
 """Earth Rover specific LLM agent that inherits from base LLMAgent with SDK-based image capture."""
 
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.core.utils import augment_image
+from robocrew.core.utils import basic_augmentation
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from concurrent.futures import ThreadPoolExecutor
 import requests
@@ -9,6 +9,8 @@ import time
 import cv2
 import base64
 import numpy as np
+import io, math
+from PIL import Image, ImageDraw
 
 class EarthRoverAgent(LLMAgent):
     """Earth Rover specific LLM agent that inherits from base LLMAgent with SDK-based image capture."""
@@ -90,10 +92,6 @@ class EarthRoverAgent(LLMAgent):
         response_rear_img = future_rear_img.result()
         response_map = future_map.result()
 
-        print(time.perf_counter())
-        print(response_front_img.json().keys())
-        
-        a = time.perf_counter()
         # Decode base64 image
         front_image_bytes = base64.b64decode(response_front_img.json()['front_frame'])
         
@@ -102,20 +100,46 @@ class EarthRoverAgent(LLMAgent):
         front_image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         # Apply augmentation with navigation grid
-        augmented_front_image = augment_image(
+        augmented_front_image = basic_augmentation(
             front_image, 
             h_fov=self.camera_fov, 
             center_angle=0, 
-            navigation_mode=None
         )
+        augmented_front_image = self.earth_rover_front_augmentation(
+            augmented_front_image,
+        )  
         
         # Convert augmented image back to base64
         _, buffer = cv2.imencode('.jpg', augmented_front_image)
-        front_image = base64.b64encode(buffer).decode('utf-8')
-        print(f"Image augmentation took {time.perf_counter() - a:.2f} seconds.")
+        front_image = base64.b64encode(buffer).decode('utf-8')\
+        
+        map_augmented = self.map_augmentation(
+            response_map.json()['map_frame'],
+            response_data.json()["orientation"]
+        )
     
-        return front_image, response_rear_img.json()['rear_frame'], response_map.json()['map_frame']
+        return front_image, response_rear_img.json()['rear_frame'], map_augmented
+    
 
+    def earth_rover_front_augmentation(self, image):
+        height, width = image.shape[:2]
+        cv2.line(image, (int(0.26 * width), height), (int(0.45 * width), int(0.62 * height)), (0, 255, 255), 2)
+        cv2.line(image, (int(0.74 * width), height), (int(0.55 * width), int(0.62 * height)), (0, 255, 255), 2)
+        return image
+
+
+    def map_augmentation(self, b64_img, angle):
+        size = 30
+        im = Image.open(io.BytesIO(base64.b64decode(b64_img))).convert("RGB")
+        w,h = im.size; cx,cy = w//2,h//2
+        r = math.radians(angle-90)  # 0° -> up
+        tip = (cx+size*math.cos(r), cy+size*math.sin(r))
+        left = (cx+size*0.6*math.cos(r+2.4), cy+size*0.6*math.sin(r+2.4))
+        right= (cx+size*0.6*math.cos(r-2.4), cy+size*0.6*math.sin(r-2.4))
+        ImageDraw.Draw(im).polygon([tip,left,right], fill=(255,0,0))
+        out = io.BytesIO(); im.save(out, "JPEG", quality=75)
+        return base64.b64encode(out.getvalue()).decode()
+    
     
     def go(self):
         """Override the go method to use Earth Rover SDK for image capture."""
