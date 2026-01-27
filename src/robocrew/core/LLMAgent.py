@@ -156,7 +156,6 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         return content
 
     def fetch_camera_images_base64(self):
-        """Fetch all camera views from Earth Rover SDK in a single request."""
         image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
         return [base64.b64encode(image_bytes).decode('utf-8')]
     

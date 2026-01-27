@@ -43,17 +43,14 @@ class EarthRoverAgent(LLMAgent):
 - Basic movement capabilities: forward, backward, turning, and curved paths
 
 ## NAVIGATION RULES
-- Use move_forward and move_backward for straight line movement with distance parameter
+- Use move_forward and move_backward for straight line movement with distance parameter. Ensure no obstacles between trace lines before moving.
 - Use turn_left and turn_right for directional changes with angle parameter
-- Use go_forward_with_turning_right/left for smooth curved paths with distance parameter
-- Make small movements (0.5-2m) for better control on rough terrain
-- Use appropriate turn angles (15-90 degrees) for navigation
-- Check path is clear before moving to avoid obstacles
+- Use go_forward_with_turning_right/left if you nee bot to turn and move forward simultaneously (it's faster to do it at once)
 
 ## OPERATION SEQUENCE
 1. Use turn commands with specific angles to align with target direction
 2. Use move_forward with distance to approach target
-3. Use curved movements with distance for smooth navigation around obstacles
+3. Use curved movements for faster navigation around obstacles (one tool instead of two)
 4. Use move_backward with distance to retreat if needed
 5. Always consider terrain conditions when planning movements
         """
@@ -81,7 +78,6 @@ class EarthRoverAgent(LLMAgent):
 
     def fetch_sensor_inputs(self):
         """Fetch all camera views from Earth Rover SDK in a single request and augment front camera."""
-        print(time.perf_counter())
         # Send requests simultaneously
         future_data = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/data")
         future_front_img = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/v2/front")
@@ -115,7 +111,10 @@ class EarthRoverAgent(LLMAgent):
         
         map_augmented = self.map_augmentation(
             response_map.json()['map_frame'],
-            response_data.json()["orientation"]
+            response_data.json()["orientation"],
+            response_data.json()["latitude"],
+            response_data.json()["longitude"],
+            50.287343949493895, 18.67283416733715
         )
     
         return front_image, response_rear_img.json()['rear_frame'], map_augmented
@@ -123,73 +122,83 @@ class EarthRoverAgent(LLMAgent):
 
     def earth_rover_front_augmentation(self, image):
         height, width = image.shape[:2]
-        cv2.line(image, (int(0.26 * width), height), (int(0.45 * width), int(0.62 * height)), (0, 255, 255), 2)
-        cv2.line(image, (int(0.74 * width), height), (int(0.55 * width), int(0.62 * height)), (0, 255, 255), 2)
+        cv2.line(image, (int(0.26 * width), height), (int(0.47 * width), int(0.58 * height)), (0, 255, 255), 2)
+        cv2.line(image, (int(0.74 * width), height), (int(0.53 * width), int(0.58 * height)), (0, 255, 255), 2)
         return image
 
 
-    def map_augmentation(self, b64_img, angle):
-        size = 30
-        im = Image.open(io.BytesIO(base64.b64decode(b64_img))).convert("RGB")
-        w,h = im.size; cx,cy = w//2,h//2
-        r = math.radians(angle-90)  # 0° -> up
-        tip = (cx+size*math.cos(r), cy+size*math.sin(r))
-        left = (cx+size*0.6*math.cos(r+2.4), cy+size*0.6*math.sin(r+2.4))
-        right= (cx+size*0.6*math.cos(r-2.4), cy+size*0.6*math.sin(r-2.4))
-        ImageDraw.Draw(im).polygon([tip,left,right], fill=(255,0,0))
-        out = io.BytesIO(); im.save(out, "JPEG", quality=75)
+    def map_augmentation(self, b64_img, angle, lat, lon, tlat=None, tlon=None):
+        image = Image.open(io.BytesIO(base64.b64decode(b64_img))).convert("RGB")
+        draw_object = ImageDraw.Draw(image)
+        width, height = image.size
+        center_x, center_y = width // 2, height // 2
+
+        # center arrow (heading)
+        angle_rad = math.radians(angle)
+        self.draw_arrow(center_x, center_y, angle_rad, 35, (255,0,0), draw_object)
+
+        # target arrow
+        if tlat:
+            radius = height // 2 - 30
+            bearing = self.calculate_bearing(lat, lon, tlat, tlon)
+            self.draw_arrow(center_x + radius * math.cos(bearing - math.pi/2), center_y - radius * math.sin(bearing - math.pi/2), bearing, 60, (255, 255, 0), draw_object)    # minus for y becausee of inversion of coordinate system for images
+
+        out = io.BytesIO()
+        image.save(out, "JPEG", quality=75)
         return base64.b64encode(out.getvalue()).decode()
     
+    def calculate_bearing(self, lat1, lon1, lat2, lon2):
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+        dx = (lon2 - lon1) * math.cos((lat1 + lat2) / 2)
+        dy = lat2 - lat1
+        return math.atan2(dx, dy)
     
-    def go(self):
-        """Override the go method to use Earth Rover SDK for image capture."""
-        try:
-            while True:
-                # Fetch all camera views from Earth Rover SDK in one request
-                front_frame, rear_frame, map_frame = self.fetch_sensor_inputs()
-
-                # Create messages for all camera views
-                message = HumanMessage(
-                    content=[
-                        {"type": "text", "text": "Front camera view:"},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{front_frame}"}
-                        },
-                        {"type": "text", "text": "Rear camera view:"},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{rear_frame}"}
-                        },
-                        {"type": "text", "text": "Map view:"},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{map_frame}"}
-                        },
-                        {"type": "text", "text": f"\n\nYour task is: '{self.task}'"},
-                    ]
-                )
-
-                self.message_history.append(message)
-                response = self.llm.invoke(self.message_history)
-                print(response.content)
-                print(response.tool_calls)
-                
-                self.message_history.append(response)
-                if self.history_len:
-                    self.cut_off_context(self.history_len)
-                # execute tool
-                for tool_call in response.tool_calls:
-                    tool_response, additional_response = self.invoke_tool(tool_call)
-                    self.message_history.append(tool_response)
-                    if additional_response:
-                        self.message_history.append(additional_response)
-                    # Special handling for special tools
-                    if tool_call["name"] == "finish_task":
-                        print("Task finished, going idle.")
-                        return "Task finished, going idle."
-
-
-        except KeyboardInterrupt:
-            print("Earth Rover agent stopped by user")
+    def draw_arrow(self, position_x, position_y, angle_rad, size, color, draw):
+        angle_rad = angle_rad - math.pi/2  # adjust to point upwards
+        tip = (position_x+size*math.cos(angle_rad), position_y+size*math.sin(angle_rad))
+        left = (position_x+size*0.6*math.cos(angle_rad+2.4), position_y+size*0.6*math.sin(angle_rad+2.4))
+        right= (position_x+size*0.6*math.cos(angle_rad-2.4), position_y+size*0.6*math.sin(angle_rad-2.4))
+        draw.polygon([tip,left,right], fill=color)
     
+    def main_loop_content(self):
+        # Fetch all camera views from Earth Rover SDK in one request
+        front_frame, rear_frame, map_frame = self.fetch_sensor_inputs()
+
+        # Create messages for all camera views
+        message = HumanMessage(
+            content=[
+                {"type": "text", "text": "Front camera view:"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{front_frame}"}
+                },
+                {"type": "text", "text": "Rear camera view:"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{rear_frame}"}
+                },
+                {"type": "text", "text": "Map view:"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{map_frame}"}
+                },
+                {"type": "text", "text": f"\n\nYour task is: '{self.task}'"},
+            ]
+        )
+
+        self.message_history.append(message)
+        response = self.llm.invoke(self.message_history)
+        print(response.content)
+        print(response.tool_calls)
+        
+        self.message_history.append(response)
+        if self.history_len:
+            self.cut_off_context(self.history_len)
+            
+        # execute tool
+        for tool_call in response.tool_calls:
+            tool_response, additional_response = self.invoke_tool(tool_call)
+            self.message_history.append(tool_response)
+            if additional_response:
+                self.message_history.append(additional_response)
