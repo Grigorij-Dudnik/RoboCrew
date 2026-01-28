@@ -10,7 +10,7 @@ import cv2
 import base64
 import numpy as np
 import io, math
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 class EarthRoverAgent(LLMAgent):
     """Earth Rover specific LLM agent that inherits from base LLMAgent with SDK-based image capture."""
@@ -42,18 +42,17 @@ class EarthRoverAgent(LLMAgent):
 - Designed for rough terrain navigation
 - Basic movement capabilities: forward, backward, turning, and curved paths
 
-## NAVIGATION RULES
-- Use move_forward and move_backward for straight line movement with distance parameter. Ensure no obstacles between trace lines before moving.
-- Use turn_left and turn_right for directional changes with angle parameter
-- Use go_forward_with_turning_right/left if you nee bot to turn and move forward simultaneously (it's faster to do it at once)
-
 ## OPERATION SEQUENCE
 1. Use turn commands with specific angles to align with target direction
 2. Use move_forward with distance to approach target
 3. Use curved movements for faster navigation around obstacles (one tool instead of two)
-4. Use move_backward with distance to retreat if needed
+4. Use move_backward with distance to retreat if you stuck
 5. Always consider terrain conditions when planning movements
-        """
+
+## NAVIGATION RULES
+- Never enter car roadway. You can use pedestrian path along the road, but never enter roadway.
+- Prefer small roads or off-road over main roads.
+"""
         
         # Initialize parent class with minimal settings (no camera, sound, etc.)
         super().__init__(
@@ -72,9 +71,11 @@ class EarthRoverAgent(LLMAgent):
         
         # Initialize thread pool executor for concurrent operations
         self.executor = ThreadPoolExecutor(max_workers=2)
-        
-        # Optional: Use a session to reuse TCP connections (faster)
-        self.requests_session = requests.Session()        
+        self.requests_session = requests.Session() 
+        self.imagefont = ImageFont.load_default(size=30)       
+        self.target_coordinates = (None, None)
+        # send initial request to wake up sdk browser and avoid deadlock on first request
+        self.requests_session.get("http://127.0.0.1:8000/data")
 
     def fetch_sensor_inputs(self):
         """Fetch all camera views from Earth Rover SDK in a single request and augment front camera."""
@@ -114,7 +115,8 @@ class EarthRoverAgent(LLMAgent):
             response_data.json()["orientation"],
             response_data.json()["latitude"],
             response_data.json()["longitude"],
-            50.287343949493895, 18.67283416733715
+            self.target_coordinates[0],
+            self.target_coordinates[1],
         )
     
         return front_image, response_rear_img.json()['rear_frame'], map_augmented
@@ -135,26 +137,28 @@ class EarthRoverAgent(LLMAgent):
 
         # center arrow (heading)
         angle_rad = math.radians(angle)
-        self.draw_arrow(center_x, center_y, angle_rad, 35, (255,0,0), draw_object)
+        self._draw_arrow(center_x, center_y, angle_rad, 35, (255,0,0), draw_object)
 
         # target arrow
         if tlat:
-            radius = height // 2 - 30
-            bearing = self.calculate_bearing(lat, lon, tlat, tlon)
-            self.draw_arrow(center_x + radius * math.cos(bearing - math.pi/2), center_y - radius * math.sin(bearing - math.pi/2), bearing, 60, (255, 255, 0), draw_object)    # minus for y becausee of inversion of coordinate system for images
+            radius = height // 2 - 40
+            text_placement_radius = radius - 60
+            bearing = self._calculate_bearing(lat, lon, tlat, tlon)
+            self._draw_arrow(center_x + radius * math.cos(math.pi/2 - bearing), center_y - radius * math.sin(math.pi/2 - bearing), bearing, 60, (255, 255, 0), draw_object)    # minus after center_y because of inversion of coordinate system for images
+            draw_object.text((center_x + text_placement_radius * math.cos(math.pi/2 - bearing) - 10, center_y - text_placement_radius * math.sin(math.pi/2 - bearing) - 10), "Target", fill=(100,100,0), font=self.imagefont)
 
         out = io.BytesIO()
         image.save(out, "JPEG", quality=75)
         return base64.b64encode(out.getvalue()).decode()
     
-    def calculate_bearing(self, lat1, lon1, lat2, lon2):
+    def _calculate_bearing(self, lat1, lon1, lat2, lon2):
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
         dx = (lon2 - lon1) * math.cos((lat1 + lat2) / 2)
         dy = lat2 - lat1
         return math.atan2(dx, dy)
     
-    def draw_arrow(self, position_x, position_y, angle_rad, size, color, draw):
+    def _draw_arrow(self, position_x, position_y, angle_rad, size, color, draw):
         angle_rad = angle_rad - math.pi/2  # adjust to point upwards
         tip = (position_x+size*math.cos(angle_rad), position_y+size*math.sin(angle_rad))
         left = (position_x+size*0.6*math.cos(angle_rad+2.4), position_y+size*0.6*math.sin(angle_rad+2.4))

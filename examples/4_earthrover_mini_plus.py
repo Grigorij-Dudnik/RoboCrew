@@ -26,6 +26,7 @@ agent = EarthRoverAgent(
     camera_fov=90,
 )
 
-agent.task = "go south along the road"
+agent.target_coordinates = 50.354465728775985, 18.58367655341123
+agent.task = "Try to reach the target"
 
 agent.go()
