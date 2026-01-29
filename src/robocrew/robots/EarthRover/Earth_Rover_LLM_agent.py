@@ -4,13 +4,15 @@ from robocrew.core.LLMAgent import LLMAgent
 from robocrew.core.utils import basic_augmentation
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from concurrent.futures import ThreadPoolExecutor
+from PIL import Image, ImageDraw, ImageFont
+from pathlib import Path
 import requests
 import time
 import cv2
 import base64
 import numpy as np
 import io, math
-from PIL import Image, ImageDraw, ImageFont
+
 
 class EarthRoverAgent(LLMAgent):
     """Earth Rover specific LLM agent that inherits from base LLMAgent with SDK-based image capture."""
@@ -24,35 +26,10 @@ class EarthRoverAgent(LLMAgent):
         history_len=None,
         use_memory=False
     ):
-        """
-        Initialize Earth Rover LLM agent with SDK-based image capture.
-        
-        Args:
-            model: name of the model to use
-            tools: list of langchain tools
-            system_prompt: custom system prompt - optional (uses Earth Rover default if None)
-            camera_fov: field of view (degrees) of your main camera
-            history_len: if you want agent to have messages history cutoff
-            use_memory: set to True to enable long-term memory
-        """
-        # Use Earth Rover specific system prompt if none provided
-        earth_rover_system_prompt = system_prompt or """
-## EARTH ROVER SPECIFICATIONS
-- Outdoor exploration robot with 4-wheel drive
-- Designed for rough terrain navigation
-- Basic movement capabilities: forward, backward, turning, and curved paths
-
-## OPERATION SEQUENCE
-1. Use turn commands with specific angles to align with target direction
-2. Use move_forward with distance to approach target
-3. Use curved movements for faster navigation around obstacles (one tool instead of two)
-4. Use move_backward with distance to retreat if you stuck
-5. Always consider terrain conditions when planning movements
-
-## NAVIGATION RULES
-- Never enter car roadway. You can use pedestrian path along the road, but never enter roadway.
-- Prefer small roads or off-road over main roads.
-"""
+        prompt_path = Path(__file__).parent.parent.resolve() / "EarthRover/earth_rover.prompt"
+        with open(prompt_path, "r") as f:
+            system_prompt_default = f.read()
+        earth_rover_system_prompt = system_prompt or system_prompt_default
         
         # Initialize parent class with minimal settings (no camera, sound, etc.)
         super().__init__(
@@ -70,16 +47,20 @@ class EarthRoverAgent(LLMAgent):
         )
         
         # Initialize thread pool executor for concurrent operations
+        # ToDo: zmienić na 4
         self.executor = ThreadPoolExecutor(max_workers=2)
         self.requests_session = requests.Session() 
         self.imagefont = ImageFont.load_default(size=30)       
         self.target_coordinates = (None, None)
         # send initial request to wake up sdk browser and avoid deadlock on first request
-        self.requests_session.get("http://127.0.0.1:8000/data")
+        init_request_response = self.requests_session.get("http://127.0.0.1:8000/data")
+        if init_request_response.status_code != 200:
+            raise ConnectionError("Failed to connect to Earth Rover SDK. Ensure the SDK is running \"hypercorn main:app\", and robot is enabled.")
 
     def fetch_sensor_inputs(self):
         """Fetch all camera views from Earth Rover SDK in a single request and augment front camera."""
         # Send requests simultaneously
+        start = time.perf_counter()
         future_data = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/data")
         future_front_img = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/v2/front")
         future_rear_img = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/v2/rear")
@@ -88,6 +69,8 @@ class EarthRoverAgent(LLMAgent):
         response_front_img = future_front_img.result()
         response_rear_img = future_rear_img.result()
         response_map = future_map.result()
+        end = time.perf_counter()
+        print(f"Fetched sensor inputs in {end - start} seconds.")
 
         # Decode base64 image
         front_image_bytes = base64.b64decode(response_front_img.json()['front_frame'])
@@ -124,8 +107,18 @@ class EarthRoverAgent(LLMAgent):
 
     def earth_rover_front_augmentation(self, image):
         height, width = image.shape[:2]
+        # path lines
         cv2.line(image, (int(0.26 * width), height), (int(0.47 * width), int(0.58 * height)), (0, 255, 255), 2)
         cv2.line(image, (int(0.74 * width), height), (int(0.53 * width), int(0.58 * height)), (0, 255, 255), 2)
+
+        # meters markers
+        cv2.line(image, (int(0.62 * width), int(0.80 * height)), (int(0.66 * width), int(0.80 * height)), (0, 255, 255), 2)
+        cv2.putText(image, "1m", (int(0.66 * width), int(0.79 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.line(image, (int(0.55 * width), int(0.66 * height)), (int(0.58 * width), int(0.66 * height)), (0, 255, 255), 2)
+        cv2.putText(image, "2m", (int(0.59 * width), int(0.65 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.line(image, (int(0.52 * width), int(0.58 * height)), (int(0.54 * width), int(0.58 * height)), (0, 255, 255), 2)
+        cv2.putText(image, "3m", (int(0.54 * width), int(0.57 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        
         return image
 
 
@@ -206,3 +199,15 @@ class EarthRoverAgent(LLMAgent):
             self.message_history.append(tool_response)
             if additional_response:
                 self.message_history.append(additional_response)
+
+if __name__ == "__main__":
+    # test image augmentation for front camera
+    agent = EarthRoverAgent(
+        model="google_genai:gemini-3-flash-preview",
+        tools=[],
+        camera_fov=90,
+    )
+    front_image_path = Path(__file__).parent.parent.resolve() / "EarthRover/flat.jpg"
+    front_image = cv2.imread(str(front_image_path))
+    augmented_image = agent.earth_rover_front_augmentation(front_image)
+    cv2.imwrite("augmented_test_front.jpg", augmented_image)
