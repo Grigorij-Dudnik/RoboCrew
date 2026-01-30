@@ -13,12 +13,12 @@ def fullscreen():
     if not TRAIL_COORDINATES:
         return "No location data yet."
     
-    m = folium.Map(location=TRAIL_COORDINATES[-1], zoom_start=15)
+    m = folium.Map(location=TRAIL_COORDINATES[-1], zoom_start=24)
     folium.PolyLine(TRAIL_COORDINATES).add_to(m)
     folium.Marker(TRAIL_COORDINATES[-1]).add_to(m)
 
     html = m.get_root().render()
-    return html.replace('<head>', '<head><meta http-equiv="refresh" content="2">')  # addint autorefresh
+    return html.replace('<head>', '<head><meta http-equiv="refresh" content="6">')  # adding autorefresh
 
 
 @app.route("/update_location", methods=['POST'])

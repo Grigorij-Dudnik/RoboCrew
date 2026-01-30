@@ -56,16 +56,18 @@ class EarthRoverAgent(LLMAgent):
         self.target_coordinates = (None, None)
         self.use_location_visualizer = use_location_visualizer
 
-        # send initial request to wake up sdk browser and avoid deadlock on first request
-        # init_request_response = self.requests_session.get("http://127.0.0.1:8000/data")
-        # if init_request_response.status_code != 200:
-        #     raise ConnectionError("Failed to connect to Earth Rover SDK. Ensure the SDK is running \"hypercorn main:app\", and robot is enabled.")
+        self.llm_times = []
+
+        # send initial request to wake up sdk browser and avoid deadlock on first request. Avoid sending for testing purposes.
+        if __name__ != "__main__":
+            init_request_response = self.requests_session.get("http://127.0.0.1:8000/data")
+            if init_request_response.status_code != 200:
+                raise ConnectionError("Failed to connect to Earth Rover SDK. Ensure the SDK is running \"hypercorn main:app\", and robot is enabled.")
 
     def fetch_sensor_inputs(self):
         """Fetch all camera views from Earth Rover SDK in a single request and augment front camera."""
         # Send requests simultaneously
         start = time.perf_counter()
-        print("sending sensor requests...")
         future_data = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/data")
         future_front_img = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/v2/front")
         future_rear_img = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/v2/rear")
@@ -74,10 +76,11 @@ class EarthRoverAgent(LLMAgent):
         response_front_img = future_front_img.result()
         response_rear_img = future_rear_img.result()
         response_map = future_map.result()
+        end = time.perf_counter()
+        print(f"Sensor data fetch time: {end - start} seconds.")
+
         latitude = response_data.json()["latitude"]
         longitude = response_data.json()["longitude"]
-        end = time.perf_counter()
-        print(f"Fetched sensor inputs in {end - start} seconds.")
 
         # Decode base64 image
         front_image_bytes = base64.b64decode(response_front_img.json()['front_frame'])
@@ -94,11 +97,12 @@ class EarthRoverAgent(LLMAgent):
         )
         augmented_front_image = self.earth_rover_front_augmentation(
             augmented_front_image,
-        )  
+        )
+        #augmented_front_image = cv2.resize(augmented_front_image, (512, 288))
         
         # Convert augmented image back to base64
         _, buffer = cv2.imencode('.jpg', augmented_front_image)
-        front_image = base64.b64encode(buffer).decode('utf-8')\
+        front_image = base64.b64encode(buffer).decode('utf-8')
         
         map_augmented = self.map_augmentation(
             response_map.json()['map_frame'],
@@ -115,16 +119,16 @@ class EarthRoverAgent(LLMAgent):
     def earth_rover_front_augmentation(self, image):
         height, width = image.shape[:2]
         # path lines
-        cv2.line(image, (int(0.26 * width), height), (int(0.47 * width), int(0.58 * height)), (0, 255, 255), 2)
-        cv2.line(image, (int(0.74 * width), height), (int(0.53 * width), int(0.58 * height)), (0, 255, 255), 2)
+        cv2.line(image, (int(0.26 * width), height), (int(0.48 * width), int(0.56 * height)), (0, 255, 255), 2)
+        cv2.line(image, (int(0.74 * width), height), (int(0.52 * width), int(0.56 * height)), (0, 255, 255), 2)
 
         # meters markers
-        cv2.line(image, (int(0.62 * width), int(0.80 * height)), (int(0.66 * width), int(0.80 * height)), (0, 255, 255), 2)
-        cv2.putText(image, "1m", (int(0.66 * width), int(0.79 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-        cv2.line(image, (int(0.55 * width), int(0.66 * height)), (int(0.58 * width), int(0.66 * height)), (0, 255, 255), 2)
-        cv2.putText(image, "2m", (int(0.59 * width), int(0.65 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-        cv2.line(image, (int(0.52 * width), int(0.58 * height)), (int(0.54 * width), int(0.58 * height)), (0, 255, 255), 2)
-        cv2.putText(image, "3m", (int(0.54 * width), int(0.57 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.line(image, (int(0.60 * width), int(0.75 * height)), (int(0.64 * width), int(0.75 * height)), (0, 255, 255), 2)
+        cv2.putText(image, "1m", (int(0.65 * width), int(0.74 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.line(image, (int(0.53 * width), int(0.61 * height)), (int(0.56 * width), int(0.61 * height)), (0, 255, 255), 2)
+        cv2.putText(image, "2m", (int(0.58 * width), int(0.60 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.line(image, (int(0.51 * width), int(0.56 * height)), (int(0.53 * width), int(0.56 * height)), (0, 255, 255), 2)
+        cv2.putText(image, "3m", (int(0.54 * width), int(0.55 * height)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         
         return image
 
@@ -155,6 +159,8 @@ class EarthRoverAgent(LLMAgent):
             draw_object.text((center_x + text_placement_radius * math.cos(math.pi/2 - relative_bearing) - 10, center_y - text_placement_radius * math.sin(math.pi/2 - relative_bearing) - 10), "Target", fill=(100,100,0), font=self.imagefont_big)
 
         out = io.BytesIO()
+
+        #image = image.resize((400, 400))
         image.save(out, "JPEG", quality=75)
         return base64.b64encode(out.getvalue()).decode()
     
@@ -170,6 +176,11 @@ class EarthRoverAgent(LLMAgent):
         tip = (position_x+size*math.cos(angle_rad), position_y+size*math.sin(angle_rad))
         left = (position_x+size*0.6*math.cos(angle_rad+2.4), position_y+size*0.6*math.sin(angle_rad+2.4))
         right= (position_x+size*0.6*math.cos(angle_rad-2.4), position_y+size*0.6*math.sin(angle_rad-2.4))
+        tip_background = (position_x+size*1.1*math.cos(angle_rad), position_y+size*1.1*math.sin(angle_rad))
+        left_background = (position_x+size*0.65*math.cos(angle_rad+2.4), position_y+size*0.65*math.sin(angle_rad+2.4))
+        right_background= (position_x+size*0.65*math.cos(angle_rad-2.4), position_y+size*0.65*math.sin(angle_rad-2.4))
+        
+        draw.polygon([tip_background,left_background,right_background], fill=(0,0,0))
         draw.polygon([tip,left,right], fill=color)
 
     def send_location_to_visualizer(self, latitude, longitude):
@@ -209,7 +220,16 @@ class EarthRoverAgent(LLMAgent):
         )
 
         self.message_history.append(message)
+        start = time.perf_counter()
         response = self.llm.invoke(self.message_history)
+        llm_time = time.perf_counter() - start
+        print(f"LLM response time: {llm_time} seconds.")
+        self.llm_times.append(llm_time)
+        # print(len(self.llm_times))
+        # if len(self.llm_times) >= 25:
+        #     avg_time = sum(self.llm_times) / len(self.llm_times)
+        #     print(f"Average LLM response time over last {len(self.llm_times)} calls: {avg_time} seconds.")
+        #     raise Exception
         print(response.content)
         print(response.tool_calls)
         
@@ -233,5 +253,21 @@ if __name__ == "__main__":
         camera_fov=90,
     )
     # read image
-    map_image_path = Path(__file__).parent.parent.resolve() / "EarthRover/map.jpg"
-    agent.send_location_to_visualizer(50.0985, 18.9818)
+    map_image_path = "map.png"
+    with open(map_image_path, "rb") as f:
+        b64_img = base64.b64encode(f.read()).decode()
+    augmented_map = agent.map_augmentation(
+        b64_img,
+        angle=45,
+        lat=50.301,
+        lon=18.672,
+        tlat=50.302,
+        tlon=18.674,
+    )
+    # save augmented image
+    with open("augmented_map.jpg", "wb") as f:
+        f.write(base64.b64decode(augmented_map))
+    
+    # test visualiser
+    agent.use_location_visualizer = True
+    agent.send_location_to_visualizer(50.301, 18.672)
