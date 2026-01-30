@@ -9,6 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 EARTH_ROVER_SDK_URL = "http://127.0.0.1:8000"
 
+# ToDo: zrobić toole blokującymi?
+
 @tool
 def move_forward(distance_meters: float) -> str:
     """Drives the Earth Rover forward for a specific distance."""
@@ -17,9 +19,21 @@ def move_forward(distance_meters: float) -> str:
     for _ in range(num_requests):
         threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 1, "angular": 0}})).start()
         time.sleep(0.4)
+    time.sleep(0.6)
 
     return f"Moved forward {distance_meters:.2f} meters."
 
+@tool
+def move_forward_carefully(distance_meters: float) -> str:
+    """Drives the Earth Rover forward on half of speed. Use when close to the obvstacles."""
+    num_requests = max(1, int(distance_meters / 0.5))   # 0.5 meters per request
+
+    for _ in range(num_requests):
+        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.5, "angular": 0}})).start()
+        time.sleep(0.4)
+    time.sleep(0.5)
+
+    return f"Moved forward {distance_meters:.2f} meters."
 
 @tool
 def move_backward(distance_meters: float) -> str:
@@ -29,7 +43,7 @@ def move_backward(distance_meters: float) -> str:
     for _ in range(num_requests):
         threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": -1, "angular": 0}})).start()
         time.sleep(0.4)
-
+    time.sleep(0.5)
     return f"Moved backward {distance_meters:.2f} meters."
 
 @tool
@@ -40,6 +54,7 @@ def turn_right(angle_degrees: float) -> str:
     for _ in range(num_requests):
         threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0, "angular": -1}})).start()
         time.sleep(0.4)
+    time.sleep(0.5)
 
     return f"Turned right by {angle_degrees:.2f} degrees."   
 
@@ -51,6 +66,7 @@ def turn_left(angle_degrees: float) -> str:
     for _ in range(num_requests):
         threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0, "angular": 1}})).start()
         time.sleep(0.4)
+    time.sleep(0.5)
 
     return f"Turned left by {angle_degrees:.2f} degrees."   
 

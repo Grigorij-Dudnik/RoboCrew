@@ -24,7 +24,8 @@ class EarthRoverAgent(LLMAgent):
         system_prompt=None,
         camera_fov=90,
         history_len=None,
-        use_memory=False
+        use_memory=False,
+        use_location_visualizer=False,
     ):
         prompt_path = Path(__file__).parent.parent.resolve() / "EarthRover/earth_rover.prompt"
         with open(prompt_path, "r") as f:
@@ -48,19 +49,23 @@ class EarthRoverAgent(LLMAgent):
         
         # Initialize thread pool executor for concurrent operations
         # ToDo: zmienić na 4
-        self.executor = ThreadPoolExecutor(max_workers=2)
+        self.executor = ThreadPoolExecutor(max_workers=4)
         self.requests_session = requests.Session() 
-        self.imagefont = ImageFont.load_default(size=30)       
+        self.imagefont_big = ImageFont.load_default(size=30)
+        self.imagefont_small = ImageFont.load_default(size=20)       
         self.target_coordinates = (None, None)
+        self.use_location_visualizer = use_location_visualizer
+
         # send initial request to wake up sdk browser and avoid deadlock on first request
-        init_request_response = self.requests_session.get("http://127.0.0.1:8000/data")
-        if init_request_response.status_code != 200:
-            raise ConnectionError("Failed to connect to Earth Rover SDK. Ensure the SDK is running \"hypercorn main:app\", and robot is enabled.")
+        # init_request_response = self.requests_session.get("http://127.0.0.1:8000/data")
+        # if init_request_response.status_code != 200:
+        #     raise ConnectionError("Failed to connect to Earth Rover SDK. Ensure the SDK is running \"hypercorn main:app\", and robot is enabled.")
 
     def fetch_sensor_inputs(self):
         """Fetch all camera views from Earth Rover SDK in a single request and augment front camera."""
         # Send requests simultaneously
         start = time.perf_counter()
+        print("sending sensor requests...")
         future_data = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/data")
         future_front_img = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/v2/front")
         future_rear_img = self.executor.submit(self.requests_session.get, "http://127.0.0.1:8000/v2/rear")
@@ -69,6 +74,8 @@ class EarthRoverAgent(LLMAgent):
         response_front_img = future_front_img.result()
         response_rear_img = future_rear_img.result()
         response_map = future_map.result()
+        latitude = response_data.json()["latitude"]
+        longitude = response_data.json()["longitude"]
         end = time.perf_counter()
         print(f"Fetched sensor inputs in {end - start} seconds.")
 
@@ -96,13 +103,13 @@ class EarthRoverAgent(LLMAgent):
         map_augmented = self.map_augmentation(
             response_map.json()['map_frame'],
             response_data.json()["orientation"],
-            response_data.json()["latitude"],
-            response_data.json()["longitude"],
+            latitude,
+            longitude,
             self.target_coordinates[0],
             self.target_coordinates[1],
         )
     
-        return front_image, response_rear_img.json()['rear_frame'], map_augmented
+        return front_image, response_rear_img.json()['rear_frame'], map_augmented, (latitude, longitude)
     
 
     def earth_rover_front_augmentation(self, image):
@@ -124,21 +131,28 @@ class EarthRoverAgent(LLMAgent):
 
     def map_augmentation(self, b64_img, angle, lat, lon, tlat=None, tlon=None):
         image = Image.open(io.BytesIO(base64.b64decode(b64_img))).convert("RGB")
-        draw_object = ImageDraw.Draw(image)
         width, height = image.size
         center_x, center_y = width // 2, height // 2
 
+        # rotate image according to heading
+        image = image.rotate(-angle)
+
+        draw_object = ImageDraw.Draw(image)
+
         # center arrow (heading)
-        angle_rad = math.radians(angle)
-        self._draw_arrow(center_x, center_y, angle_rad, 35, (255,0,0), draw_object)
+        self._draw_arrow(center_x, center_y, 0, 35, (255,0,0), draw_object)
+        draw_object.text((center_x - 120, center_y - 110), "<= Left", fill=(150,0,0), font=self.imagefont_big)
+        draw_object.text((center_x + 30, center_y - 110), "Right =>", fill=(150,0,0), font=self.imagefont_big)
+        draw_object.line((center_x, 0, center_x, center_y), fill=(225,0,0), width=1)
 
         # target arrow
         if tlat:
             radius = height // 2 - 40
             text_placement_radius = radius - 60
             bearing = self._calculate_bearing(lat, lon, tlat, tlon)
-            self._draw_arrow(center_x + radius * math.cos(math.pi/2 - bearing), center_y - radius * math.sin(math.pi/2 - bearing), bearing, 60, (255, 255, 0), draw_object)    # minus after center_y because of inversion of coordinate system for images
-            draw_object.text((center_x + text_placement_radius * math.cos(math.pi/2 - bearing) - 10, center_y - text_placement_radius * math.sin(math.pi/2 - bearing) - 10), "Target", fill=(100,100,0), font=self.imagefont)
+            relative_bearing = bearing - math.radians(angle)
+            self._draw_arrow(center_x + radius * math.cos(math.pi/2 - relative_bearing), center_y - radius * math.sin(math.pi/2 - relative_bearing), relative_bearing, 60, (255, 255, 0), draw_object)    # minus after center_y because of inversion of coordinate system for images
+            draw_object.text((center_x + text_placement_radius * math.cos(math.pi/2 - relative_bearing) - 10, center_y - text_placement_radius * math.sin(math.pi/2 - relative_bearing) - 10), "Target", fill=(100,100,0), font=self.imagefont_big)
 
         out = io.BytesIO()
         image.save(out, "JPEG", quality=75)
@@ -157,10 +171,20 @@ class EarthRoverAgent(LLMAgent):
         left = (position_x+size*0.6*math.cos(angle_rad+2.4), position_y+size*0.6*math.sin(angle_rad+2.4))
         right= (position_x+size*0.6*math.cos(angle_rad-2.4), position_y+size*0.6*math.sin(angle_rad-2.4))
         draw.polygon([tip,left,right], fill=color)
+
+    def send_location_to_visualizer(self, latitude, longitude):
+        """Sends current location to map visualizer running in Flask app."""
+        self.executor.submit(
+            requests.post, "http://127.0.0.1:5000/update_location",
+            json={"lat": latitude, "lon": longitude},
+            timeout=0.5
+            )
     
     def main_loop_content(self):
         # Fetch all camera views from Earth Rover SDK in one request
-        front_frame, rear_frame, map_frame = self.fetch_sensor_inputs()
+        front_frame, rear_frame, map_frame, (latitude, longitude) = self.fetch_sensor_inputs()
+        if self.use_location_visualizer:
+            self.send_location_to_visualizer(latitude, longitude)
 
         # Create messages for all camera views
         message = HumanMessage(
@@ -200,14 +224,14 @@ class EarthRoverAgent(LLMAgent):
             if additional_response:
                 self.message_history.append(additional_response)
 
+
 if __name__ == "__main__":
-    # test image augmentation for front camera
+    # test image augmentation for map
     agent = EarthRoverAgent(
         model="google_genai:gemini-3-flash-preview",
         tools=[],
         camera_fov=90,
     )
-    front_image_path = Path(__file__).parent.parent.resolve() / "EarthRover/flat.jpg"
-    front_image = cv2.imread(str(front_image_path))
-    augmented_image = agent.earth_rover_front_augmentation(front_image)
-    cv2.imwrite("augmented_test_front.jpg", augmented_image)
+    # read image
+    map_image_path = Path(__file__).parent.parent.resolve() / "EarthRover/map.jpg"
+    agent.send_location_to_visualizer(50.0985, 18.9818)
