@@ -24,7 +24,7 @@ agent = EarthRoverAgent(
     camera_fov=100,
     use_location_visualizer=True,
 )
-agent.target_coordinates = 50.30107135941755, 18.6724942284762
+agent.target_coordinates = 50.30495619197536, 18.23360803299451
 
 agent.task = "Follow the target. Direction to target marked with yellow arrow on map."
 

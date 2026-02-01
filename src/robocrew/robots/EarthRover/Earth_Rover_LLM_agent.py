@@ -2,6 +2,7 @@
 
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.core.utils import basic_augmentation
+from robocrew.robots.EarthRover.utils import calculate_robot_bearing
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageFont
@@ -12,6 +13,7 @@ import cv2
 import base64
 import numpy as np
 import io, math
+import geomag
 
 
 class EarthRoverAgent(LLMAgent):
@@ -63,6 +65,11 @@ class EarthRoverAgent(LLMAgent):
             init_request_response = self.requests_session.get("http://127.0.0.1:8000/data")
             if init_request_response.status_code != 200:
                 raise ConnectionError("Failed to connect to Earth Rover SDK. Ensure the SDK is running \"hypercorn main:app\", and robot is enabled.")
+            self.magnetic_declination = geomag.declination(dlat=init_request_response.json()["latitude"], dlon=init_request_response.json()["longitude"])
+            if init_request_response.json()["latitude"] == 1000:
+                self.magnetic_declination = 0
+                print("No connection to GPS. Place your robot outdoors.")
+
 
     def fetch_sensor_inputs(self):
         """Fetch all camera views from Earth Rover SDK in a single request and augment front camera."""
@@ -103,10 +110,19 @@ class EarthRoverAgent(LLMAgent):
         # Convert augmented image back to base64
         _, buffer = cv2.imencode('.jpg', augmented_front_image)
         front_image = base64.b64encode(buffer).decode('utf-8')
-        
+
+        print(f"accel: {response_data.json()['accels']}, magnet: {response_data.json()['mags']}")
+        # Caution: use only when robot stays steady. Function includes Earth acceleration compensation - so avoid artificial accelerations.
+        robot_bearing = calculate_robot_bearing(
+            response_data.json()["accels"],
+            response_data.json()["mags"],
+            declination=self.magnetic_declination,
+        )
+        print(f"Robot Bearing: {robot_bearing}")
+        print(f"angle: {response_data.json()['orientation']}")
         map_augmented = self.map_augmentation(
             response_map.json()['map_frame'],
-            response_data.json()["orientation"],
+            robot_bearing,
             latitude,
             longitude,
             self.target_coordinates[0],
@@ -153,7 +169,7 @@ class EarthRoverAgent(LLMAgent):
         if tlat:
             radius = height // 2 - 40
             text_placement_radius = radius - 60
-            bearing = self._calculate_bearing(lat, lon, tlat, tlon)
+            bearing = self._calculate_target_bearing(lat, lon, tlat, tlon)
             relative_bearing = bearing - math.radians(angle)
             self._draw_arrow(center_x + radius * math.cos(math.pi/2 - relative_bearing), center_y - radius * math.sin(math.pi/2 - relative_bearing), relative_bearing, 60, (255, 255, 0), draw_object)    # minus after center_y because of inversion of coordinate system for images
             draw_object.text((center_x + text_placement_radius * math.cos(math.pi/2 - relative_bearing) - 10, center_y - text_placement_radius * math.sin(math.pi/2 - relative_bearing) - 10), "Target", fill=(100,100,0), font=self.imagefont_big)
@@ -164,7 +180,7 @@ class EarthRoverAgent(LLMAgent):
         image.save(out, "JPEG", quality=75)
         return base64.b64encode(out.getvalue()).decode()
     
-    def _calculate_bearing(self, lat1, lon1, lat2, lon2):
+    def _calculate_target_bearing(self, lat1, lon1, lat2, lon2):
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
         dx = (lon2 - lon1) * math.cos((lat1 + lat2) / 2)
