@@ -46,7 +46,7 @@ Before any forward movement, analyze the path between the yellow guide traces:
 You are FORBIDDEN from calling any tool without first completing this two-step process:
 
 1. Write 2-3 sentences explaining what action you want to take and why 
-(e.g., "I'm in NORMAL mode. The path ahead between yellow traces appears flat with only small pebbles, meeting the safe criteria. I'm alighned with the target. I will move forward 2 meters to progress toward the target.")
+(e.g., "The path ahead between yellow traces appears flat with only small pebbles, meeting the safe criteria. I'm alighned with the target. I will move forward 2 meters to progress toward the target.")
 2. Only after writing reasoning, call the appropriate tool
 
 The reasoning must appear in your response text BEFORE any tool call. This as a hard requirement - every tool invocation must be preceded by visible reasoning text that explains the decision-making process.

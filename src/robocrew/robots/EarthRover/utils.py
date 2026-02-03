@@ -11,9 +11,9 @@ def calculate_robot_bearing(acc_raw, mag_raw, declination=0):
     accelerations_mean = [sum(x) / len(x) for x in zip(*acc_raw)][:3] # [:3] - removing timestamp
     
     # hard iron magnetic biases. Run magentetic_calibration.py to get these values for your robot.
-    hard_iron_x = 240.0
-    hard_iron_y = -136.0
-    hard_iron_z = 440.5
+    hard_iron_x = 110   # 240.0
+    hard_iron_y = -261  # -136.0
+    hard_iron_z = 111   # 440.5
 
     ax, ay, az = accelerations_mean
     mx, my, mz, _ = mag_raw[0]

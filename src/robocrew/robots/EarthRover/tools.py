@@ -20,6 +20,8 @@ def move_forward(distance_meters: float) -> str:
         threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 1, "angular": 0, "lamp": LAMP}})).start()
         time.sleep(0.4)
     # slow down on the end of movement to stabilize Earth accels measurement
+    threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.6, "angular": 0, "lamp": LAMP}})).start()
+    time.sleep(0.4)
     threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.3, "angular": 0, "lamp": LAMP}})).start()
     time.sleep(0.4)
     # time to finish movement, stabilize before Earth accels measurement
