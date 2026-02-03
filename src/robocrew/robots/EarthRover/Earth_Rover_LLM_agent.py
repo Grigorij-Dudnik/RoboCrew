@@ -57,8 +57,7 @@ class EarthRoverAgent(LLMAgent):
         self.imagefont_small = ImageFont.load_default(size=20)       
         self.target_coordinates = (None, None)
         self.use_location_visualizer = use_location_visualizer
-
-        self.llm_times = []
+        self.navigation_mode = "NORMAL"  # or "OBSTACLE_AVOIDANCE"
 
         # send initial request to wake up sdk browser and avoid deadlock on first request. Avoid sending for testing purposes.
         if __name__ != "__main__":
@@ -119,7 +118,6 @@ class EarthRoverAgent(LLMAgent):
             declination=self.magnetic_declination,
         )
         print(f"Robot Bearing: {robot_bearing}")
-        print(f"angle: {response_data.json()['orientation']}")
         map_augmented = self.map_augmentation(
             response_map.json()['map_frame'],
             robot_bearing,
@@ -240,12 +238,6 @@ class EarthRoverAgent(LLMAgent):
         response = self.llm.invoke(self.message_history)
         llm_time = time.perf_counter() - start
         print(f"LLM response time: {llm_time} seconds.")
-        self.llm_times.append(llm_time)
-        # print(len(self.llm_times))
-        # if len(self.llm_times) >= 25:
-        #     avg_time = sum(self.llm_times) / len(self.llm_times)
-        #     print(f"Average LLM response time over last {len(self.llm_times)} calls: {avg_time} seconds.")
-        #     raise Exception
         print(response.content)
         print(response.tool_calls)
         

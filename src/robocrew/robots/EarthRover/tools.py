@@ -14,12 +14,15 @@ LAMP = 0    # 0 or 1 to disable or enable lamps
 @tool
 def move_forward(distance_meters: float) -> str:
     """Drives the Earth Rover forward for a specific distance."""
-    num_requests = max(1, int(distance_meters / 0.32))   # 0.32 meters per request
+    num_requests = max(1, int(distance_meters / 0.34))   # 0.34 meters per request
 
     for _ in range(num_requests):
-        print(time.time())
         threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 1, "angular": 0, "lamp": LAMP}})).start()
         time.sleep(0.4)
+    # slow down on the end of movement to stabilize Earth accels measurement
+    threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.3, "angular": 0, "lamp": LAMP}})).start()
+    time.sleep(0.4)
+    # time to finish movement, stabilize before Earth accels measurement
     time.sleep(1)
 
     return f"Moved forward {distance_meters:.2f} meters."
@@ -27,7 +30,7 @@ def move_forward(distance_meters: float) -> str:
 @tool
 def move_forward_carefully(distance_meters: float) -> str:
     """Drives the Earth Rover forward on half of speed. Use when going through rough terrain or when you close to the obstacles."""
-    num_requests = max(1, int(distance_meters / 0.20))   # 0.20 meters per request
+    num_requests = max(1, int(distance_meters / 0.18))   # 0.18 meters per request
 
     for _ in range(num_requests):
         threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.6, "angular": 0, "lamp": LAMP}})).start()
@@ -39,10 +42,10 @@ def move_forward_carefully(distance_meters: float) -> str:
 @tool
 def move_backward(distance_meters: float) -> str:
     """Drives the Earth Rover backward for a specific distance."""
-    num_requests = max(1, int(distance_meters / 0.4))
+    num_requests = max(1, int(distance_meters / 0.3))
 
     for _ in range(num_requests):
-        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": -1, "angular": 0, "lamp": LAMP}})).start()
+        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": -0.6, "angular": 0, "lamp": LAMP}})).start()
         time.sleep(0.4)
     time.sleep(1)
     return f"Moved backward {distance_meters:.2f} meters."
