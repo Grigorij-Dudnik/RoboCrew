@@ -20,7 +20,7 @@ agent = EarthRoverAgent(
         turn_left,
         turn_right,
     ],
-    history_len=7,
+    history_len=4,
     camera_fov=120,
     use_location_visualizer=True,
 )
