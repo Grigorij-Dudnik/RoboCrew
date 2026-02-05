@@ -54,10 +54,10 @@ class EarthRoverAgent(LLMAgent):
         self.executor = ThreadPoolExecutor(max_workers=4)
         self.requests_session = requests.Session() 
         self.imagefont_big = ImageFont.load_default(size=30)
-        self.imagefont_small = ImageFont.load_default(size=20)       
-        self.target_coordinates = (None, None)
+        self.imagefont_small = ImageFont.load_default(size=20) 
+        self.task = "Follow the target. Direction to target marked with yellow arrow on the map."      
+        self.waypoints = []
         self.use_location_visualizer = use_location_visualizer
-        self.navigation_mode = "NORMAL"  # or "OBSTACLE_AVOIDANCE"
 
         # send initial request to wake up sdk browser and avoid deadlock on first request. Avoid sending for testing purposes.
         if __name__ != "__main__":
@@ -123,8 +123,8 @@ class EarthRoverAgent(LLMAgent):
             robot_bearing,
             latitude,
             longitude,
-            self.target_coordinates[0],
-            self.target_coordinates[1],
+            self.waypoints[0][0],
+            self.waypoints[0][1],
         )
     
         return front_image, response_rear_img.json()['rear_frame'], map_augmented, (latitude, longitude)
@@ -204,10 +204,21 @@ class EarthRoverAgent(LLMAgent):
             json={"lat": latitude, "lon": longitude},
             timeout=0.5
             )
+        
+    def check_waypoint_closiness(self, latitude, longitude):
+        """Checks if current location is in 20m range to the next waypoint and removes it from the list if so."""
+        print(f"latitude: {latitude}, target latitude: {self.waypoints[0][0]}, longitude: {longitude}, target longitude: {self.waypoints[0][1]}")
+        if abs(latitude - self.waypoints[0][0]) < 0.00030 and abs(longitude - self.waypoints[0][1]) < 0.00018:
+            print("Waypoint reached!")
+            self.waypoints.pop(0)
+            if not self.waypoints:
+                print("All waypoints reached.")
+
     
     def main_loop_content(self):
         # Fetch all camera views from Earth Rover SDK in one request
         front_frame, rear_frame, map_frame, (latitude, longitude) = self.fetch_sensor_inputs()
+        self.check_waypoint_closiness(latitude, longitude)
         if self.use_location_visualizer:
             self.send_location_to_visualizer(latitude, longitude)
 

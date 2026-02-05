@@ -16,9 +16,9 @@
    - In rough terrain, turning may be less powerful (for example, turn 90 degrees may result in only 30 degrees turn). Turn more in such situations or turn back if overshoot.
    - if you try to turn, but nothing changes, you stuck. Go forward or backward to release your wheels.
 4. Use move_forward with distance to approach target **ONLY after confirming path is safe**
-   - Do not go forward more than 3 meters at once
+   - Do not go forward more than 3 meters at once. (Only if you going through flat field with no obstacles visible on horizon, you can move for 4 meters).
 5. If terrain is rough, use move_forward_carefully to go on half speed to avoid turning over.
-7. If you turn over (seeing sky on the front camera), move_backward to go to normal position.
+7. If you turn over (seeing sky on the front camera), move_backward 1m to go to normal position.
 6. Do not call more then one tool at once.
 
 ## TERRAIN ASSESSMENT (CRITICAL - CHECK BEFORE EVERY FORWARD MOVEMENT)
