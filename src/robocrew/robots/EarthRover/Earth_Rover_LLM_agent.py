@@ -110,7 +110,6 @@ class EarthRoverAgent(LLMAgent):
         _, buffer = cv2.imencode('.jpg', augmented_front_image)
         front_image = base64.b64encode(buffer).decode('utf-8')
 
-        print(f"accel: {response_data.json()['accels']}, magnet: {response_data.json()['mags']}")
         # Caution: use only when robot stays steady. Function includes Earth acceleration compensation - so avoid artificial accelerations.
         robot_bearing = calculate_robot_bearing(
             response_data.json()["accels"],
@@ -169,6 +168,7 @@ class EarthRoverAgent(LLMAgent):
             text_placement_radius = radius - 60
             bearing = self._calculate_target_bearing(lat, lon, tlat, tlon)
             relative_bearing = bearing - math.radians(angle)
+            print(f"Relative bearing: {math.degrees(relative_bearing)}")
             self._draw_arrow(center_x + radius * math.cos(math.pi/2 - relative_bearing), center_y - radius * math.sin(math.pi/2 - relative_bearing), relative_bearing, 60, (255, 255, 0), draw_object)    # minus after center_y because of inversion of coordinate system for images
             draw_object.text((center_x + text_placement_radius * math.cos(math.pi/2 - relative_bearing) - 10, center_y - text_placement_radius * math.sin(math.pi/2 - relative_bearing) - 10), "Target", fill=(100,100,0), font=self.imagefont_big)
 

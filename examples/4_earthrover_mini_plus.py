@@ -6,31 +6,35 @@ from robocrew.robots.EarthRover.Earth_Rover_LLM_agent import EarthRoverAgent
 from robocrew.robots.EarthRover.tools import \
     move_forward, \
     move_backward, \
-    turn_right, \
-    turn_left, \
-    move_forward_carefully
+    move_forward_max_speed, \
+    turn_right_forward_rotation, \
+    turn_left_forward_rotation, \
+    turn_right_backward_rotation, \
+    turn_left_backward_rotation
 
 # init Earth Rover agent
 agent = EarthRoverAgent(
     model="google_genai:gemini-3-flash-preview",
     tools=[
         move_forward,
-        move_forward_carefully,
         move_backward,
-        turn_left,
-        turn_right,
+        move_forward_max_speed,
+        turn_right_forward_rotation,
+        turn_left_forward_rotation,
+        turn_right_backward_rotation,
+        turn_left_backward_rotation,
     ],
     history_len=4,
     camera_fov=120,
     use_location_visualizer=True,
 )
 agent.waypoints = [
-    (50.260504811881184, 18.585664752785213), 
-    (50.26067393589781, 18.59067010893742), 
-    (50.263471599349636, 18.600700771653397), 
-    (50.26275607990065, 18.602425811028276),
-    (50.261639047439566, 18.604020186018648),
-    (50.25994587473119, 18.609209113928962),
+    (50.46199017312358, 18.52245882339651), 
+    (50.46312884434534, 18.519863268946846),
+    (50.46416841170328, 18.52073741261176),
+    (50.46931451571181, 18.515441379426754),
+    (50.47290427097344, 18.51146549840186),
+    (50.47523116115213, 18.50625015824145),
     ]
 
 agent.go()
