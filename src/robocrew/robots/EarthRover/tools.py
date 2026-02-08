@@ -55,10 +55,10 @@ def move_forward_max_speed(distance_meters: float) -> str:
 @tool
 def turn_right_forward_rotation(angle_degrees: float) -> str:
     """Turns the Earth Rover right by a specified angle in degrees with small movement forward."""
-    num_requests = max(1, int(angle_degrees / 19))  # 19 degrees per request
+    num_requests = max(1, int(angle_degrees / 17))  # 17 degrees per request
     
     for _ in range(num_requests):
-        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.1, "angular": -1, "lamp": LAMP}})).start()
+        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.2, "angular": -1, "lamp": LAMP}})).start()
         time.sleep(0.4)
     time.sleep(1)
 
@@ -67,10 +67,10 @@ def turn_right_forward_rotation(angle_degrees: float) -> str:
 @tool
 def turn_left_forward_rotation(angle_degrees: float) -> str:
     """Turns the Earth Rover left by a specified angle in degrees with small movement forward."""
-    num_requests = max(1, int(angle_degrees / 19))  # 19 degrees per request
+    num_requests = max(1, int(angle_degrees / 17))  # 17 degrees per request
 
     for _ in range(num_requests):
-        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.1, "angular": 1, "lamp": LAMP}})).start()
+        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": 0.2, "angular": 1, "lamp": LAMP}})).start()
         time.sleep(0.4)
     time.sleep(1)
 
@@ -79,10 +79,10 @@ def turn_left_forward_rotation(angle_degrees: float) -> str:
 @tool
 def turn_right_backward_rotation(angle_degrees: float) -> str:
     """Turns the Earth Rover right by a specified angle in degrees with small movement backward."""
-    num_requests = max(1, int(angle_degrees / 19))  # 19 degrees per request
+    num_requests = max(1, int(angle_degrees / 17))  # 17 degrees per request
     
     for _ in range(num_requests):
-        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": -0.1, "angular": -1, "lamp": LAMP}})).start()
+        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": -0.2, "angular": -1, "lamp": LAMP}})).start()
         time.sleep(0.4)
     time.sleep(1)
 
@@ -91,10 +91,10 @@ def turn_right_backward_rotation(angle_degrees: float) -> str:
 @tool
 def turn_left_backward_rotation(angle_degrees: float) -> str:
     """Turns the Earth Rover left by a specified angle in degrees with small movement backward."""
-    num_requests = max(1, int(angle_degrees / 19))  # 19 degrees per request
+    num_requests = max(1, int(angle_degrees / 17))  # 17 degrees per request
 
     for _ in range(num_requests):
-        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": -0.1, "angular": 1, "lamp": LAMP}})).start()
+        threading.Thread(target=lambda: requests.post(f"{EARTH_ROVER_SDK_URL}/control", json={"command": {"linear": -0.2, "angular": 1, "lamp": LAMP}})).start()
         time.sleep(0.4)
     time.sleep(1)
 
