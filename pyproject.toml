@@ -37,6 +37,7 @@ license-files = ["LICEN[CS]E*"]
 
 [project.scripts]
 robocrew-setup-usb-modules = "robocrew.scripts.robocrew_setup_usb_modules:main"
+robocrew-set-wifi-priority = "robocrew.scripts.robocrew_set_wifi_priority:set_priority"
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
