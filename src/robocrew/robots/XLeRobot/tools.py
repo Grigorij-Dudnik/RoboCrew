@@ -199,12 +199,14 @@ def create_vla_single_arm_manipulation(
     preloaded_client = None
     if load_on_startup:
         print(f" Loading Policy for {tool_name}...")
+        # release main camera from agent
         main_camera_object.release()
         time.sleep(1) 
-        
-        preloaded_client = RobotClient(cfg)
-        preloaded_client.stop()
 
+        preloaded_client = RobotClient(cfg)
+        preloaded_client.robot.disconnect()
+
+        #assign main camera back to agent
         time.sleep(0.5)
         main_camera_object.reopen()
     
@@ -223,16 +225,17 @@ def create_vla_single_arm_manipulation(
                 client = RobotClient(cfg)
             else:
                 client = preloaded_client
+                client.robot.connect()
             if not client.start():
                 return "Failed to connect to robot server."
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
-            threading.Timer(execution_time, client.stop).start()
+            threading.Timer(execution_time, client.robot.disconnect).start()
             client.control_loop(task=task_prompt)
-            
         
         finally:
-            if client:
+            #if client and client.robot.is_connected:
+            if not load_on_startup and client:
                 client.stop()
             # Re-open main camera for agent use. 
             time.sleep(1)
