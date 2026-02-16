@@ -82,6 +82,18 @@ def main():
 		assignments.append({"alias": alias, "device": dev})
 		known.add(key)
 
+	while True:
+		resp = input("All default devices assigned. Type 'a' to add more, or press Enter to finish: ").strip().lower()
+		if resp != "a":
+			break
+		else:
+			alias = input("Enter alias for the new device: ").strip()
+			if not alias:
+				print("Alias cannot be empty. Skipping.")
+				continue
+			dev, key = wait_for_device(known)
+			assignments.append({"alias": alias, "device": dev})
+			known.add(key)
 
 	if not assignments:
 		print("No devices registered, nothing to emit.")
