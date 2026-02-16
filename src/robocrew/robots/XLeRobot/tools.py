@@ -2,8 +2,8 @@ import base64
 from langchain_core.tools import tool  # type: ignore[import]
 from lerobot.async_inference.robot_client import RobotClient 
 from lerobot.async_inference.configs import RobotClientConfig
-from lerobot.common.robot_devices.robots.so_follower import SO101FollowerConfig
-from lerobot.common.robot_devices.cameras.opencv import OpenCVCameraConfig
+from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
+from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 import time
 import threading
 
@@ -176,12 +176,13 @@ def create_vla_single_arm_manipulation(
             fps=cam_settings.get("fps", 30)
         )
 
-    robot_config = SO101FollowerConfig(
+    robot_config = SOFollowerConfig(
         port=arm_port,
         cameras=configured_cameras,
-        # TODO: Figure out calibration loading/saving issues
-        # calibration_dir=Path("/home/pi/RoboCrew/calibrations")
     )
+    robot_config.type = "so101_follower"
+    robot_config.id="robot_arm"
+    robot_config.calibration_dir = None
 
     cfg = RobotClientConfig(
         robot=robot_config,
@@ -197,7 +198,15 @@ def create_vla_single_arm_manipulation(
 
     preloaded_client = None
     if load_on_startup:
+        print(f" Loading Policy for {tool_name}...")
+        main_camera_object.release()
+        time.sleep(1) 
+        
         preloaded_client = RobotClient(cfg)
+        preloaded_client.stop()
+
+        time.sleep(0.5)
+        main_camera_object.reopen()
     
     @tool
     def tool_name_to_override() -> str:
