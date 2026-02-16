@@ -118,6 +118,7 @@ def main():
 	camera_ids = set()
 	scan("/dev/v4l/by-path/*", "video4linux", devices, serial_counts, camera_ids)
 	scan("/dev/serial/by-path/*", "tty", devices, serial_counts, camera_ids)
+	scan("/dev/snd/controlC*", "sound", devices, serial_counts, camera_ids)
 	emit_rules(devices, serial_counts)
 
 
