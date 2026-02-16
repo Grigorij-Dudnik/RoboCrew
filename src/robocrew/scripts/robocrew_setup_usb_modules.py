@@ -13,8 +13,7 @@ import argparse
 MODE = os.environ.get("MODE", getattr(base_rules, "MODE", "0660"))
 GROUP = os.environ.get("GROUP", getattr(base_rules, "GROUP", "dialout"))
 
-default_devices = ["camera_center", "camera_right", "camera_left", "arm_right", "arm_left"]
-
+default_devices = ["camera_center", "camera_right", "camera_left", "arm_right", "arm_left", "mic_main"]
 
 def capture_devices():
 	devices = []
@@ -22,6 +21,7 @@ def capture_devices():
 	camera_ids = set()
 	base_rules.scan("/dev/v4l/by-path/*", "video4linux", devices, serial_counts, camera_ids)
 	base_rules.scan("/dev/serial/by-path/*", "tty", devices, serial_counts, camera_ids)
+	base_rules.scan("/dev/snd/controlC*", "sound", devices, serial_counts, camera_ids)
 	return devices
 
 

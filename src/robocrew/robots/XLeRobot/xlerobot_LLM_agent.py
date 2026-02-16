@@ -26,7 +26,7 @@ class XLeRobotAgent(LLMAgent):
 			main_camera=main_camera,
 			system_prompt=system_prompt,
 			camera_fov=camera_fov,
-			sounddevice_index=sounddevice_index,
+			sounddevice_index_or_alias=sounddevice_index,
 			servo_controler=servo_controler,
 			wakeword=wakeword,
 			tts=tts,
