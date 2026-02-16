@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: polly
+Version: 0.1.0
+Summary: Polish TTS module using Piper voice synthesis (POLish + parrot = Polly!)
+Author: shinken
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: POSIX :: Linux
+Requires-Python: >=3.6
+Requires-Dist: piper-tts>=1.0.0
+Dynamic: author
+Dynamic: classifier
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

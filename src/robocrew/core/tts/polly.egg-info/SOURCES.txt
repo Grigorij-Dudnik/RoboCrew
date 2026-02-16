@@ -1,0 +1,8 @@
+README.md
+polly.py
+setup.py
+polly.egg-info/PKG-INFO
+polly.egg-info/SOURCES.txt
+polly.egg-info/dependency_links.txt
+polly.egg-info/requires.txt
+polly.egg-info/top_level.txt
