@@ -18,5 +18,6 @@ constraints.txt
 test-req.txt
 *.rules
 *.log
+map.png
 
 examples/xlerobot_controler.py

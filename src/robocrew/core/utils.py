@@ -2,7 +2,7 @@ import cv2
 import math
 
 
-def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
+def basic_augmentation(image, h_fov=120, center_angle=0, navigation_mode="normal"):
     """Draw horizontal angle markers on the bottom of the image."""
     height, width = image.shape[:2]
     yellow = (0, 255, 255)
@@ -23,9 +23,9 @@ def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
     for mark_number in range(nr_of_marks):
         x = int(start_pixel + mark_number * pixels_per_mark)
         angle = start_angle + mark_number * mark_len_angle
-        cv2.line(image, (x, y_pos - 10), (x, y_pos + 10), yellow, 2)
+        cv2.line(image, (x, y_pos - 10), (x, y_pos + 10), orange, 2)
         cv2.putText(image, f"{angle}", (x - 15, y_pos + 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, yellow, 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, orange, 2)
         
     # put right/left text
     cv2.putText(image, "<=LEFT", (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, orange, 2)

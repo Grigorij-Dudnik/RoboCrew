@@ -1,3 +1,4 @@
+from os import getenv
 from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
 import time
@@ -89,6 +90,7 @@ class LLMAgent():
 
 
         llm = init_chat_model(model)
+        #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
         self.tools = tools
         self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
@@ -156,7 +158,6 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         return content
 
     def fetch_camera_images_base64(self):
-        """Fetch all camera views from Earth Rover SDK in a single request."""
         image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
         return [base64.b64encode(image_bytes).decode('utf-8')]
     
