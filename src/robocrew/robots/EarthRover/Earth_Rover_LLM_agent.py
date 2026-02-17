@@ -116,7 +116,6 @@ class EarthRoverAgent(LLMAgent):
             response_data.json()["mags"],
             declination=self.magnetic_declination,
         )
-        print(f"Robot Bearing: {robot_bearing}")
         map_augmented = self.map_augmentation(
             response_map.json()['map_frame'],
             robot_bearing,
@@ -207,7 +206,6 @@ class EarthRoverAgent(LLMAgent):
         
     def check_waypoint_closiness(self, latitude, longitude):
         """Checks if current location is in 20m range to the next waypoint and removes it from the list if so."""
-        print(f"latitude: {latitude}, target latitude: {self.waypoints[0][0]}, longitude: {longitude}, target longitude: {self.waypoints[0][1]}")
         if abs(latitude - self.waypoints[0][0]) < 0.00030 and abs(longitude - self.waypoints[0][1]) < 0.00018:
             print("Waypoint reached!")
             self.waypoints.pop(0)
