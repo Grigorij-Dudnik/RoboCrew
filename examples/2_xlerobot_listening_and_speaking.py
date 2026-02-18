@@ -29,7 +29,7 @@ agent = XLeRobotAgent(
     ],
     main_camera=main_camera,
     servo_controler=servo_controler,
-    sounddevice_index_or_alias="mic_main",    # provide your microphone device index.
+    sounddevice_index_or_alias=4,    # provide your microphone device index.
     wakeword="Bob",         # set custom wakeword (default is "robot").
     # tts=True,               # uncomment for text-to-speech, to make robot speak (work in progress).
 )

@@ -2,7 +2,8 @@ import sys
 import pyaudio
 import wave
 import threading
-import time
+import times
+import numpy as np
 import audioop
 import time
 import os
@@ -66,9 +67,9 @@ class SoundReceiver:
         self.openai_client = OpenAI()
         self.start_listening()
 
-    def _resolve_device_index(self, alias, prefix="robocrew"):
+    def _resolve_device_index(self, alias):
             """Resolves a udev symlink alias to a PyAudio device index."""
-            symlink_path = f"/dev/{prefix}-{alias}"
+            symlink_path = f"/dev/{alias}"
 
             if not os.path.exists(symlink_path):
                 raise FileNotFoundError(f"Symlink {symlink_path} not found.")
@@ -132,6 +133,7 @@ class SoundReceiver:
                 continue
             loop_start_time = time.perf_counter()
             if not self._recording:
+                
                 if self.get_rms() > self.RMS_THRESHOLD:
                     self._recording = True
                     pre_roll_data = self.get_last_recorded_bytes(2.0)
@@ -163,6 +165,8 @@ class SoundReceiver:
 
 
     def _transcribe_audio(self, audio_data: bytes) -> str:
+        import io
+        
         print(f"Buffer counter: {self.num_recorded_buffers}")
         # ONLY FOR NOW - TO AVOID SHORT WHEEL NOISES
         if self.num_recorded_buffers < 200: # Check for minimum audio length
@@ -244,6 +248,7 @@ class SoundReceiver:
     def is_listening(self):
         return self._listening
 
+    #ToDo: You can make this faster by taking only the end of buffer
     def get_buffer_bytes(self) -> bytes:
         with self._lock:
             if not self._has_wrapped:
@@ -259,8 +264,12 @@ class SoundReceiver:
 
     # RMS helpers
     def get_rms(self) -> float:
-        """Return RMS level for raw PCM bytes (paInt16 width expected)."""
-        return float(audioop.rms(self.get_last_recorded_bytes(seconds=0.2), self._sample_width))
+        data = self.get_last_recorded_bytes(seconds=0.2)
+        buffer_end = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+        mean_square = np.sqrt(np.dot(buffer_end, buffer_end) / buffer_end.size)
+        return float(mean_square)
+    
+    
     
 
 # Minimal CLI demo

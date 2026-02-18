@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 from robocrew.core.memory import Memory
+from voice_synth import speak_and_play
 import pyttsx3
 
 
@@ -48,9 +49,7 @@ def create_say(sound_receiver=None):
             sound_receiver.stop_listening()
         
         try:
-            engine = pyttsx3.init()
-            engine.say(query)
-            engine.runAndWait()
+            speak_and_play(query)
         finally:
             # Resume listening after speech
             if sound_receiver is not None:
