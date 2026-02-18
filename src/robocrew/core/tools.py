@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 from robocrew.core.memory import Memory
 from robocrew.core.utils import stop_listening_during_tool_execution
+from voice_synth import speak_and_play
 import pyttsx3
 
 
@@ -46,9 +47,7 @@ def create_say(sound_receiver=None):
         Use this to communicate verbally with the user, for example to greet them,
         answer questions, or provide status updates.
         """
-        engine = pyttsx3.init()
-        engine.say(query)
-        engine.runAndWait()
+        speak_and_play(query)
         return f"Said: {query}"
     return say
 
