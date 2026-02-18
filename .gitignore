@@ -1,5 +1,6 @@
 __pycache__/
 venv/
+.venv/
 .env
 .clean_coder/
 .coderrules
@@ -11,3 +12,4 @@ uv.lock
 debug/
 physical_path.sh
 robot_memory.db
+xlerobot_controler.py
