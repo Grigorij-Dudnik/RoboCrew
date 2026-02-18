@@ -1,0 +1,29 @@
+on:
+  push:
+    tags:
+      # - 'v*'      # Production
+      - 'testv*'  # Testing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Dynamic environment selection based on the tag name
+    environment: ${{ startsWith(github.ref, 'refs/tags/testv') && 'testpypi' || 'pypi' }}
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build
+        run: python -m build
+
+      - name: Publish to TestPyPI
+        if: startsWith(github.ref, 'refs/tags/testv')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      # - name: Publish to PyPI
+      #   if: startsWith(github.ref, 'refs/tags/v') && !startsWith(github.ref, 'refs/tags/testv')
+      #   uses: pypa/gh-action-pypi-publish@release/v1
