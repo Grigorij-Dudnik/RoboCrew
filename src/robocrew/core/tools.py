@@ -1,8 +1,7 @@
 from langchain_core.tools import tool
 from robocrew.core.memory import Memory
 from robocrew.core.utils import stop_listening_during_tool_execution
-from voice_synth import speak_and_play
-import pyttsx3
+from robocrew.core.voice_synth import speak_and_play
 
 
 @tool

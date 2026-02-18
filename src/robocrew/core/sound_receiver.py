@@ -2,9 +2,7 @@ import sys
 import pyaudio
 import wave
 import threading
-import times
 import numpy as np
-import audioop
 import time
 import os
 import re

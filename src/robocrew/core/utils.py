@@ -1,5 +1,6 @@
 import cv2
 import math
+import functools
 
 
 def augment_image(image, h_fov=120, center_angle=0, navigation_mode="normal"):
@@ -65,6 +66,7 @@ def stop_listening_during_tool_execution(sound_receiver):
     Decorator to stop listening before function execution and resume after.
     """
     def decorator(func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             if sound_receiver is not None:
                 sound_receiver.stop_listening()
