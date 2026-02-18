@@ -67,12 +67,14 @@ def scan(pattern, subsystem, devices, serial_counts, camera_ids):
 		phys_dir = os.path.dirname(os.path.dirname(sysfs_path))
 		phys_path = os.path.basename(phys_dir).split(":", 1)[0]
 		id_path = props.get("ID_PATH") or phys_path
-		serial = props.get("ID_SERIAL_SHORT") or props.get("ID_SERIAL") or None
+		serial_short = props.get("ID_SERIAL_SHORT")
+		serial = serial_short or props.get("ID_SERIAL") or None
 
 		devices.append(
 			{
 				"kernel": os.path.basename(real_device),
 				"serial": serial,
+				"serial_is_short": bool(serial_short),
 				"vendor": vendor_id,
 				"product": product_id,
 				"id_path": id_path,
@@ -100,7 +102,10 @@ def emit_rules(devices, serial_counts):
 		serial = dev["serial"]
 
 		if serial and serial != "00000000":
-			rule += f', ATTRS{{serial}}=="{serial}"'
+			if dev.get("serial_is_short"):
+				rule += f', ATTRS{{serial}}=="{serial}"'
+			else:
+				rule += f', ENV{{ID_SERIAL}}=="{serial}"'
 			if serial_counts.get(serial, 0) > 1:
 				rule += f', KERNELS=="{dev["phys"]}"'
 		else:

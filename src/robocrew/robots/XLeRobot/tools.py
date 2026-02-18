@@ -4,12 +4,14 @@ from lerobot.async_inference.robot_client import RobotClient
 from lerobot.async_inference.configs import RobotClientConfig
 from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from robocrew.core.utils import stop_listening_during_tool_execution
 import time
 import threading
 
 
-def create_move_forward(servo_controller):
+def create_move_forward(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def move_forward(distance_meters: float) -> str:
         """Drives the robot forward (or backward) for a specific distance."""
 
@@ -22,8 +24,9 @@ def create_move_forward(servo_controller):
 
     return move_forward
 
-def create_move_backward(servo_controller):
+def create_move_backward(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def move_backward(distance_meters: float) -> str:
         """Drives the robot forward (or backward) for a specific distance."""
 
@@ -33,8 +36,9 @@ def create_move_backward(servo_controller):
 
     return move_backward
 
-def create_turn_right(servo_controller):
+def create_turn_right(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def turn_right(angle_degrees: float) -> str:
         """Turns the robot right by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
@@ -44,8 +48,9 @@ def create_turn_right(servo_controller):
 
     return turn_right
 
-def create_turn_left(servo_controller):
+def create_turn_left(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def turn_left(angle_degrees: float) -> str:
         """Turns the robot left by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
@@ -56,8 +61,9 @@ def create_turn_left(servo_controller):
     return turn_left
 
 
-def create_strafe_left(servo_controller):
+def create_strafe_left(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def strafe_left(distance_meters: float) -> str:
         """Moves the robot sideways left by a specific distance in meters."""
         distance = float(distance_meters)
@@ -66,8 +72,9 @@ def create_strafe_left(servo_controller):
 
     return strafe_left
 
-def create_strafe_right(servo_controller):
+def create_strafe_right(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def strafe_right(distance_meters: float) -> str:
         """Moves the robot sideways right by a specific distance in meters."""
         distance = float(distance_meters)

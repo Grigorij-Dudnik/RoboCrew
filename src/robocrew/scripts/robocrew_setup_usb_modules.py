@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-
-from html import parser
 import os
 import subprocess
 import sys
@@ -47,7 +45,10 @@ def build_rule(dev, alias):
 	rule += f', ENV{{ID_PATH}}=="{id_path}"'
 	serial = dev.get("serial")
 	if serial and serial != "00000000":
-		rule += f', ATTRS{{serial}}=="{serial}"'
+		if dev.get("serial_is_short"):
+			rule += f', ATTRS{{serial}}=="{serial}"'
+		else:
+			rule += f', ENV{{ID_SERIAL}}=="{serial}"'
 	rule += f', MODE="{MODE}", GROUP="{GROUP}", SYMLINK+="{alias}"'
 	return rule
 

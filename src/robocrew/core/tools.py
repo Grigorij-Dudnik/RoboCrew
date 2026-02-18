@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 from robocrew.core.memory import Memory
+from robocrew.core.utils import stop_listening_during_tool_execution
 import pyttsx3
 
 
@@ -28,36 +29,27 @@ def recall_thing(query: str):
     return robot_memory.search_memory(query)
 
 
+
+
 def create_say(sound_receiver=None):
     """
     Factory function to create the 'say' tool with optional sound_receiver integration.
-    
     Args:
         sound_receiver: Optional SoundReceiver instance. If provided, listening will be
                        paused during speech to avoid the robot hearing itself.
     """
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def say(query: str):
         """
         Speak a sentence aloud to the user.
         Use this to communicate verbally with the user, for example to greet them,
         answer questions, or provide status updates.
-        """        
-        # Stop listening if sound receiver is active (to avoid hearing ourselves)
-        if sound_receiver is not None:
-            sound_receiver.stop_listening()
-        
-        try:
-            engine = pyttsx3.init()
-            engine.say(query)
-            engine.runAndWait()
-        finally:
-            # Resume listening after speech
-            if sound_receiver is not None:
-                sound_receiver.start_listening()
-        
+        """
+        engine = pyttsx3.init()
+        engine.say(query)
+        engine.runAndWait()
         return f"Said: {query}"
-    
     return say
 
 @tool

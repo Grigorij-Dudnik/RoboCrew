@@ -66,9 +66,9 @@ class SoundReceiver:
         self.openai_client = OpenAI()
         self.start_listening()
 
-    def _resolve_device_index(self, alias, prefix="robocrew"):
+    def _resolve_device_index(self, alias):
             """Resolves a udev symlink alias to a PyAudio device index."""
-            symlink_path = f"/dev/{prefix}-{alias}"
+            symlink_path = f"/dev/{alias}"
 
             if not os.path.exists(symlink_path):
                 raise FileNotFoundError(f"Symlink {symlink_path} not found.")
