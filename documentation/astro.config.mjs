@@ -7,15 +7,31 @@ export default defineConfig({
   base: 'RoboCrew',
   integrations: [
     starlight({
-      title: '/Robo Crew/',
+      title: 'RoboCrew',
       social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/withastro/starlight' }
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/Grigorij-Dudnik/RoboCrew' }
       ],
       sidebar: [
         {
           label: 'Guides',
           items: [
-            { label: 'Example Guide', slug: 'guides/example' },
+            { 
+              label: 'First Setup (Recommended if it\'s your first time)',
+              items: [
+                { label: 'Flashing Raspberry and plugin', slug: 'guides/setup/raspberry-and-plug' },
+                { label: 'Installing RoboCrew', slug: 'guides/setup/installing-robocrew' },
+                { label: 'Setting up udev rules', slug: 'guides/setup/udev-rules' },
+              ],
+            },
+            { label: 'How to start (Short Guide)', slug: 'guides/start' },
+            { 
+              label: 'Examples',
+              items: [
+                { label: 'Movement', slug: 'guides/examples/movement' },
+                { label: 'Audio and Voice', slug: 'guides/examples/audio' },
+                { label: 'VLA as Tools', slug: 'guides/examples/vla-as-tools' },
+              ],
+            },
           ],
         },
         {
