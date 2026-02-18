@@ -231,7 +231,11 @@ def create_vla_single_arm_manipulation(
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
             threading.Timer(execution_time, client.robot.disconnect).start()
-            client.control_loop(task=task_prompt)
+            try:
+                client.control_loop(task=task_prompt)
+            # catch DeviceNotConnectedError exception after robot finishes work and got disconnected by timer
+            except:
+                pass
         
         finally:
             #if client and client.robot.is_connected:
