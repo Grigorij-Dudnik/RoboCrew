@@ -79,7 +79,7 @@ class LLMAgent():
 
         # Add TTS tool if enabled (after sound_receiver is created so we can pass it)
         if tts:
-            say_tool = create_say(self.sound_receiver)
+            say_tool = create_say(getattr(self, 'sound_receiver', None))
             tools.append(say_tool)
             tts_prompt = (
                 " You can speak to the user using the `say` tool. "
@@ -173,7 +173,7 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         ]
         
         if self.lidar:
-              content = self.lidar_content(content)
+            content = self.lidar_content(content)
         message = HumanMessage(content)
         
         self.message_history.append(message)
