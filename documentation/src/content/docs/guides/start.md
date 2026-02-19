@@ -47,6 +47,3 @@ agent.task = "Find kitchen in my house and go there."
 agent.go()  # Robot explores autonomously
 ```
 
-## Further reading
-
-- Read [about how-to guides](https://diataxis.fr/how-to-guides/) in the Diátaxis framework
