@@ -2,6 +2,7 @@ __pycache__/
 venv/
 .venv/
 .env
+pypi-robocrew/
 .clean_coder/
 .coderrules
 .wav
@@ -9,7 +10,15 @@ venv/
 dist/
 old_sdk.py
 uv.lock
-debug/
 physical_path.sh
 robot_memory.db
-xlerobot_controler.py
+logs/
+requirements.txt
+constraints.txt
+test-req.txt
+*.rules
+*.log
+*.onnx
+*.onnx.json
+
+examples/xlerobot_controler.py

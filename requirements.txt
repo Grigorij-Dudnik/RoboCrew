@@ -1,8 +1,0 @@
-langchain>=0.3.27
-langchain-core>=0.3.79
-langchain-google-genai
-opencv-python
-pyaudio
-pyserial>=3.5
-python-dotenv>=1.1.1
-openai>=2.3.0

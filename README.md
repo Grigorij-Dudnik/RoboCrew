@@ -1,112 +1,198 @@
-# 🤖 RoboCrew
+# 🤖 RoboCrew 
 
 **Build AI-powered robots that see, move, and manipulate objects — in a few lines of code.**
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
-![xlerobot_schema](images/main-coming.png)
+![images/main.jpg](https://github.com/Grigorij-Dudnik/RoboCrew/blob/573b6ff33e961676ad349b694b8c20b4cb8cd9ac/images/main.jpg)
 
-## Features
+<div align="center">
 
-- 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
-- 🎤 **Voice** - Wake-word activated voice commands
-- 🧠 **Intelligence** - LLM agent robot control provides complete autonomy and decision making
+[![PyPI version](https://badge.fury.io/py/robocrew.svg)](https://badge.fury.io/py/robocrew)
+[![GitHub stars](https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=social)](https://github.com/Grigorij-Dudnik/RoboCrew)
+[![Docs](https://img.shields.io/badge/docs-latest-lightblue)](https://grigorij-dudnik.github.io/RoboCrew/)
+[![Discord](https://img.shields.io/static/v1?logo=discord&label=discord&message=Join&color=brightgreen)](https://discord.gg/BAe59y93)
+</div>
+
+---
+
+## ✨ Features
+
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
-- 📚 **Memory** - Long-term memory to remember envinronment details
-- 🦾 **Manipulation** *(coming soon)* - VLA models as a tools for arms control
-- 🗺️ **Navigation** *(coming soon)* - Navigation features
-
-## Supported Robots
-
-- **XLeRobot**
-- **LeKiwi** (not tested, but we assume XLeRobot code will work for it as platforms are similar. Please try to run repo on your LeKiwi and open an issue with info if it works)
-- More robot platforms coming soon!
+- 🦾 **Manipulation** - VLA models as tools for arms control
+- 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
+- 🎤 **Voice** - Wake-word activated voice commands and TTS responses
+- 🗺️ **LiDAR** - Top-down mapping with LiDAR sensor
+- 🧠 **Intelligence** - LLM agent control provides complete autonomy and decision making
+- 📚 **Memory** - Long-term memory to remember environment details
 
 
-## Quick Start
+## 🎯 How It Works
+
+<div align="center">
+
+<img src="https://github.com/Grigorij-Dudnik/RoboCrew/blob/573b6ff33e961676ad349b694b8c20b4cb8cd9ac/images/robot_agent.png" alt="How It Works Diagram" width="500">
+</div>
+
+
+**The RoboCrew Intelligence Loop:**
+
+1. 👂 **Input** - Voice commands, text tasks, or autonomous operation
+2. 🧠 **LLM Processing** - Gemini analyzes the task and environment
+3. 🛠️ **Tool Selection** - AI chooses appropriate tools (move, turn, grab the apple, etc.)
+4. 🤖 **Robot Actions** - Wheels and arms execute commands
+5. 📹 **Visual Feedback** - Cameras capture results with augmented overlay
+6. 🔄 **Adaptive Loop** - LLM evaluates results and adjusts strategy
+
+This closed-loop system creates AI agents that perceive → reason → act, but in the physical world!
+
+
+## 🎨 Supported Robots
+
+- ✅ **XLeRobot** - Full support for all features
+- 🥝 **LeKiwi** - Use XLeRobot code (compatible platform)
+- 🚙 **Earth Rover mini plus** - Full support
+- 🔜 More robot platforms coming soon! [Request your platform →](https://github.com/Grigorij-Dudnik/RoboCrew/issues)
+
+
+## 🚀 Quick Start
 
 ```bash
 pip install robocrew
 ```
 
-### Mobile Robot (XLeRobot)
+### 📱 Mobile Robot (XLeRobot)
 
 ```python
+from robocrew.core.camera import RobotCamera
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.core.tools import finish_task
-from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_left, create_turn_right
-from robocrew.robots.XLeRobot.wheel_controls import XLeRobotWheels
+from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_right, create_turn_left
+from robocrew.robots.XLeRobot.servo_controls import ServoControler
 
-# Set up wheels
-sdk = XLeRobotWheels.connect_serial("/dev/ttyUSB0")     # provide the right arm usb port - the arm connected to wheels
-wheel_controller = XLeRobotWheels(sdk)
+# 📷 Set up main camera
+main_camera = RobotCamera("/dev/camera_center")  # camera usb port Eg: /dev/video0
 
-# Create movement tools
-move_forward = create_move_forward(wheel_controller)
-turn_left = create_turn_left(wheel_controller)
-turn_right = create_turn_right(wheel_controller)
+# 🎛️ Set up servo controller
+right_arm_wheel_usb = "/dev/arm_right"  # provide your right arm usb port. Eg: /dev/ttyACM1
+servo_controler = ServoControler(right_arm_wheel_usb=right_arm_wheel_usb)
 
-# Create agent
+# 🛠️ Set up tools
+move_forward = create_move_forward(servo_controler)
+turn_left = create_turn_left(servo_controler)
+turn_right = create_turn_right(servo_controler)
+
+# 🤖 Initialize agent
 agent = LLMAgent(
-    model="google_genai:gemini-robotics-er-1.5-preview",
-    tools=[move_forward, turn_left, turn_right, finish_task],
-    main_camera_usb_port="/dev/video0",  # provide usb port main camera connected to
+    model="google_genai:gemini-3-flash-preview",
+    tools=[move_forward, turn_left, turn_right],
+    main_camera=main_camera,
+    servo_controler=servo_controler,
 )
-agent.task = "Find kitchen in my house and go there."
 
-agent.go()  # Robot explores autonomously
+# 🎯 Give it a task and go!
+agent.task = "Approach a human."
+agent.go()
 ```
 
-### With Voice Commands
 
-Add a microphone to give your robot voice-activated tasks:
+### 🎤 With Voice Commands
+
+Add a microphone and speaker to give your robot voice commands and enable it to speak back to you:
 
 ```python
 agent = LLMAgent(
-    model="google_genai:gemini-robotics-er-1.5-preview",
+    model="google_genai:gemini-3-flash-preview",
     tools=[move_forward, turn_left, turn_right],
-    main_camera_usb_port="/dev/video0",  # provide usb port main camera connected to
-    sounddevice_index=0,  # Your mic device
-    wakeword="robot",  # The robot listens for this word in your speech
-    history_len=4,
-    use_memory=True, # memory system to remember important things
+    main_camera=main_camera,
+    servo_controler=servo_controler,
+    sounddevice_index=2,  # 🎙️ provide your microphone device index
+    tts=True,  # 🔊 enable text-to-speech (robot can speak)
 )
 ```
 
-Then install Portaudio for audio support:
+Then install Portaudio and Pyaudio for audio support:
+
 ```bash
 sudo apt install portaudio19-dev
+pip install pyaudio
 ```
 
-Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the word "robot" anywhere in your command, it'll use the entire phrase as its new task.
+Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the wakeword "robot" anywhere in your command, it'll use the entire phrase as its new task.
 
+📖 **Full example:** [examples/2_xlerobot_listening_and_speaking.py](examples/2_xlerobot_listening_and_speaking.py)
 
-## Key Parameters
+---
 
-- **model**: Any LangChain model
-- **tools**: List of functions your robot can call (movement, manipulation)
-- **main_camera_usb_port**: Your camera device (find with `ls /dev/video*`)
-- **sounddevice_index**: Microphone index (optional, for voice commands)
-- **wakeword**: Word that must appear in your speech to give robot a new task (default: "robot").
-- **history_len**: How many conversation turns to remember (optional)
-- **use_memory**: Enable memory system to remember important things (optional)
+### 🦾 Add VLA Policy as a Tool
 
+Let's make our robot manipulate with its arms! 
 
-## Custom Tools
+First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html).
 
-Create your own tools easily:
+After you have your policy, run the policy server in a separate terminal. Let's create a tool for the agent to enable it to use a VLA policy:
 
 ```python
-from langchain_core.tools import tool
+from robocrew.robots.XLeRobot.tools import create_vla_single_arm_manipulation
 
-@tool
-def grab_object(name: str) -> str:
-    """Grab the specified object."""
-    # Your hardware code here
-    return f"Grabbed {name}"
+# 🎯 Create a specialized manipulation tool
+pick_up_notebook = create_vla_single_arm_manipulation(
+    tool_name="Grab_a_notebook",
+    tool_description="Manipulation tool to grab a notebook from the table and put it to your basket.",
+    task_prompt="Grab a notebook.",
+    server_address="0.0.0.0:8080",
+    policy_name="Grigorij/act_right-arm-grab-notebook-2",
+    policy_type="act",
+    arm_port=right_arm_wheel_usb,
+    servo_controler=servo_controler,
+    camera_config={
+        "main": {"index_or_path": "/dev/camera_center"},
+        "right_arm": {"index_or_path": "/dev/camera_right"}
+    },
+    main_camera_object=main_camera,
+    policy_device="cpu",
+)
+```
 
-# Then just add to tools list
-agent = LLMAgent(tools=[grab_object, finish_task], ...)
+📖 **Full example:** [examples/3_xlerobot_arm_manipulation.py](examples/3_xlerobot_arm_manipulation.py)
+
+
+## 🔧 Give USB Ports Constant Names (Udev Rules)
+
+To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
+
+```bash
+robocrew-setup-usb-modules
+```
+
+This script will guide you through connecting each component one by one and will create the necessary udev rules to maintain consistent device naming.
+
+**After running the script**, you can check the generated rules at `/etc/udev/rules.d/99-robocrew.rules`, or check the symlinks:
+
+```bash
+pi@raspberrypi:~ $ ls -l /dev/arm*
+lrwxrwxrwx 1 root root 7 Dec 2 11:40 /dev/arm_left -> ttyACM4
+lrwxrwxrwx 1 root root 7 Dec 2 11:40 /dev/arm_right -> ttyACM2
+
+pi@raspberrypi:~ $ ls -l /dev/cam*
+lrwxrwxrwx 1 root root 6 Dec 2 11:40 /dev/camera_center -> video0
+lrwxrwxrwx 1 root root 6 Dec 2 11:40 /dev/camera_right -> video2
 ```
 
 
+## 📚 Documentation
+
+For detailed documentation, tutorials, and API references, visit our [official documentation](https://grigorij-dudnik.github.io/RoboCrew/).
+
+
+## 💬 Community & Support
+
+- 💭 [Join our Discord](https://discord.gg/BAe59y93) - Get help, share projects, discuss features
+- 📖 [Read the Docs](https://grigorij-dudnik.github.io/RoboCrew/) - Comprehensive guides and API reference
+- 🐛 [Report Issues](https://github.com/Grigorij-Dudnik/RoboCrew/issues) - Found a bug? Let us know!
+- ⭐ [Star on GitHub](https://github.com/Grigorij-Dudnik/RoboCrew) - Show your support!
+
+
+## 🙏 Acknowledgments
+
+
+Built with ❤️ for the robotics and AI community. Special thanks to all contributors and early adopters!
