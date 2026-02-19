@@ -1,11 +1,12 @@
+import sys
 import pyaudio
 import wave
 import threading
+import numpy as np
 import time
-import audioop
-import time
+import os
+import re
 from openai import OpenAI
-import io
 from dotenv import find_dotenv, load_dotenv
 
 
@@ -13,7 +14,7 @@ load_dotenv(find_dotenv())
 
 
 class SoundReceiver:
-    def __init__(self, sounddevice_index, task_queue=None, wakeword="robot"):
+    def __init__(self, sounddevice_index_or_alias, task_queue=None, wakeword="robot"):
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 1
         self.RATE = 48000
@@ -21,10 +22,27 @@ class SoundReceiver:
         self.frames_per_buffer = 2048
         self.recording_loop_delay = 0.2
         # parse DEVICE_INDEX env var into an int if present, else None
-        self.DEVICE_INDEX = sounddevice_index
+        if isinstance(sounddevice_index_or_alias, int) or sounddevice_index_or_alias is None:
+            self.DEVICE_INDEX = sounddevice_index_or_alias
+            device_alias = None
+        elif isinstance(sounddevice_index_or_alias, str):
+            self.DEVICE_INDEX = None
+            device_alias = sounddevice_index_or_alias
+        else:
+            raise ValueError("sounddevice_index_or_alias must be an int, str, or None")
         self.wakeword = wakeword
 
         self._p = pyaudio.PyAudio()
+
+        if self.DEVICE_INDEX is None and device_alias:
+            try:
+                self.DEVICE_INDEX = self._resolve_device_index(device_alias)
+                print(f"✅ Resolved alias '{device_alias}' to PyAudio Device Index: {self.DEVICE_INDEX}")
+            except Exception as e:
+                print(f"⚠️ Warning: Could not resolve device alias '{device_alias}'.\n Error: {e}")
+                self.DEVICE_INDEX = None
+                sys.exit(1)
+
         self._sample_width = self._p.get_sample_size(self.FORMAT)
         self._bytes_per_second = int(self.RATE * self.CHANNELS * self._sample_width)
         self._buffer_capacity_bytes = int(self._bytes_per_second * self.BUFFER_SECONDS)
@@ -46,6 +64,35 @@ class SoundReceiver:
         self.num_recorded_buffers = 0
         self.openai_client = OpenAI()
         self.start_listening()
+
+    def _resolve_device_index(self, alias):
+            """Resolves a udev symlink alias to a PyAudio device index."""
+            symlink_path = f"/dev/{alias}"
+
+            if not os.path.exists(symlink_path):
+                raise FileNotFoundError(f"Symlink {symlink_path} not found.")
+
+            # 2. Resolve symlink to real path (e.g. /dev/snd/controlC2)
+            real_path = os.path.realpath(symlink_path)
+
+            # 3. Extract the ALSA Card Number (the '2' in 'controlC2')
+            match = re.search(r"controlC(\d+)", real_path)
+            if not match:
+                raise ValueError(f"Could not parse ALSA card ID from {real_path}")
+            
+            alsa_card_index = int(match.group(1))
+
+            # 4. Find the PyAudio device that matches this ALSA card index
+            info_count = self._p.get_device_count()
+            for i in range(info_count):
+                info = self._p.get_device_info_by_index(i)
+                if info['maxInputChannels'] > 0:
+                    # ALSA names usually look like: "USB Audio Device: - (hw:2,0)"
+                    # We search for "(hw:X," where X is our card index.
+                    if f"(hw:{alsa_card_index}," in info['name']:
+                        return i
+            
+            raise RuntimeError(f"ALSA Card {alsa_card_index} found, but no matching PyAudio device detected.")
 
 
     def _write_to_buffer(self, data: bytes):
@@ -84,6 +131,7 @@ class SoundReceiver:
                 continue
             loop_start_time = time.perf_counter()
             if not self._recording:
+                
                 if self.get_rms() > self.RMS_THRESHOLD:
                     self._recording = True
                     pre_roll_data = self.get_last_recorded_bytes(2.0)
@@ -115,6 +163,8 @@ class SoundReceiver:
 
 
     def _transcribe_audio(self, audio_data: bytes) -> str:
+        import io
+        
         print(f"Buffer counter: {self.num_recorded_buffers}")
         # ONLY FOR NOW - TO AVOID SHORT WHEEL NOISES
         if self.num_recorded_buffers < 200: # Check for minimum audio length
@@ -196,6 +246,7 @@ class SoundReceiver:
     def is_listening(self):
         return self._listening
 
+    #ToDo: You can make this faster by taking only the end of buffer
     def get_buffer_bytes(self) -> bytes:
         with self._lock:
             if not self._has_wrapped:
@@ -211,8 +262,12 @@ class SoundReceiver:
 
     # RMS helpers
     def get_rms(self) -> float:
-        """Return RMS level for raw PCM bytes (paInt16 width expected)."""
-        return float(audioop.rms(self.get_last_recorded_bytes(seconds=0.2), self._sample_width))
+        data = self.get_last_recorded_bytes(seconds=0.2)
+        buffer_end = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+        mean_square = np.sqrt(np.dot(buffer_end, buffer_end) / buffer_end.size)
+        return float(mean_square)
+    
+    
     
 
 # Minimal CLI demo

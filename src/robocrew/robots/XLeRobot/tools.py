@@ -2,15 +2,16 @@ import base64
 from langchain_core.tools import tool  # type: ignore[import]
 from lerobot.async_inference.robot_client import RobotClient 
 from lerobot.async_inference.configs import RobotClientConfig
-from lerobot.robots.so101_follower.config_so101_follower import SO101FollowerConfig
-from lerobot.robots.bi_so100_follower.config_bi_so100_follower import BiSO100FollowerConfig
+from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from robocrew.core.utils import stop_listening_during_tool_execution
 import time
 import threading
 
 
-def create_move_forward(servo_controller):
+def create_move_forward(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def move_forward(distance_meters: float) -> str:
         """Drives the robot forward (or backward) for a specific distance."""
 
@@ -23,8 +24,9 @@ def create_move_forward(servo_controller):
 
     return move_forward
 
-def create_move_backward(servo_controller):
+def create_move_backward(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def move_backward(distance_meters: float) -> str:
         """Drives the robot forward (or backward) for a specific distance."""
 
@@ -34,8 +36,9 @@ def create_move_backward(servo_controller):
 
     return move_backward
 
-def create_turn_right(servo_controller):
+def create_turn_right(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def turn_right(angle_degrees: float) -> str:
         """Turns the robot right by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
@@ -45,8 +48,9 @@ def create_turn_right(servo_controller):
 
     return turn_right
 
-def create_turn_left(servo_controller):
+def create_turn_left(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def turn_left(angle_degrees: float) -> str:
         """Turns the robot left by angle in degrees. Use only when robot body not touches any obstacle."""
         angle = float(angle_degrees)
@@ -57,8 +61,9 @@ def create_turn_left(servo_controller):
     return turn_left
 
 
-def create_strafe_left(servo_controller):
+def create_strafe_left(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def strafe_left(distance_meters: float) -> str:
         """Moves the robot sideways left by a specific distance in meters."""
         distance = float(distance_meters)
@@ -67,8 +72,9 @@ def create_strafe_left(servo_controller):
 
     return strafe_left
 
-def create_strafe_right(servo_controller):
+def create_strafe_right(servo_controller, sound_receiver=None):
     @tool
+    @stop_listening_during_tool_execution(sound_receiver)
     def strafe_right(distance_meters: float) -> str:
         """Moves the robot sideways right by a specific distance in meters."""
         distance = float(distance_meters)
@@ -149,6 +155,7 @@ def create_vla_single_arm_manipulation(
         policy_device: str = "cuda",
         fps: int = 30,
         actions_per_chunk: int = 50,
+        load_on_startup: bool = True,
     ):
     """Creates a tool that makes the robot pick up a cup using its arm.
     Args:
@@ -164,6 +171,7 @@ def create_vla_single_arm_manipulation(
         policy_device (str, optional): The device to run the policy on. Defaults to "cuda".
         fps (int, optional): The fps to run the policy at.
         actions_per_chunk (int, optional): Number of actions VLA calculates at once.
+        load_on_startup (bool, optional): Whether to load the VLA policy on startup. If False, the policy will be loaded every time the tool used, which may cause a delay. If True for many tools, you may overload server's GPU.
     """
     configured_cameras = {}
     for cam_name, cam_settings in camera_config.items():
@@ -175,14 +183,13 @@ def create_vla_single_arm_manipulation(
             fps=cam_settings.get("fps", 30)
         )
 
-
-    robot_config = SO101FollowerConfig(
+    robot_config = SOFollowerConfig(
         port=arm_port,
         cameras=configured_cameras,
-        id="robot_arms",
-        # TODO: Figure out calibration loading/saving issues
-        # calibration_dir=Path("/home/pi/RoboCrew/calibrations")
     )
+    robot_config.type = "so101_follower"
+    robot_config.id="robot_arm"
+    robot_config.calibration_dir = None
 
     cfg = RobotClientConfig(
         robot=robot_config,
@@ -195,125 +202,56 @@ def create_vla_single_arm_manipulation(
         chunk_size_threshold=0.5,
         fps=fps
     )
+
+    preloaded_client = None
+    if load_on_startup:
+        print(f" Loading Policy for {tool_name}...")
+        # release main camera from agent
+        main_camera_object.release()
+        time.sleep(1) 
+
+        preloaded_client = RobotClient(cfg)
+        preloaded_client.robot.disconnect()
+
+        #assign main camera back to agent
+        time.sleep(0.5)
+        main_camera_object.reopen()
     
     @tool
     def tool_name_to_override() -> str:
         """Tool description to override."""
         print("Manipulation tool activated")
-        servo_controler.turn_head_pitch(45)
-        servo_controler.turn_head_yaw(0)
+        servo_controler.turn_head_to_vla_position()
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
         time.sleep(1)  # give some time to release camera
 
+        client = None
         try:
-            client = RobotClient(cfg)
+            if not load_on_startup:
+                client = RobotClient(cfg)
+            else:
+                client = preloaded_client
+                client.robot.connect()
             if not client.start():
                 return "Failed to connect to robot server."
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
-            threading.Timer(execution_time, client.stop).start()
-            client.control_loop(task=task_prompt)
-            
+            threading.Timer(execution_time, client.robot.disconnect).start()
+            try:
+                client.control_loop(task=task_prompt)
+            # catch DeviceNotConnectedError exception after robot finishes work and got disconnected by timer
+            except:
+                pass
         
         finally:
+            #if client and client.robot.is_connected:
+            if not load_on_startup and client:
+                client.stop()
             # Re-open main camera for agent use. 
             time.sleep(1)
             main_camera_object.reopen()
             servo_controler.reset_head_position()
-        
-        return "Arm manipulation done"
-    
-    tool_name_to_override.name = tool_name
-    tool_name_to_override.description = tool_description
-
-    return tool_name_to_override
-
-
-def create_vla_two_arm_manipulation(
-        tool_name: str,
-        tool_description: str,
-        task_prompt: str,
-        server_address: str,
-        policy_name: str, 
-        policy_type: str, 
-        servo_controller, 
-        camera_config: dict[str, dict], 
-        main_camera_object,
-        execution_time: int = 30,
-        policy_device: str = "cuda",
-        fps: int = 30,
-        actions_per_chunk: int = 50,
-    ):
-    """Creates a tool that makes the robot pick up a cup using its arm.
-    Args:
-        tool_name (str): The name of the tool AI agent will see.
-        tool_description (str): The description of the tool AI agent will see.
-        task_prompt (str): The task prompt to give to the VLA policy.
-        server_address (str): The address of the server to connect to.
-        policy_name (str): The name or path of the pretrained policy.
-        policy_type (str): The type of policy to use.
-        camera_config (dict, optional): Lerobot-type camera configuration. (E.g., "{ main: {type: opencv, index_or_path: /dev/video2, width: 640, height: 480, fps: 30}, left_arm: {type: opencv, index_or_path: /dev/video0, width: 640, height: 480, fps: 30}}")
-        execution_time (int, optional): Time in seconds to run the manipulation.
-        policy_device (str, optional): The device to run the policy on. Defaults to "cuda".
-        fps (int, optional): The fps to run the policy at.
-        actions_per_chunk (int, optional): Number of actions VLA calculates at once.
-    """
-    configured_cameras = {}
-    for cam_name, cam_settings in camera_config.items():
-        # Unpack the dictionary settings directly into the Config class
-        configured_cameras[cam_name] = OpenCVCameraConfig(
-            index_or_path=cam_settings["index_or_path"],
-            width=cam_settings.get("width", 640),
-            height=cam_settings.get("height", 480),
-            fps=cam_settings.get("fps", 30)
-        )
-
-
-    robot_config = BiSO100FollowerConfig(
-        left_arm_port=servo_controller.left_arm_head_usb,
-        right_arm_port=servo_controller.right_arm_wheel_usb,
-        cameras=configured_cameras,
-        id="robot_arms",
-    )
-
-    cfg = RobotClientConfig(
-        robot=robot_config,
-        task=task_prompt,
-        server_address=server_address,
-        policy_type=policy_type,
-        pretrained_name_or_path=policy_name,
-        policy_device=policy_device,
-        actions_per_chunk=actions_per_chunk,
-        chunk_size_threshold=0.5,
-        fps=fps
-    )
-    
-    @tool
-    def tool_name_to_override() -> str:
-        """Tool description to override."""
-        print("Manipulation tool activated")
-        servo_controller.turn_head_pitch(45)
-        servo_controller.turn_head_yaw(0)
-        # release main camera from agent, so arm policy can use it
-        main_camera_object.release()
-        time.sleep(1)  # give some time to release camera
-
-        try:
-            client = RobotClient(cfg)
-            if not client.start():
-                return "Failed to connect to robot server."
-
-            threading.Thread(target=client.receive_actions, daemon=True).start()
-            threading.Timer(execution_time, client.stop).start()
-            client.control_loop(task=task_prompt)
-            
-        
-        finally:
-            # Re-open main camera for agent use. 
-            time.sleep(1)
-            main_camera_object.reopen()
-            servo_controller.reset_head_position()
         
         return "Arm manipulation done"
     

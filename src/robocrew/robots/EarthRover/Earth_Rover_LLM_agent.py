@@ -41,7 +41,7 @@ class EarthRoverAgent(LLMAgent):
             main_camera=None,  # We handle camera via SDK
             system_prompt=earth_rover_system_prompt,
             camera_fov=camera_fov,
-            sounddevice_index=None,  # No sound input
+            sounddevice_index_or_alias=None,  # No sound input
             servo_controler=None,  # No servo control
             wakeword=None,  # No wakeword detection
             tts=False,  # No text-to-speech

@@ -31,7 +31,7 @@ class LLMAgent():
             main_camera,
             system_prompt=None,
             camera_fov=90,
-            sounddevice_index=None,
+            sounddevice_index_or_alias=None,
             servo_controler=None,
             wakeword="robot",
             tts=False,
@@ -70,17 +70,17 @@ class LLMAgent():
 
         self.task = None
         
-        self.sounddevice_index = sounddevice_index
-        if self.sounddevice_index is not None:
+        self.sounddevice_index_or_alias = sounddevice_index_or_alias
+        if self.sounddevice_index_or_alias is not None:
             from robocrew.core.sound_receiver import SoundReceiver
             self.task_queue = queue.Queue()
-            self.sound_receiver = SoundReceiver(sounddevice_index, self.task_queue, wakeword)
+            self.sound_receiver = SoundReceiver(self.sounddevice_index_or_alias, self.task_queue, wakeword)
             
         self.navigation_mode = "normal"  # or "precision"
 
         # Add TTS tool if enabled (after sound_receiver is created so we can pass it)
         if tts:
-            say_tool = create_say(self.sound_receiver)
+            say_tool = create_say(getattr(self, 'sound_receiver', None))
             tools.append(say_tool)
             tts_prompt = (
                 " You can speak to the user using the `say` tool. "
@@ -136,7 +136,7 @@ class LLMAgent():
 
     def check_for_new_task(self):
         """Non-blockingly checks the queue for a new task."""
-        if self.sounddevice_index and not self.task_queue.empty():
+        if self.sounddevice_index_or_alias and not self.task_queue.empty():
             self.task = self.task_queue.get()
             
     def lidar_content(self, content):
@@ -174,7 +174,7 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         ]
         
         if self.lidar:
-              content = self.lidar_content(content)
+            content = self.lidar_content(content)
         message = HumanMessage(content)
         
         self.message_history.append(message)
@@ -213,7 +213,7 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
                     # idle mode
                     time.sleep(0.5)
                     
-                if self.sounddevice_index:
+                if self.sounddevice_index_or_alias:
                     self.check_for_new_task()
 
         except KeyboardInterrupt:

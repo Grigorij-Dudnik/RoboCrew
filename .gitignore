@@ -18,6 +18,7 @@ constraints.txt
 test-req.txt
 *.rules
 *.log
-map.png
+*.onnx
+*.onnx.json
 
 examples/xlerobot_controler.py

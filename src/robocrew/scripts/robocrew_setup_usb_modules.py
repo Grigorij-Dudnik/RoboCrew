@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-
 import os
 import subprocess
 import sys
 import time
 from robocrew.scripts import robocrew_generate_udev_rules as base_rules
+from robocrew.scripts.robocrew_set_wifi_priority import set_priority as set_wifi_priority
+import argparse
 
 
 MODE = os.environ.get("MODE", getattr(base_rules, "MODE", "0660"))
 GROUP = os.environ.get("GROUP", getattr(base_rules, "GROUP", "dialout"))
 
-default_devices = ["camera_center", "camera_right", "camera_left", "arm_right", "arm_left"]
-
+default_devices = ["camera_center", "camera_right", "camera_left", "arm_right", "arm_left", "mic_main"]
 
 def capture_devices():
 	devices = []
@@ -19,6 +19,7 @@ def capture_devices():
 	camera_ids = set()
 	base_rules.scan("/dev/v4l/by-path/*", "video4linux", devices, serial_counts, camera_ids)
 	base_rules.scan("/dev/serial/by-path/*", "tty", devices, serial_counts, camera_ids)
+	base_rules.scan("/dev/snd/controlC*", "sound", devices, serial_counts, camera_ids)
 	return devices
 
 
@@ -44,7 +45,10 @@ def build_rule(dev, alias):
 	rule += f', ENV{{ID_PATH}}=="{id_path}"'
 	serial = dev.get("serial")
 	if serial and serial != "00000000":
-		rule += f', ATTRS{{serial}}=="{serial}"'
+		if dev.get("serial_is_short"):
+			rule += f', ATTRS{{serial}}=="{serial}"'
+		else:
+			rule += f', ENV{{ID_SERIAL}}=="{serial}"'
 	rule += f', MODE="{MODE}", GROUP="{GROUP}", SYMLINK+="{alias}"'
 	return rule
 
@@ -58,6 +62,11 @@ def ensure_root():
 
 
 def main():
+	parser = argparse.ArgumentParser(description="Setup udev rules for RoboCrew devices.")
+	parser.add_argument('--no-wifi-priority', action='store_true', help="Do not set WiFi priority for RoboCrew.")
+	args = parser.parse_args()
+
+
 	ensure_root()
 	input("Disconnect all RoboCrew devices, then press Enter to continue.")
 
@@ -74,6 +83,18 @@ def main():
 		assignments.append({"alias": alias, "device": dev})
 		known.add(key)
 
+	while True:
+		resp = input("All default devices assigned. Type 'a' to add more, or press Enter to finish: ").strip().lower()
+		if resp != "a":
+			break
+		else:
+			alias = input("Enter alias for the new device: ").strip()
+			if not alias:
+				print("Alias cannot be empty. Skipping.")
+				continue
+			dev, key = wait_for_device(known)
+			assignments.append({"alias": alias, "device": dev})
+			known.add(key)
 
 	if not assignments:
 		print("No devices registered, nothing to emit.")
@@ -86,7 +107,14 @@ def main():
 	print(f"Saved {len(rules)} rules to {rules_path}.")
 	subprocess.run(["udevadm", "control", "--reload-rules"], check=False)
 	subprocess.run(["udevadm", "trigger"], check=False)
-
+	if args.no_wifi_priority:
+		print("Skipping WiFi priority setup.")
+	else:
+		try:
+			set_wifi_priority()
+		except Exception as e:
+			print(f"(Warning) Failed to set WiFi priority. Please run 'robocrew_set_wifi_priority.py' manually to set it. \
+			It will fix wifi auto-connect issues.\n Error: {e}")
 
 if __name__ == "__main__":
 	try:

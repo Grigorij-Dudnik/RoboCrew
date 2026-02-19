@@ -1,5 +1,6 @@
 import cv2
 import math
+import functools
 
 
 def basic_augmentation(image, h_fov=120, center_angle=0, navigation_mode="normal"):
@@ -58,3 +59,20 @@ if __name__ == "__main__":
     img_with_grid = augment_image(img, h_fov=118, navigation_mode="precision")
     # write to file
     cv2.imwrite("img_with_grid.jpg", img_with_grid)
+
+
+def stop_listening_during_tool_execution(sound_receiver):
+    """
+    Decorator to stop listening before function execution and resume after.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if sound_receiver is not None:
+                sound_receiver.stop_listening()
+            result = func(*args, **kwargs)
+            if sound_receiver is not None:
+                sound_receiver.start_listening()
+            return result
+        return wrapper
+    return decorator
