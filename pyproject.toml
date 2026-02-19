@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "robocrew"
-version = "0.1.3"
+version = "0.1.8"
 authors = [
   { name="Grigorij Dudnik", email="dudnikgrv@gmail.com" },
   { name="Konrad Suchodolski", email="konrad.suchodolski50@gmail.com" },
@@ -42,3 +42,4 @@ robocrew-set-wifi-priority = "robocrew.scripts.robocrew_set_wifi_priority:set_pr
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
+
