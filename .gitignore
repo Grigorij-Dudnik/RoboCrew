@@ -5,7 +5,7 @@ venv/
 pypi-robocrew/
 .clean_coder/
 .coderrules
-.wav
+*.wav
 .idea/
 dist/
 old_sdk.py
@@ -18,7 +18,8 @@ constraints.txt
 test-req.txt
 *.rules
 *.log
-map.png
-*.onnx*
+*.onnx
+*.onnx.json
+documentation/
 
 examples/xlerobot_controler.py
