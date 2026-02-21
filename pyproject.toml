@@ -12,6 +12,7 @@ authors = [
 ]
 description = "🦾Set up your embodied LLM agent same easiness as you set up normal agents in CrewAI or Autogen"
 dependencies = [
+  "streamlit",
   "langchain==1.1.0",
   "langchain-google-genai==3.2.0",
   "langchain-openai==1.1.0",
@@ -39,6 +40,7 @@ license-files = ["LICEN[CS]E*"]
 [project.scripts]
 robocrew-setup-usb-modules = "robocrew.scripts.robocrew_setup_usb_modules:main"
 robocrew-set-wifi-priority = "robocrew.scripts.robocrew_set_wifi_priority:set_priority"
+robocrew-gui = "robocrew.ui.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
