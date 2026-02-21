@@ -19,5 +19,6 @@ test-req.txt
 *.rules
 *.log
 map.png
+*.onnx*
 
 examples/xlerobot_controler.py
