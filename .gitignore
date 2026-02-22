@@ -23,3 +23,4 @@ test-req.txt
 documentation/
 
 examples/xlerobot_controler.py
+examples/xlerobot_controller.py
