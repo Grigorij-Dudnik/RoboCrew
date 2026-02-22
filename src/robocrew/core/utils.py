@@ -53,14 +53,6 @@ def draw_precision_mode_aug(image, width, height):
     return image
 
 
-if __name__ == "__main__":
-    # Test the function with a sample image
-    img = cv2.imread("debug/latest_view.jpg")
-    img_with_grid = augment_image(img, h_fov=118, navigation_mode="precision")
-    # write to file
-    cv2.imwrite("img_with_grid.jpg", img_with_grid)
-
-
 def stop_listening_during_tool_execution(sound_receiver):
     """
     Decorator to stop listening before function execution and resume after.
