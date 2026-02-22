@@ -1,5 +1,5 @@
 import cv2
-from robocrew.core.utils import augment_image
+from robocrew.core.utils import basic_augmentation
 
 class RobotCamera:
     def __init__(self, usb_port):
@@ -17,6 +17,6 @@ class RobotCamera:
     def capture_image(self, camera_fov=120, center_angle=0, navigation_mode="normal"):
         self.capture.grab() # Clear the buffer
         _, frame = self.capture.read()
-        frame = augment_image(frame, h_fov=camera_fov, center_angle=center_angle, navigation_mode=navigation_mode)
+        frame = basic_augmentation(frame, h_fov=camera_fov, center_angle=center_angle, navigation_mode=navigation_mode)
         _, buffer = cv2.imencode('.jpg', frame)
         return buffer.tobytes()
