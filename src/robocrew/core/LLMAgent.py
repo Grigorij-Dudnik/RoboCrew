@@ -222,4 +222,4 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         finally:
             if self.servo_controler:
                 print("Disconnecting servo controller...")
-     
+                self.servo_controler.disconnect()

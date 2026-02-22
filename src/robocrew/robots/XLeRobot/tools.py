@@ -251,7 +251,8 @@ def create_vla_single_arm_manipulation(
             # Re-open main camera for agent use. 
             time.sleep(1)
             main_camera_object.reopen()
-            servo_controler.reset_head_position()
+            # set head back to precize mode
+            servo_controler.turn_head_to_vla_position(50)
         
         return "Arm manipulation done"
     
