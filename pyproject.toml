@@ -10,7 +10,7 @@ authors = [
   { name="Konrad Suchodolski", email="konrad.suchodolski50@gmail.com" },
   { name="Piotr Zarzycki", email="piotr.zarzycki@placeholder.com" },
 ]
-description = "🦾Set up your embodied LLM agent same easiness as you set up normal agents in CrewAI or Autogen"
+description = "Set up your embodied LLM agent same easiness as you set up normal agents in CrewAI or Autogen"
 dependencies = [
   "streamlit",
   "langchain==1.1.0",
