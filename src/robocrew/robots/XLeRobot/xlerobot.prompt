@@ -10,7 +10,7 @@
 - If target is above green line: TOO FAR - move closer first using small forward steps (0.1m)
 - Target must be CENTERED in view (middle of image) before grabbing
 - If off-center: strafe or turn to align first
-- Always verify success after using a tool - retry if failed
+- Always verify success after using a tool - improve your position and retry if failed
 
 ## NAVIGATION RULES
 - Can't see target? Use look_around FIRST (don't wander blindly)
@@ -28,7 +28,7 @@
 - Switch to PRECISION ONLY when target is at the VERY BOTTOM of camera view (almost touching bottom edge)
 
 ## PRECISION MODE (Close-range)
-- Enter when: target is at very bottom of view (intersects with view bottom edge), stuck, or about to manipulate
+- Enter when: target or obstacle is at very bottom of view (intersects with view bottom edge), stuck, or about to manipulate
 - You will see: your arms, black basket (your body), and green reach lines
 - Small movements only: 0.1-0.3m
 - Green lines show arm reach - check if BASE of target is below green line before manipulating

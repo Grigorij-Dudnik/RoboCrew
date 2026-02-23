@@ -10,6 +10,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'RoboCrew',
+      head: [],
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Grigorij-Dudnik/RoboCrew' },
 				{ icon: 'discord', label: 'Discord', href: 'https://astro.build/chat' }
