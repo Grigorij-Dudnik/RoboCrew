@@ -15,20 +15,31 @@ from robocrew.robots.XLeRobot.tools import (
     create_look_around
 )
 
-st.set_page_config(page_title="RoboCrew Web Console", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="RoboCrew Dashboard", layout="wide", page_icon="🤖")
 
-# --- Zarządzanie Stanem Agenta (Session State) ---
+# --- Hardware Diagnostic Helper ---
+def get_hardware_status():
+    """Checks if critical hardware paths exist in the system."""
+    devices = {
+        "Main Camera": "/dev/camera_center",
+        "Right Arm": "/dev/arm_right",
+        "Left Arm": "/dev/arm_left"
+    }
+    # Zwraca słownik {nazwa: True/False}
+    return {name: os.path.exists(path) for name, path in devices.items()}
+
+# --- Agent Session State Management ---
 if "agent" not in st.session_state:
     st.session_state.agent = None
 
 def init_agent():
-    """Inicjalizacja sprzetu i agenta zgodnie z Twoim setupem."""
+    """Initializes the agent and its tools."""
     try:
-        # Konfiguracja kamer i serwomechanizmów
+        # Konfiguracja zgodnie z Twoim przykładem
         main_camera = RobotCamera("/dev/camera_center")
         servo_controller = ServoControler("/dev/arm_right", "/dev/arm_left")
-
-        # Definicja narzedzi
+        
+        # Inicjalizacja listy narzędzi
         tools = [
             create_move_forward(servo_controller),
             create_move_backward(servo_controller),
@@ -36,8 +47,8 @@ def init_agent():
             create_turn_right(servo_controller),
             create_look_around(servo_controller, main_camera)
         ]
-
-        # Inicjalizacja agenta LLM
+        
+        # Tworzenie agenta
         agent = XLeRobotAgent(
             model="google_genai:gemini-3-flash-preview",
             tools=tools,
@@ -46,87 +57,93 @@ def init_agent():
             history_len=8
         )
         st.session_state.agent = agent
-        st.success("Robot hardware and Agent initialized!")
+        st.success("Success: All systems operational!")
     except Exception as e:
-        st.error(f"Failed to initialize hardware: {e}")
+        st.error(f"Hardware initialization failed: {e}")
 
-# --- Pasek boczny: Sterowanie Reczne (Manual Override) ---
+# --- Sidebar: Hardware Health & Controls ---
 with st.sidebar:
-    st.header("⚙️ System Control")
-    if st.button("🔄 Initialize/Reset Robot"):
-        init_agent()
-        st.rerun()
+    st.header("🔌 Hardware Health")
+    hw_status = get_hardware_status()
     
+    # Wyświetlanie statusu urządzeń (Zielony/Czerwony)
+    for name, connected in hw_status.items():
+        if connected:
+            st.success(f"● {name}: Connected")
+        else:
+            st.error(f"○ {name}: Disconnected")
+    
+    st.divider()
+    
+    # Przycisk inicjalizacji (opcjonalnie zablokowany, jeśli brak sprzętu)
+    if st.button("🚀 Initialize Robot", use_container_width=True):
+        init_agent()
+    
+    # Manual Override (tylko gdy agent jest zainicjowany)
     if st.session_state.agent:
-        st.divider()
-        st.subheader("🕹️ Manual Controls")
-        # Wykorzystujemy pobrany wczesniej kontroler serw
+        st.subheader("🕹️ Manual Control")
         ctrl = st.session_state.agent.servo_controler
-        
         m_col1, m_col2, m_col3 = st.columns(3)
         
         with m_col2:
-            # Uzywamy 'distance_meters' zamiast 'distance'
             if st.button("⬆️"):
+                # Używamy distance_meters zgodnie z walidacją pydantic
                 create_move_forward(ctrl).invoke({"distance_meters": 0.1})
-                st.toast("Moving forward 0.1m")
-        
         with m_col1:
-            # Uzywamy 'angle_degrees' zamiast 'angle' zgodnie z bledem Pydantic
             if st.button("⬅️"):
+                # Używamy angle_degrees zgodnie z walidacją pydantic
                 create_turn_left(ctrl).invoke({"angle_degrees": 15})
-                st.toast("Turning left 15°")
-        
         with m_col3:
-            # Uzywamy 'angle_degrees' zamiast 'angle'
             if st.button("➡️"):
                 create_turn_right(ctrl).invoke({"angle_degrees": 15})
-                st.toast("Turning right 15°")
 
-# --- Glówny Interfejs ---
-st.title("🤖 RoboCrew Dashboard")
+# --- Main Dashboard ---
+st.title("RoboCrew Control Center")
 
 if st.session_state.agent is None:
-    st.warning("Please click 'Initialize Robot' in the sidebar to start.")
+    st.info("Robot is in standby. Check hardware status and click 'Initialize Robot' to start.")
 else:
     agent = st.session_state.agent
-    tab_chat, tab_udev = st.tabs(["💬 Conversation", "🛠️ Udev Setup"])
+    tab_chat, tab_udev = st.tabs(["💬 Conversation", "🛠️ System Config"])
 
     with tab_chat:
         col_viz, col_chat = st.columns([1, 1])
-
+        
         with col_viz:
-            st.subheader("Robot Vision")
+            st.subheader("Vision Feedback")
             try:
-                # Pobieranie obrazu base64 z Twojej metody LLMAgent
+                # Pobieranie obrazu z kamery przez agenta
                 images = agent.fetch_camera_images_base64()
                 if images:
-                    # 'width="stretch"' zamiast 'use_container_width'
+                    # width='stretch' zamiast przestarzałego use_container_width
                     st.image(f"data:image/jpeg;base64,{images[0]}", width="stretch")
             except Exception as e:
-                st.error(f"Camera Error: {e}")
+                st.error(f"Vision error: {e}")
 
         with col_chat:
-            st.subheader("Agent Chat")
-            # Wyswietlanie historii z agent.message_history
-            for msg in agent.message_history:
-                if msg.type == "system": continue
-                role = "user" if msg.type == "human" else "assistant"
-                with st.chat_message(role):
-                    if isinstance(msg.content, str):
-                        st.write(msg.content)
-                    else:
-                        st.caption("[Visual Data Transmitted]")
+            st.subheader("LLM Agent Log")
+            # Kontener na historię rozmowy
+            chat_container = st.container(height=500)
+            with chat_container:
+                for msg in agent.message_history:
+                    if msg.type == "system": continue
+                    role = "user" if msg.type == "human" else "assistant"
+                    with st.chat_message(role):
+                        if isinstance(msg.content, str):
+                            st.write(msg.content)
+                        else:
+                            st.caption("[Visual data transmitted]")
 
-            if prompt := st.chat_input("Enter command for the robot..."):
-                agent.task = prompt # Ustawienie zadania
-                with st.spinner("Processing..."):
-                    # Wywolanie glównej petli Twojego agenta
+            # Pole tekstowe dla nowych zadań
+            if prompt := st.chat_input("Enter new task for the robot..."):
+                agent.task = prompt
+                with st.spinner("Processing loop..."):
+                    # Wywołanie pojedynczego kroku pętli agenta
                     agent.main_loop_content()
                 st.rerun()
 
     with tab_udev:
-        st.header("Udev Rules Assistant")
+        st.header("Udev Rules Manager")
         if st.button("Scan USB Devices (lsusb)"):
             res = subprocess.run(['lsusb'], capture_output=True, text=True)
             st.code(res.stdout)
@@ -135,7 +152,6 @@ else:
             v_id = st.text_input("Vendor ID (e.g., 1a86)")
             p_id = st.text_input("Product ID (e.g., 7523)")
             s_name = st.text_input("Symlink Name (e.g., arm_right)")
-
             if st.form_submit_button("Generate Rule"):
                 rule = f'SUBSYSTEM=="tty", ATTRS{{idVendor}}=="{v_id}", ATTRS{{idProduct}}=="{p_id}", SYMLINK+="{s_name}"'
                 st.code(rule, language="bash")
