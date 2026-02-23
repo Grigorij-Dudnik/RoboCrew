@@ -22,13 +22,13 @@ It is important to connect the robot arms and cameras to the **correct USB** por
 
 To control the robot without a dedicated monitor:
 
-1. **Enable VNC**: Run `sudo raspi-config` in the terminal, go to **Interface Options**, and enable **VNC**.
-2. **Connect from PC**: Install **RealVNC Viewer** on your laptop and connect using your pre-configured hostname (e.g., `XLerobot.local`).
-3. **SSH Access**: You can also SSH into your Pi using `ssh pi@XLerobot.local` (replace `pi` with your configured username if you have changed it).
-4. **SSHFS Access**: For file transfers, use `sshfs pi@XLerobot.local: /mnt/robocrew` (you can replace `/mnt/robocrew` with any **empty directory** on your local machine).
+1. **SSH Access**: You can also SSH into your Pi using `ssh pi@XLerobot.local` (replace `pi` with your configured username if you have changed it).
+2. **SSHFS Access**: For file transfers, use `sshfs pi@XLerobot.local: /mnt/robocrew` (you can replace `/mnt/robocrew` with any **empty directory** on your local machine).
    * Linux (Debian/Ubuntu): Install `sshfs` via `sudo apt install sshfs`.
    * MacOS: Install `sshfs` via Homebrew with `brew install sshfs`.
    * Windows: in PowerShell run `winget install SSHFS-Win.SSHFS-Win`.
+3. **VNC Access**: Run `sudo raspi-config` in the terminal, go to **Interface Options**, and enable **VNC** server.
+   * **Connect from PC**: Install **RealVNC Viewer** on your laptop and connect using your pre-configured hostname (e.g., `XLerobot.local`).
 
 ### 4. Software Preparation
 

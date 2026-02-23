@@ -5,21 +5,33 @@ description: How to start using the RoboCrew project.
 
 ## Quick Start
 
+<ol>
+    <li>
+        <p>Install RoboCrew:</p>
+
 ```bash
 pip install robocrew
 ```
+    </li>
 
-If you want to use voice commands, also run `sudo apt install portaudio19-dev` to install Portaudio for audio support.
+    <li>
+        <p>If you want to use voice commands, also run <code>sudo apt install portaudio19-dev</code> to install Portaudio for audio support.</p>
+    </li>
 
-(Optional but recommended) Set up **udev rules** for consistent device naming by following the [udev rules guide](../setup/udev-rules), or run the automatic setup script:
+    <li>
+        <p>(Optional but recommended) Set up <strong>udev rules</strong> for consistent device naming by following the <a href="../setup/udev-rules">udev rules guide</a>, or run the automatic setup script:</p>
 
 ```bash
 robocrew-setup-usb-modules
 ```
+    </li>
 
-Then just run the example code below to see your robot in action! Make sure to provide the correct USB ports for your robot's main camera and arm connected to wheels.
+    <li>
+        <p>Run the example code below to see your robot in action. Make sure to provide the correct USB ports for your robot's main camera and arm connected to wheels.</p>
+    </li>
+</ol>
 
-### Mobile Robot (XLeRobot)
+### Example script
 
 ```python
 from robocrew.core.LLMAgent import LLMAgent
