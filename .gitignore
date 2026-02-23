@@ -7,7 +7,7 @@ pypi-robocrew/
 .coderrules
 *.wav
 .idea/
-dist/
+/dist/
 old_sdk.py
 uv.lock
 physical_path.sh
