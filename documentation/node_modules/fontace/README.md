@@ -84,7 +84,7 @@ const fontFaceDeclaration = `@font-face {
 
 ## Acknowledgements
 
-`fontace` uses the [`fontkit`](https://www.npmjs.com/package/fontkit) package to extract data from font files.
+`fontace` uses the [`fontkitten`](https://www.npmjs.com/package/fontkitten) package to extract data from font files.
 
 ## License
 
