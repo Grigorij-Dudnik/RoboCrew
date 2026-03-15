@@ -191,18 +191,15 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             self.message_history.append(tool_response)
             if additional_response:
                 self.message_history.append(additional_response)
-            # Special handling for special tools
-            if tool_call["name"] == "save_checkpoint":
-                checkpoint_info = tool_call["args"].get("checkpont_query")
-                self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
             if tool_call["name"] == "go_to_precision_mode":
                 self.navigation_mode = "precision"
             elif tool_call["name"] == "go_to_normal_mode":
                 self.navigation_mode = "normal"
             if tool_call["name"] == "finish_task":
+                report = tool_call["args"].get("report", "Task finished")
                 self.task = None
-                print("Task finished, going idle.")
-                return "Task finished, going idle."
+                print(f"Task finished: {report}")
+                return report
 
     def go(self):
         try:
