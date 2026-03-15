@@ -58,34 +58,34 @@ pick_up_tissue = create_vla_single_arm_manipulation(
     tool_name="Pick_up_tissue",
     tool_description="Pick up a tissue from a surface. Use only when very close to the tissue and looking straight at it.",
     task_prompt="Pick up tissue.",
-    server_address="0.0.0.0:8080",
-    policy_name="Grigorij/act_right-arm-grab-notebook-2",
-    policy_type="act",
+    server_address="greg-pc:8080",
+    policy_name="Grigorij/pi05_collect_tissue_23_02",
+    policy_type="pi05",
     arm_port=right_arm_wheel_usb,
     servo_controler=servo_controler,
-    camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
+    camera_config={"camera1": {"index_or_path": "/dev/camera_center"}, "camera2": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
-    policy_device="cpu",
+    policy_device="cuda",
 )
 
 throw_to_trash = create_vla_single_arm_manipulation(
     tool_name="Throw_to_trash",
     tool_description="Drop the held object into the trash bin. Use only when very close to the bin and looking straight at it.",
     task_prompt="Drop object into trash bin.",
-    server_address="0.0.0.0:8080",
+    server_address="greg-pc:8080",
     policy_name="Grigorij/act_right_arm_give_notebook",
     policy_type="act",
     arm_port=right_arm_wheel_usb,
     servo_controler=servo_controler,
     camera_config={"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}},
     main_camera_object=main_camera,
-    policy_device="cpu",
+    policy_device="cuda",
     execution_time=45,
 )
 
 # init controller agent (fast model, movement + manipulation tools)
-controller = XLeRobotAgent(
-    model="google_genai:gemini-3.1-flash",
+executor = XLeRobotAgent(
+    model="google_genai:gemini-3-flash-preview",
     tools=[
         move_forward,
         move_backward,
@@ -108,20 +108,22 @@ controller = XLeRobotAgent(
 )
 
 # set up planner tools
-execute_subtask = create_execute_subtask(controller)
+execute_subtask = create_execute_subtask(executor)
 
 # init planner agent (smart model, subtask delegation)
 planner = LLMAgent(
-    model="google_genai:gemini-3.1-pro",
+    model="google_genai:gemini-3.1-pro-preview",
     tools=[
+        look_around,
         execute_subtask,
         finish_task,
     ],
     main_camera=main_camera,
     camera_fov=90,
+    servo_controler=servo_controler,
     system_prompt=planner_prompt,
 )
 
 # run mission
-planner.task = "Find tissues on the floor, pick them up, find the trash bin and throw them away."
+planner.task = "Find tissues on the table, pick them up, find the trash bin and throw them away."
 planner.go()

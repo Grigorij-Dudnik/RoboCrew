@@ -97,6 +97,7 @@ class LLMAgent():
         self.system_message = SystemMessage(content=system_prompt)
         self.message_history = [self.system_message]
         self.history_len = history_len
+
         # cameras
         self.main_camera = main_camera
         self.camera_fov = camera_fov
@@ -181,6 +182,7 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         response = self.llm.invoke(self.message_history)
         print(response.content)
         print(response.tool_calls)
+        print()
         
         self.message_history.append(response)
         if self.history_len:
