@@ -85,7 +85,7 @@ throw_to_trash = create_vla_single_arm_manipulation(
 
 # init controller agent (fast model, movement + manipulation tools)
 controller = XLeRobotAgent(
-    model="google_genai:gemini-2.5-flash-preview-05-20",
+    model="google_genai:gemini-3.1-flash",
     tools=[
         move_forward,
         move_backward,
@@ -112,7 +112,7 @@ execute_subtask = create_execute_subtask(controller)
 
 # init planner agent (smart model, subtask delegation)
 planner = LLMAgent(
-    model="google_genai:gemini-2.5-pro-preview-05-06",
+    model="google_genai:gemini-3.1-pro",
     tools=[
         execute_subtask,
         finish_task,
