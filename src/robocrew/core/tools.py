@@ -5,9 +5,14 @@ from robocrew.core.voice_synth import speak_and_play
 
 
 @tool
-def finish_task():
-    """Claim that task is finished and go idle. Call this tool when you 200% sure the task is complete."""
-    return "Task finished"
+def finish_task(report: str = "Task finished"):
+    """Signal that the current task is complete or cannot be completed.
+    Provide a brief report of what was accomplished or why you're stuck.
+
+    Call this when:
+    - Task is done
+    - You are stuck and cannot make progress after 3+ attempts"""
+    return report
 
 
 robot_memory = Memory()
@@ -15,7 +20,7 @@ robot_memory = Memory()
 @tool
 def remember_thing(text: str):
     """
-    Save a fact or observation to memory. 
+    Save a fact or observation to memory.
     Useful for remembering locations (e.g., 'The kitchen is down the hall') or other important details.
     """
     return robot_memory.add_memory(text)
@@ -50,12 +55,24 @@ def create_say(sound_receiver=None):
         return f"Said: {query}"
     return say
 
-@tool
-def save_checkpoint(checkpont_query: str):
+
+def create_execute_subtask(executor):
     """
-    Call this tool when you complete an important step in the task to not forget about it.
-    For example, if your task is to go to kitchen and cook a dinner, call this tool with "Reached kitchen" when you are in the kitchen.
-    This tool will add the checkpoint info to the agent's system message for future context.
+    Factory function to create the 'execute_subtask' tool for the Planner agent.
+    Takes a controller LLMAgent instance and returns a tool that delegates
+    subtasks to it, blocking until the controller finishes.
     """
-    # The actual logic is handled in LLMAgent.invoke_tool
-    return f"Checkpoint saved: {checkpont_query}"
+    @tool
+    def execute_subtask(reasoning: str, subtask: str) -> str:
+        """Delegate a concrete subtask to the robot controller.
+        Write the 'reasoning' parameter first, before writing 'subtask'!
+
+        reasoning: Think step by step about what you see and why you chose this subtask.
+        The executor handles low-level navigation and manipulation.
+        Blocks until the controller finishes. Returns a completion report."""
+        executor.task = subtask
+        result = None
+        while executor.task:
+            result = executor.main_loop_content()
+        return result
+    return execute_subtask

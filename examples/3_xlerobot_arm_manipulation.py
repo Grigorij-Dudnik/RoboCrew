@@ -4,7 +4,6 @@ vla_single_arm_manipulation tools allow XLeRobot to use its arm for manipulating
 """
 
 from robocrew.core.camera import RobotCamera
-from robocrew.core.tools import save_checkpoint
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import \
     create_vla_single_arm_manipulation, \
@@ -95,7 +94,6 @@ agent = XLeRobotAgent(
         give_notebook,
         go_to_precision_mode,
         go_to_normal_mode,
-        save_checkpoint,
     ],
     history_len=8,
     main_camera=main_camera,
