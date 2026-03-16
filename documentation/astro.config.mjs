@@ -35,6 +35,7 @@ export default defineConfig({
                 { label: 'Examples', link: 'guides/examples/movement' },
                 { label: 'Audio and Voice', link: 'guides/examples/audio' },
                 { label: 'Arm manipulation (VLA)', link: 'guides/examples/vla-as-tools' },
+                { label: 'Multi-Agent Mission', link: 'guides/examples/multiagent' },
               ],
             },
           ],
