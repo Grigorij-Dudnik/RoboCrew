@@ -1,9 +1,15 @@
 import base64
+import math
+import cv2
+import numpy as np
 from langchain_core.tools import tool  # type: ignore[import]
-from lerobot.async_inference.robot_client import RobotClient 
+from lerobot.async_inference.robot_client import RobotClient
 from lerobot.async_inference.configs import RobotClientConfig
 from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from lerobot.motors import Motor, MotorNormMode
+from lerobot.motors.feetech import FeetechMotorsBus
+from gr00t.policy.server_client import PolicyClient
 from robocrew.core.utils import stop_listening_during_tool_execution
 import time
 import threading
@@ -255,6 +261,189 @@ def create_vla_single_arm_manipulation(
         
         return "Arm manipulation done"
     
+    tool_name_to_override.name = tool_name
+    tool_name_to_override.description = tool_description
+
+    return tool_name_to_override
+
+
+def _shutdown_robot_client(client: "RobotClient") -> None:
+    """Gracefully stop the control loop before disconnecting the robot.
+
+    Signals the running control loop to exit on its next iteration before
+    hardware disconnection, preventing race conditions.
+    """
+    client.stop()
+
+
+def _groot_recursive_add_extra_dim(obs: dict) -> dict:
+    """Add one (batch or time) dimension to every leaf in the obs dict recursively."""
+    for key, val in obs.items():
+        if isinstance(val, np.ndarray):
+            obs[key] = val[np.newaxis, ...]
+        elif isinstance(val, dict):
+            obs[key] = _groot_recursive_add_extra_dim(val)
+        else:
+            obs[key] = [val]  # scalar / string -> list
+    return obs
+
+
+def _groot_build_observation(frame1_rgb, frame2_rgb, state_rad, task_prompt: str) -> dict:
+    """Convert raw sensor data into the nested dict GR00T policy server expects.
+
+    Camera keys must match those in modality.json (camera1, camera2).
+    State is split into single_arm (5 joints) and gripper (1 joint).
+    All arrays get (B=1, T=1) dims via two recursive calls.
+    """
+    obs = {
+        "video": {
+            "camera1": frame1_rgb,                       # (H, W, 3)  uint8
+            "camera2": frame2_rgb,                       # (H, W, 3)  uint8
+        },
+        "state": {
+            "single_arm": state_rad[:5].astype(np.float32),  # (5,)
+            "gripper":    state_rad[5:6].astype(np.float32), # (1,)
+        },
+        "language": {
+            "annotation.human.task_description": task_prompt,
+        },
+    }
+    obs = _groot_recursive_add_extra_dim(obs)  # -> (1, ...)
+    obs = _groot_recursive_add_extra_dim(obs)  # -> (1, 1, ...)
+    return obs
+
+
+def _groot_decode_action_chunk(chunk: dict, t: int, motor_ids: list) -> dict:
+    """Extract timestep t from action chunk dict and map to {motor_id: degrees}.
+
+    chunk["single_arm"]: (B, T, 5)  radians
+    chunk["gripper"]:    (B, T, 1)  radians
+    Returns: {motor_id: float_degrees}
+    """
+    single_arm = chunk["single_arm"][0][t]  # (5,)
+    gripper    = chunk["gripper"][0][t]      # (1,)
+    full_rad   = np.concatenate([single_arm, gripper], axis=0)  # (6,)
+    return {
+        mid: math.degrees(float(full_rad[i]))
+        for i, mid in enumerate(motor_ids)
+    }
+
+
+def create_groot_single_arm_manipulation(
+        tool_name: str,
+        tool_description: str,
+        task_prompt: str,
+        server_host: str,
+        server_port: int,
+        arm_port: str,
+        motor_ids: list,
+        camera1_index_or_path,
+        camera2_index_or_path,
+        camera_width: int,
+        camera_height: int,
+        main_camera_object,
+        servo_controller,
+        execution_time: int = 30,
+        fps: int = 30,
+        timeout_ms: int = 15000,
+    ):
+    """Creates a LangChain tool that runs a GR00T policy for single-arm manipulation.
+
+    Args:
+        tool_name (str): The name of the tool the AI agent will see.
+        tool_description (str): The description of the tool the AI agent will see.
+        task_prompt (str): Natural-language task instruction sent to the GR00T policy.
+        server_host (str): Hostname of the running GR00T policy server.
+        server_port (int): Port of the GR00T policy server (default 5555).
+        arm_port (str): USB device path for the arm's FeetechMotorsBus (e.g. "/dev/arm_right").
+        motor_ids (list): Ordered list of motor IDs on the arm (e.g. [1,2,3,4,5,6]).
+        camera1_index_or_path: OpenCV index or device path for the primary arm camera.
+        camera2_index_or_path: OpenCV index or device path for the secondary/overview camera.
+        camera_width (int): Camera capture width in pixels.
+        camera_height (int): Camera capture height in pixels.
+        main_camera_object: The agent's main camera — released before and restored after execution.
+        servo_controller: Robot servo controller used to position the head for manipulation.
+        execution_time (int): How long in seconds to run the policy.
+        fps (int): Control loop frequency.
+        timeout_ms (int): PolicyClient request timeout in milliseconds.
+    """
+
+    @tool
+    def tool_name_to_override() -> str:
+        """Tool description to override."""
+        print(f"GR00T manipulation tool activated: {tool_name}")
+
+        servo_controller.turn_head_to_vla_position()
+        main_camera_object.release()
+        time.sleep(1)
+
+        cap1 = cv2.VideoCapture(camera1_index_or_path)
+        cap1.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
+        cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
+
+        cap2 = cv2.VideoCapture(camera2_index_or_path)
+        cap2.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
+        cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
+
+        arm_bus = FeetechMotorsBus(
+            port=arm_port,
+            motors={mid: Motor(mid, "sts3215", MotorNormMode.DEGREES) for mid in motor_ids},
+        )
+        arm_bus.connect()
+
+        policy = PolicyClient(host=server_host, port=server_port, timeout_ms=timeout_ms)
+        if not policy.ping():
+            arm_bus.disconnect()
+            cap1.release()
+            cap2.release()
+            time.sleep(1)
+            main_camera_object.reopen()
+            servo_controller.turn_head_to_vla_position(50)
+            return "Failed to connect to GR00T policy server."
+
+        policy.reset()
+
+        dt = 1.0 / fps
+        start_time = time.time()
+
+        try:
+            while time.time() - start_time < execution_time:
+                ret1, frame1 = cap1.read()
+                ret2, frame2 = cap2.read()
+                if not ret1 or not ret2:
+                    break
+
+                frame1_rgb = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
+                frame2_rgb = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
+
+                positions_deg = [arm_bus.read("Present_Position", mid) for mid in motor_ids]
+                state_rad = np.array(
+                    [math.radians(deg) for deg in positions_deg], dtype=np.float32
+                )  # (6,)
+
+                obs = _groot_build_observation(frame1_rgb, frame2_rgb, state_rad, task_prompt)
+
+                action_chunk, _ = policy.get_action(obs)
+                # action_chunk = {"single_arm": (1, T, 5), "gripper": (1, T, 1)}
+
+                horizon = action_chunk["single_arm"].shape[1]
+                for t in range(horizon):
+                    if time.time() - start_time >= execution_time:
+                        break
+                    action_deg = _groot_decode_action_chunk(action_chunk, t, motor_ids)
+                    arm_bus.sync_write("Goal_Position", action_deg)
+                    time.sleep(dt)
+
+        finally:
+            arm_bus.disconnect()
+            cap1.release()
+            cap2.release()
+            time.sleep(1)
+            main_camera_object.reopen()
+            servo_controller.turn_head_to_vla_position(50)
+
+        return "GR00T arm manipulation done."
+
     tool_name_to_override.name = tool_name
     tool_name_to_override.description = tool_description
 
