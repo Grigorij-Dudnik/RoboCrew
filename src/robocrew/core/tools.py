@@ -6,8 +6,12 @@ from robocrew.core.voice_synth import speak_and_play
 
 @tool
 def finish_task(report: str = "Task finished"):
-    """Task is finished. Provide a brief report of what was accomplished or what you observe.
-    Call this tool when you are 200% sure the task is complete."""
+    """Signal that the current task is complete or cannot be completed.
+    Provide a brief report of what was accomplished or why you're stuck.
+
+    Call this when:
+    - Task is done
+    - You are stuck and cannot make progress after 3+ attempts"""
     return report
 
 
