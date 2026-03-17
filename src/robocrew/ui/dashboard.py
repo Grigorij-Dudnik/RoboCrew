@@ -13,10 +13,10 @@ try:
 except ImportError:
     st.error("Please run: pip install SpeechRecognition")
 
-# Importy z Twojego pakietu RoboCrew
 from robocrew.core.camera import RobotCamera
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
+from robocrew.core.tools import finish_task
 from robocrew.robots.XLeRobot.tools import (
     create_move_forward,
     create_move_backward,
@@ -27,16 +27,43 @@ from robocrew.robots.XLeRobot.tools import (
 
 st.set_page_config(page_title="RoboCrew Dashboard", layout="wide", page_icon="🤖")
 
-# --- Stałe konfiguracyjne ---
+# --- POPRAWIONE STYLE CSS (Precyzyjne wyrównanie) ---
+st.markdown("""
+    <style>
+    /* Wyrównanie głównego okna i paska bocznego na tej samej wysokości */
+    .block-container, [data-testid="stAppViewBlockContainer"] {
+        padding-top: 2.5rem !important;
+    }
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 2.5rem !important;
+    }
+    
+    /* Usunięcie domyślnych "poduszek" nad nagłówkami, żeby tekst licował się co do piksela */
+    h2, h3 {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    /* Zwiększenie czcionki podpisów zakładek */
+    button[data-baseweb="tab"] p {
+        font-size: 1.15rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 RULES_FILE = "/etc/udev/rules.d/99-robocrew.rules"
 
-# --- Zarządzanie stanem sesji ---
 if "agent" not in st.session_state:
     st.session_state.agent = None
 if "init_error" not in st.session_state:
     st.session_state.init_error = ""
 if "recording_process" not in st.session_state:
     st.session_state.recording_process = None
+
+if "agent_active" not in st.session_state:
+    st.session_state.agent_active = False
+if "agent_step" not in st.session_state:
+    st.session_state.agent_step = 0
 
 def get_local_ip():
     try:
@@ -73,11 +100,9 @@ def save_udev_rules(new_content):
 def get_hardware_status():
     aliases = []
     if os.path.exists(RULES_FILE):
-        try:
-            with open(RULES_FILE, "r") as f:
-                content = f.read()
-            aliases = sorted(list(set(re.findall(r'SYMLINK\+="(.*?)"', content))))
-        except: pass
+        with open(RULES_FILE, "r") as f:
+            content = f.read()
+        aliases = sorted(list(set(re.findall(r'SYMLINK\+="(.*?)"', content))))
     
     if not aliases:
         return None
@@ -117,7 +142,8 @@ def init_agent():
                 create_move_backward(servo_controller),
                 create_turn_left(servo_controller),
                 create_turn_right(servo_controller),
-                create_look_around(servo_controller, main_camera)
+                create_look_around(servo_controller, main_camera),
+                finish_task
             ]
             
             st.session_state.agent = XLeRobotAgent(
@@ -128,7 +154,6 @@ def init_agent():
                 history_len=8
             )
             st.session_state.init_error = ""
-            st.success("All systems operational!")
         except Exception as e:
             st.session_state.agent = None
             st.session_state.init_error = str(e)
@@ -140,26 +165,47 @@ if "init_attempted" not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.header("🔌 Hardware Health")
+    st.markdown("### 🔌 Hardware Health")
     hw_status = get_hardware_status()
     
     if hw_status:
+        status_lines = []
         for name, info in hw_status.items():
-            if info["state"] == "error": st.error(f"🔴 **{name}**: {info['label']}")
-            elif info["state"] == "warning": st.warning(f"🟡 **{name}**: {info['label']}")
-            else: st.success(f"🟢 **{name}**: {info['label']}")
+            if info["state"] == "error": 
+                status_lines.append(f"🔴 **{name}**: {info['label']}")
+            elif info["state"] == "warning": 
+                status_lines.append(f"🟡 **{name}**: {info['label']}")
+            else: 
+                status_lines.append(f"🟢 **{name}**: {info['label']}")
+        st.markdown("  \n".join(status_lines))
     else:
-        st.info("No udev aliases found. Use System Config to add devices.")
+        st.info("No udev aliases found.")
             
     st.divider()
-    
+
+    if st.button("🛑 EMERGENCY STOP", type="primary", use_container_width=True):
+        if st.session_state.agent:
+            st.session_state.agent.task = None
+        st.session_state.agent_active = False
+        st.session_state.agent_step = 0
+        
+        if st.session_state.recording_process:
+            st.session_state.recording_process.terminate()
+            subprocess.run(["pkill", "-f", "lerobot-record"])
+            subprocess.run(["pkill", "-f", "ttyd"])
+            st.session_state.recording_process = None
+            
+        st.toast("🛑 System force-stopped by user!", icon="🛑")
+        st.rerun()
+
     if not st.session_state.agent and not st.session_state.recording_process:
-        if st.button("🔄 Retry Initialization", type="primary", use_container_width=True):
+        st.divider()
+        if st.button("🔄 Retry Initialization", use_container_width=True):
             init_agent()
             st.rerun()
 
 # --- MAIN UI ---
-st.title("RoboCrew Control Center")
+st.markdown("## RoboCrew Control Center")
 
 if st.session_state.recording_process:
     st.warning("🎥 Dataset recording is active! LLM Agent is suspended.")
@@ -178,25 +224,41 @@ with tab_chat:
             try:
                 imgs = st.session_state.agent.fetch_camera_images_base64()
                 if imgs: st.image(f"data:image/jpeg;base64,{imgs[0]}", width="stretch")
-            except: st.error("Vision link broken.")
+            except Exception as e: 
+                st.error(f"Vision link broken: {e}")
+                
         with col_chat:
             chat_container = st.container(height=450)
             with chat_container:
                 for msg in st.session_state.agent.message_history:
-                    if msg.type == "system": continue
-                    with st.chat_message("user" if msg.type == "human" else "assistant"):
-                        st.write(msg.content if isinstance(msg.content, str) else "[Visual Data]")
+                    if msg.type == "system": 
+                        continue
+                        
+                    if msg.type == "tool":
+                        with st.chat_message("assistant"):
+                            with st.expander(f"🛠️ Zakończono użycie narzędzia: {msg.name}"):
+                                st.write(msg.content)
+                        continue
+                        
+                    role = "user" if msg.type == "human" else "assistant"
+                    with st.chat_message(role):
+                        if msg.content:
+                            if isinstance(msg.content, str):
+                                st.write(msg.content)
+                            elif isinstance(msg.content, list):
+                                st.markdown("🖼️ *[Przesłano obraz z kamery]*")
+                                
+                        if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                            for tc in msg.tool_calls:
+                                st.info(f"⚙️ Agent używa narzędzia: **{tc['name']}**")
             
-            # --- WIDŻETY WEJŚCIOWE (Tekst lub Głos) ---
-            prompt_text = st.chat_input("Command the robot...")
-            audio_bytes = st.audio_input("🎤 Or say a command:")
+            prompt_text = st.chat_input("Command the robot...", disabled=st.session_state.agent_active)
+            audio_bytes = st.audio_input("🎤 Or say a command:", disabled=st.session_state.agent_active)
             
             final_prompt = None
             
-            # Sprawdzamy czy użytkownik wpisał tekst
             if prompt_text:
                 final_prompt = prompt_text
-            # Jeśli nie, sprawdzamy czy nagrał dźwięk
             elif audio_bytes:
                 try:
                     r = sr.Recognizer()
@@ -209,22 +271,35 @@ with tab_chat:
                 except Exception as e:
                     st.error(f"Speech recognition error: {e}")
 
-            # Uruchomienie pętli zadania, jeśli mamy poprawny prompt
             if final_prompt:
                 st.session_state.agent.task = final_prompt
-                with st.spinner(f"Agent is working on: {final_prompt}"):
-                    max_steps = 10 
-                    for step in range(max_steps):
-                        st.toast(f"🧠 Agent reasoning step {step+1}/{max_steps}...")
-                        result = st.session_state.agent.main_loop_content()
-                        
-                        if st.session_state.agent.task is None or result == "Task finished, going idle.":
-                            st.toast("✅ Task completed successfully!")
-                            break
-                    else:
-                        st.warning("⚠️ Task paused: Reached maximum number of steps.")
-                        
+                st.session_state.agent_active = True
+                st.session_state.agent_step = 0
                 st.rerun()
+
+            if st.session_state.agent_active:
+                st.divider()
+                
+                col_spin, col_stop = st.columns([4, 1])
+                with col_stop:
+                    if st.button("🛑 Stop Agent", use_container_width=True):
+                        st.session_state.agent_active = False
+                        st.session_state.agent.task = None
+                        st.toast("Zatrzymano pracę agenta.")
+                        st.rerun()
+                        
+                with col_spin:
+                    with st.spinner(f"🧠 Agent is processing... (Step {st.session_state.agent_step+1})"):
+                        result = st.session_state.agent.main_loop_content()
+                        st.session_state.agent_step += 1
+                
+                if st.session_state.agent.task is None or result == "Task finished, going idle.":
+                    st.toast("✅ Task completed successfully!")
+                    st.session_state.agent_active = False
+                    st.rerun()
+                else:
+                    st.rerun()
+                    
     else: st.info("LLM Agent offline.")
 
 # -------------------------------
@@ -237,7 +312,9 @@ with tab_manual:
             try:
                 imgs = st.session_state.agent.fetch_camera_images_base64()
                 if imgs: st.image(f"data:image/jpeg;base64,{imgs[0]}", width="stretch")
-            except: pass
+            except Exception as e:
+                st.error(f"Vision link broken: {e}")
+                
         with col_btn:
             ctrl = st.session_state.agent.servo_controler
             c1, c2, c3 = st.columns(3)
@@ -308,17 +385,21 @@ with tab_dataset:
             st.error("❌ You cannot select both Resume and Overwrite. Please choose only one.")
         else:
             if st.session_state.agent:
-                try: st.session_state.agent.main_camera.release()
-                except: pass
-                try: st.session_state.agent.servo_controler.disconnect()
-                except: pass
+                try:
+                    st.session_state.agent.main_camera.release()
+                    st.session_state.agent.servo_controler.disconnect()
+                except Exception as e: 
+                    st.warning(f"Hardware resources cleanup warning: {e}")
                 st.session_state.agent = None
                 
             if overwrite_record:
                 local_dir = Path.home() / ".cache" / "huggingface" / "lerobot" / repo
                 if local_dir.exists():
-                    shutil.rmtree(local_dir)
-                    st.toast(f"Deleted old dataset at {local_dir}", icon="🗑️")
+                    try:
+                        shutil.rmtree(local_dir)
+                        st.toast(f"Deleted old dataset at {local_dir}", icon="🗑️")
+                    except Exception as e:
+                        st.error(f"Failed to delete old dataset: {e}")
             
             cam_cfg = f'{{ camera1: {{type: opencv, index_or_path: {cam1}, width: 640, height: 480, fps: 25}}'
             if cam2: cam_cfg += f', camera2: {{type: opencv, index_or_path: {cam2}, width: 640, height: 480, fps: 25}}'
@@ -357,15 +438,6 @@ with tab_dataset:
         
         pi_ip = get_local_ip()
         components.iframe(f"http://{pi_ip}:8282", height=500, scrolling=True)
-        
-        st.write("")
-        
-        if st.button("⏹️ Force Kill Process", type="primary", use_container_width=True):
-            st.session_state.recording_process.terminate()
-            subprocess.run(["pkill", "-f", "lerobot-record"])
-            subprocess.run(["pkill", "-f", "ttyd"])
-            st.session_state.recording_process = None
-            st.rerun()
 
 # -------------------------------
 # ZAKŁADKA 4: SYSTEM CONFIG (UDEV)
@@ -392,8 +464,11 @@ with tab_udev:
             with col_d:
                 if st.button("🗑️", key=f"del_{al}", use_container_width=True):
                     new_c = "".join([l for l in lines if f'SYMLINK+="{al}"' not in l])
-                    save_udev_rules(new_c)
-                    st.rerun()
+                    success, err = save_udev_rules(new_c)
+                    if success:
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to delete udev rule: {err}")
     else:
         st.info("No udev rules file found yet.")
     
@@ -430,6 +505,16 @@ with tab_udev:
                         with open(RULES_FILE, "r") as f: existing = f.readlines()
                     final = [l for l in existing if f'SYMLINK+="{st.session_state.target}"' not in l]
                     final.append(rule + "\n")
-                    save_udev_rules("".join(final))
-                    st.session_state.step = 0; st.success("Saved!"); st.rerun()
-    except: st.error("Setup scripts missing. Ensure robocrew.scripts is installed.")
+                    success, err = save_udev_rules("".join(final))
+                    
+                    if success:
+                        st.session_state.step = 0
+                        st.success("Saved!")
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to save rule: {err}")
+                        
+    except ImportError: 
+        st.error("Setup scripts missing. Ensure robocrew.scripts is installed.")
+    except Exception as e:
+        st.error(f"Unexpected error in Setup Wizard: {e}")
