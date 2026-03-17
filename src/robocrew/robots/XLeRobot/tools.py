@@ -9,7 +9,7 @@ from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 from lerobot.motors import Motor, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
-from gr00t.policy.server_client import PolicyClient
+from robocrew.robots.XLeRobot.groot_client import PolicyClient
 from robocrew.core.utils import stop_listening_during_tool_execution
 import time
 import threading
