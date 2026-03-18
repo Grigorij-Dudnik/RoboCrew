@@ -8,15 +8,17 @@ Requires BreezySLAM installed:
     cd /home/pi/BreezySLAM/python && python setup.py install
 
 Usage:
+    cd /home/pi/robocrew_breezyslam
     python examples/6_xlerobot_breezyslam_slam.py
 """
 
 import sys
 sys.path.insert(0, "src")
 
-from robocrew.core.slam import SlamMapper
+from robocrew.core.camera import RobotCamera
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.robots.XLeRobot.camera import XLeRobotCamera
+from robocrew.core.slam import SlamMapper
+from robocrew.core.tools import finish_task
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 from robocrew.robots.XLeRobot.tools import (
     create_move_forward,
@@ -29,16 +31,15 @@ from robocrew.robots.XLeRobot.tools import (
     create_go_to_precision_mode,
     create_go_to_normal_mode,
 )
-from robocrew.core.tools import finish_task
 
 # ---------------------------------------------------------------------------
 # Hardware
 # ---------------------------------------------------------------------------
 servo_controler = ServoControler(
+    right_arm_wheel_usb="/dev/arm_right",
     left_arm_head_usb="/dev/left_arm",
-    right_arm_usb=None,
 )
-main_camera = XLeRobotCamera(camera_index=0)
+main_camera = RobotCamera("/dev/camera_center")
 
 # ---------------------------------------------------------------------------
 # SLAM mapper — lidar-only, no odometry
