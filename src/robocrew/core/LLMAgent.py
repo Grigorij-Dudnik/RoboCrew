@@ -101,7 +101,7 @@ class LLMAgent():
         if thinking_level is not None:
             model_kwargs["generation_config"] = {"thinking_config": {"thinking_level": thinking_level.upper()}}
 
-        llm = init_chat_model(model, model_kwargs=model_kwargs or None)
+        llm = init_chat_model(model, model_kwargs=model_kwargs or {})
         #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
         self.tools = tools
@@ -155,11 +155,23 @@ class LLMAgent():
             self.task = self.task_queue.get()
             
     def lidar_content(self, content):
+        # SLAM: acquire scan FIRST - serial buffer is clean before run_scanner
+        if self.slam_mapper is not None:
+            try:
+                angles_rad, distances_mm, _ = fetch_scan_data(
+                    self.lidar, rotations=3, max_range_mm=3000
+                )
+                if len(angles_rad) > 0:
+                    self.slam_mapper.update(angles_rad, distances_mm)
+            except Exception as exc:
+                print(f"[SLAM] Update failed: {exc}")
+
+        # Scatter-plot visualization
         lidar_buf, lidar_front_dist = run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
         lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
-        
+
         content.extend([{
-            "type": "text", 
+            "type": "text",
             "text": f"""\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm.
             
 Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles above or below that plane may not be detected.
@@ -171,33 +183,27 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
         }])
 
-        # SLAM: acquire a fresh scan and update the occupancy map
+        # Append SLAM occupancy map
         if self.slam_mapper is not None:
             try:
-                angles_rad, distances_mm, _ = fetch_scan_data(
-                    self.lidar, rotations=3, max_range_mm=3000
-                )
-                if len(angles_rad) > 0:
-                    self.slam_mapper.update(angles_rad, distances_mm)
-                    slam_b64 = self.slam_mapper.get_map_png_b64()
-                    content.extend([
-                        {
-                            "type": "text",
-                            "text": (
-                                "\n\nSLAM Occupancy Map (BreezySLAM, lidar-only). "
-                                f"Robot pose: {self.slam_mapper.pose_str()}. "
-                                "Red dot = you. White = free, dark = obstacle, gray = unexplored."
-                            ),
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{slam_b64}"},
-                        },
-                    ])
+                slam_b64 = self.slam_mapper.get_map_png_b64()
+                content.extend([
+                    {
+                        "type": "text",
+                        "text": (
+                            "\n\nSLAM Occupancy Map (BreezySLAM, lidar-only). "
+                            f"Robot pose: {self.slam_mapper.pose_str()}. "
+                            "Red dot = you. White = free, dark = obstacle, gray = unexplored."
+                        ),
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{slam_b64}"},
+                    },
+                ])
             except Exception as exc:
-                print(f"[SLAM] Update failed: {exc}")
+                print(f"[SLAM] Map render failed: {exc}")
         return content
-
     def fetch_camera_images_base64(self):
         image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
         return [base64.b64encode(image_bytes).decode('utf-8')]
