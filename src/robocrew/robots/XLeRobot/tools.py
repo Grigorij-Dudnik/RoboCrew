@@ -271,3 +271,12 @@ def create_vla_single_arm_manipulation(
     tool_name_to_override.description = tool_description
 
     return tool_name_to_override
+  
+  
+  def _shutdown_robot_client(client: "RobotClient") -> None:
+    """Gracefully stop the control loop before disconnecting the robot.
+
+    Signals the running control loop to exit on its next iteration before
+    hardware disconnection, preventing race conditions.
+    """
+    client.stop()
