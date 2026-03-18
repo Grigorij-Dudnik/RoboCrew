@@ -3,7 +3,7 @@ from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
 import time
 import base64
-from robocrew.core.lidar import init_lidar, run_scanner
+from robocrew.core.lidar import init_lidar, run_scanner, fetch_scan_data
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 import queue
@@ -40,6 +40,7 @@ class LLMAgent():
             history_len: int | None = None,
             use_memory: bool = False,
             lidar_usb_port: str | None = None,
+            slam_mapper=None,
         ):
         """
         model: name of the model to use (e.g. 'google_genai:gemini-3.1-pro-preview').
@@ -56,6 +57,7 @@ class LLMAgent():
         use_memory: set to True to enable long-term memory (requires sqlite3).
         tts: set to True to enable text-to-speech.
         lidar_usb_port: USB port of the LiDAR sensor for navigation support.
+        slam_mapper: optional SlamMapper instance (from robocrew.core.slam) for lidar-only SLAM.
         """
         system_prompt = system_prompt or base_system_prompt
         self.name = name
@@ -122,6 +124,9 @@ class LLMAgent():
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
 
+        # slam
+        self.slam_mapper = slam_mapper
+
     def invoke_tool(self, tool_call):
         # convert string to real function
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
@@ -165,6 +170,32 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             "type": "image_url",
             "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
         }])
+
+        # SLAM: acquire a fresh scan and update the occupancy map
+        if self.slam_mapper is not None:
+            try:
+                angles_rad, distances_mm, _ = fetch_scan_data(
+                    self.lidar, rotations=3, max_range_mm=3000
+                )
+                if len(angles_rad) > 0:
+                    self.slam_mapper.update(angles_rad, distances_mm)
+                    slam_b64 = self.slam_mapper.get_map_png_b64()
+                    content.extend([
+                        {
+                            "type": "text",
+                            "text": (
+                                "\n\nSLAM Occupancy Map (BreezySLAM, lidar-only). "
+                                f"Robot pose: {self.slam_mapper.pose_str()}. "
+                                "Red dot = you. White = free, dark = obstacle, gray = unexplored."
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{slam_b64}"},
+                        },
+                    ])
+            except Exception as exc:
+                print(f"[SLAM] Update failed: {exc}")
         return content
 
     def fetch_camera_images_base64(self):
@@ -232,6 +263,8 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             print("Interrupted by user, shutting down.")
 
         finally:
+            if self.slam_mapper is not None:
+                self.slam_mapper.save()
             if self.servo_controler:
                 print("Disconnecting servo controller...")
                 self.servo_controler.disconnect()
