@@ -328,7 +328,6 @@ def _groot_decode_action_chunk(chunk: dict, t: int, motor_ids: list) -> dict:
         for i, mid in enumerate(motor_ids)
     }
 
-
 def create_groot_single_arm_manipulation(
         tool_name: str,
         tool_description: str,
@@ -346,6 +345,7 @@ def create_groot_single_arm_manipulation(
         execution_time: int = 30,
         fps: int = 30,
         timeout_ms: int = 15000,
+        calibration_path: str = "/home/pi/.cache/robocrew/calibrations/right_arm.json",
     ):
     """Creates a LangChain tool that runs a GR00T policy for single-arm manipulation.
 
@@ -366,6 +366,9 @@ def create_groot_single_arm_manipulation(
         execution_time (int): How long in seconds to run the policy.
         fps (int): Control loop frequency.
         timeout_ms (int): PolicyClient request timeout in milliseconds.
+        calibration_path (str): Path to a lerobot calibration JSON file. Required for
+            normalized (degree-mode) motor reads. Typically found at
+            ~/.cache/huggingface/lerobot/calibration/robots/<robot>/<id>.json
     """
 
     @tool
@@ -385,9 +388,28 @@ def create_groot_single_arm_manipulation(
         cap2.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
         cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
 
+        # Load calibration from lerobot JSON if provided
+        calibration = None
+        if calibration_path:
+            import json
+            from lerobot.motors import MotorCalibration
+            with open(calibration_path) as f:
+                raw = json.load(f)
+            calibration = {
+                entry["id"]: MotorCalibration(
+                    id=entry["id"],
+                    drive_mode=entry["drive_mode"],
+                    homing_offset=entry["homing_offset"],
+                    range_min=entry["range_min"],
+                    range_max=entry["range_max"],
+                )
+                for entry in raw.values()
+            }
+
         arm_bus = FeetechMotorsBus(
             port=arm_port,
             motors={mid: Motor(mid, "sts3215", MotorNormMode.DEGREES) for mid in motor_ids},
+            calibration=calibration,
         )
         arm_bus.connect()
 

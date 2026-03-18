@@ -78,18 +78,18 @@ collect_tissue = create_groot_single_arm_manipulation(
         "Only call this tool when you are very close to the tissue and looking straight at it."
     ),
     task_prompt="Collect tissue to the bin.",
-    server_host="192.168.0.10",   # IP of the machine running the GR00T server
+    server_host="100.85.166.124",  
     server_port=5555,
     arm_port=right_arm_wheel_usb,
     motor_ids=[1, 2, 3, 4, 5, 6],
-    camera1_index_or_path="/dev/camera_right",   # primary / wrist camera
-    camera2_index_or_path="/dev/camera_center",  # overview camera
+    camera1_index_or_path="/dev/camera_center",
+    camera2_index_or_path="/dev/camera_right",  # overview camera
     camera_width=640,
     camera_height=480,
     main_camera_object=main_camera,
     servo_controller=servo_controler,
     execution_time=30,
-    fps=30,
+    fps=25,
     timeout_ms=15000,
 )
 
@@ -117,9 +117,6 @@ agent = XLeRobotAgent(
     servo_controler=servo_controler,
 )
 
-agent.task = (
-    "Find a tissue on the table, approach it, and collect it to the bin using your arm. "
-    "Use look_around to locate the tissue first, then navigate close to it before activating the manipulation tool."
-)
+agent.task = "Do nothing else but just call collect tissue tool. No matter if you see any tissue or not."
 
 agent.go()
