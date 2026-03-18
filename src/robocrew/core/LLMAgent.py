@@ -3,7 +3,8 @@ from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
 import time
 import base64
-from robocrew.core.lidar import init_lidar, run_scanner, fetch_scan_data
+import numpy as np
+from robocrew.core.lidar import init_lidar, fetch_scan_data, update_plot, save_plot
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
 import queue
@@ -155,25 +156,34 @@ class LLMAgent():
             self.task = self.task_queue.get()
             
     def lidar_content(self, content):
-        # SLAM: acquire scan FIRST - serial buffer is clean before run_scanner
-        if self.slam_mapper is not None:
-            try:
-                angles_rad, distances_mm, _ = fetch_scan_data(
-                    self.lidar, rotations=3, max_range_mm=3000
-                )
-                if len(angles_rad) > 0:
-                    self.slam_mapper.update(angles_rad, distances_mm)
-            except Exception as exc:
-                print(f"[SLAM] Update failed: {exc}")
+        max_range_mm = 3000
+        angles_rad = np.array([])
+        distances_mm = np.array([])
+        lidar_front_dist = 0.0
 
-        # Scatter-plot visualization
-        lidar_buf, lidar_front_dist = run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
+        # Single scan — shared between visualization and SLAM (avoids double-scan serial corruption)
+        try:
+            angles_rad, distances_mm, front_sector = fetch_scan_data(
+                self.lidar, rotations=5, max_range_mm=max_range_mm
+            )
+            if front_sector is not None and front_sector.size > 0:
+                lidar_front_dist = (np.min(front_sector) - 195) / 10
+            else:
+                print("LIDAR: Not enough front sector data. Increase number of rotations.")
+        except Exception as exc:
+            print(f"[LIDAR] Scan failed: {exc}")
+        finally:
+            self.lidar.stop()
+
+        # Scatter-plot visualization (replaces run_scanner — same internal logic)
+        img = update_plot(self.lidar_bg, self.lidar_scale, angles_rad, distances_mm, flip_x=True)
+        lidar_buf = save_plot(img)
         lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
 
         content.extend([{
             "type": "text",
             "text": f"""\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm.
-            
+
 Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles above or below that plane may not be detected.
             """
         },
@@ -183,8 +193,14 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
         }])
 
-        # Append SLAM occupancy map
+        # SLAM update — same scan data, zero extra serial traffic
         if self.slam_mapper is not None:
+            try:
+                if len(angles_rad) > 0:
+                    self.slam_mapper.update(angles_rad, distances_mm)
+            except Exception as exc:
+                print(f"[SLAM] Update failed: {exc}")
+
             try:
                 slam_b64 = self.slam_mapper.get_map_png_b64()
                 content.extend([
@@ -204,6 +220,7 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             except Exception as exc:
                 print(f"[SLAM] Map render failed: {exc}")
         return content
+
     def fetch_camera_images_base64(self):
         image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
         return [base64.b64encode(image_bytes).decode('utf-8')]
