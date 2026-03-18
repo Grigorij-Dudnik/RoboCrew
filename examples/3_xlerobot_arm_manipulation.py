@@ -54,7 +54,7 @@ pick_up_notebook = create_vla_single_arm_manipulation(
     tool_name="Grab_a_notebook",
     tool_description="Manipulation tool to grab a notebook from the table and put it to your basket. Use the tool only when you are very very close to table with a notebook, and look straingt on it.",
     task_prompt="Grab a notebook.",
-    server_address="0.0.0.0:8080",
+    server_address="100.85.166.124:8080",
     policy_name="Grigorij/act_right-arm-grab-notebook-2",
     policy_type="act",
     arm_port=right_arm_wheel_usb,
@@ -68,7 +68,7 @@ give_notebook = create_vla_single_arm_manipulation(
     tool_name="Give_a_notebook_to_a_human",
     tool_description="Manipulation tool to take a notebook from your basket and give it to human. Use the tool only when you are close to the human (base of human is below green line), and look straingt on him.",
     task_prompt="Grab a notebook and give it to a human.",
-    server_address="0.0.0.0:8080",
+    server_address="100.85.166.124:8080",
     policy_name="Grigorij/act_right_arm_give_notebook",
     policy_type="act",
     arm_port=right_arm_wheel_usb,
@@ -104,5 +104,7 @@ agent = XLeRobotAgent(
 )
 
 agent.task = "Approach blue notebook, grab it from the table and give it to human. Do not approach human until you grabbed a notebook."
+
+servo_controler.set_saved_position("default", "both")  # optionally if you have saved positions (example 5_xlerobot_test_save_recall_positions), set a default position for both arms before starting the agent.
 
 agent.go()

@@ -26,6 +26,28 @@ ACTION_MAP = {
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
 
 
+def _pick_non_degree_norm_mode() -> MotorNormMode:
+    for name in ("RANGE_0_4095", "RANGE_0_100", "RANGE_M100_100"):
+        mode = getattr(MotorNormMode, name, None)
+        if mode is not None:
+            return mode
+    for mode in MotorNormMode:
+        if mode != MotorNormMode.DEGREES:
+            return mode
+    return MotorNormMode.DEGREES
+
+
+POSITION_NORM_MODE = _pick_non_degree_norm_mode()
+HEAD_NORM_MODE = MotorNormMode.DEGREES
+HEAD_YAW_LIMIT_DEG = (-120.0, 120.0)
+HEAD_PITCH_LIMIT_DEG = (0.0, 85.0)
+
+
+def _clamp(value: float, bounds: tuple[float, float]) -> float:
+    low, high = bounds
+    return max(low, min(high, float(value)))
+
+
 def _load_arm_servo_map(file_name: str) -> Dict[str, int]:
     config = json.loads((Path(__file__).resolve().parents[4] / file_name).read_text(encoding="utf-8"))
     return {name: int(item["id"]) for name, item in config.items()}
@@ -36,6 +58,42 @@ ARM_SERVO_MAPS = {
     "right": _load_arm_servo_map("right_arm.json"),
 }
 DEFAULT_ARM_POSITION_DIR = "~/.cache/robocrew/positions/"
+DEFAULT_ARM_CALIBRATION_DIR = "~/.cache/robocrew/calibrations/"
+
+
+def _default_calibration(ids: tuple[int, ...]) -> Dict[int, MotorCalibration]:
+    return {
+        sid: MotorCalibration(
+            id=sid,
+            drive_mode=0,
+            homing_offset=0,
+            range_min=0,
+            range_max=4095,
+        )
+        for sid in ids
+    }
+
+
+def _load_arm_calibration(file_name: str, ids: tuple[int, ...]) -> Dict[int, MotorCalibration]:
+    path = Path(DEFAULT_ARM_CALIBRATION_DIR).expanduser() / file_name
+    if not path.exists():
+        return _default_calibration(ids)
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    loaded = {
+        int(item["id"]): MotorCalibration(
+            id=int(item["id"]),
+            drive_mode=int(item.get("drive_mode", 0)),
+            homing_offset=int(item.get("homing_offset", 0)),
+            range_min=int(item.get("range_min", 0)),
+            range_max=int(item.get("range_max", 4095)),
+        )
+        for item in data.values()
+        if isinstance(item, dict) and "id" in item
+    }
+    for sid, cal in _default_calibration(ids).items():
+        loaded.setdefault(sid, cal)
+    return loaded
 
 class ServoControler:
     """Minimal wheel controller that keeps only basic movement helpers."""
@@ -59,11 +117,13 @@ class ServoControler:
         self._arm_positions_right = {name: 0.0 for name in ARM_SERVO_MAPS["right"].keys()}
         self._arm_positions_left = {name: 0.0 for name in ARM_SERVO_MAPS["left"].keys()}
         self._arm_positions = {name: 0.0 for name in ARM_SERVO_MAPS["right"].keys()}
+        right_arm_calibration = _load_arm_calibration("right_arm.json", self._right_arm_ids)
+        left_arm_calibration = _load_arm_calibration("left_arm.json", self._left_arm_ids)
 
         # Initialize FeetechMotorsBus with the three wheel motors
         if right_arm_wheel_usb:
             arm_motors = {
-                aid: Motor(aid, "sts3215", MotorNormMode.DEGREES)
+                aid: Motor(aid, "sts3215", POSITION_NORM_MODE)
                 for aid in self._right_arm_ids
             }
             self.wheel_bus = FeetechMotorsBus(
@@ -74,14 +134,15 @@ class ServoControler:
                     8: Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
                     9: Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
                 },
+                calibration=right_arm_calibration,
             )
             self.wheel_bus.connect()
             self.apply_wheel_modes()
             self.apply_arm_modes()
         
         # Create basic calibration for head motors
-        # STS3215 motors have 4096 positions (0-4095) which typically map to ~360 degrees
         head_calibration = {
+            **left_arm_calibration,
             7: MotorCalibration(
                 id=7,
                 drive_mode=0,
@@ -101,15 +162,15 @@ class ServoControler:
         # Initialize FeetechMotorsBus for head motors
         if left_arm_head_usb:
             left_arm_motors = {
-                aid: Motor(aid, "sts3215", MotorNormMode.DEGREES)
+                aid: Motor(aid, "sts3215", POSITION_NORM_MODE)
                 for aid in self._left_arm_ids
             }
             self.head_bus = FeetechMotorsBus(
                 port=left_arm_head_usb,
                 motors={
                     **left_arm_motors,
-                    HEAD_SERVO_MAP["yaw"]: Motor(HEAD_SERVO_MAP["yaw"], "sts3215", MotorNormMode.DEGREES),
-                    HEAD_SERVO_MAP["pitch"]: Motor(HEAD_SERVO_MAP["pitch"], "sts3215", MotorNormMode.DEGREES),
+                    HEAD_SERVO_MAP["yaw"]: Motor(HEAD_SERVO_MAP["yaw"], "sts3215", HEAD_NORM_MODE),
+                    HEAD_SERVO_MAP["pitch"]: Motor(HEAD_SERVO_MAP["pitch"], "sts3215", HEAD_NORM_MODE),
                 },
                 calibration=head_calibration,
             )
@@ -120,6 +181,9 @@ class ServoControler:
 
 
     def _wheels_stop(self) -> None:
+        if not hasattr(self, "wheel_bus"):
+            print("Warning: wheel bus not initialized, cannot stop wheels.")
+            return
         payload = {wid: 0 for wid in self._wheel_ids}
         self.wheel_bus.sync_write("Goal_Velocity", payload)
 
@@ -180,13 +244,44 @@ class ServoControler:
     def apply_head_modes(self) -> None:
         self._set_position_mode(self.head_bus, self._head_ids)
 
+    def _set_bus_torque(self, bus: FeetechMotorsBus, ids: tuple[int, ...], enabled: bool) -> None:
+        fn = getattr(bus, "enable_torque" if enabled else "disable_torque", None)
+        if fn:
+            fn()
+            return
+        for sid in ids:
+            bus.write("Torque_Enable", sid, int(enabled))
+
+    def _set_torque(self, enabled: bool, target: Literal["all", "wheels", "arms", "head"] = "all") -> None:
+        groups = {
+            "wheels": ((getattr(self, "wheel_bus", None), self._wheel_ids),),
+            "head": ((getattr(self, "head_bus", None), self._head_ids),),
+            "arms": (
+                (getattr(self, "wheel_bus", None), self._right_arm_ids),
+                (getattr(self, "head_bus", None), self._left_arm_ids),
+            ),
+        }
+        selected = ("wheels", "head", "arms") if target == "all" else (target,)
+        for key in selected:
+            for bus, ids in groups[key]:
+                if bus:
+                    self._set_bus_torque(bus, ids, enabled)
+
+    def enable_torque(self, target: Literal["all", "wheels", "arms", "head"] = "all") -> None:
+        """Enable torque for all/wheels/arms/head."""
+        self._set_torque(True, target)
+
+    def disable_torque(self, target: Literal["all", "wheels", "arms", "head"] = "all") -> None:
+        """Disable torque for all/wheels/arms/head."""
+        self._set_torque(False, target)
+
     def turn_head_yaw(self, degrees: float) -> Dict[int, float]:
-        payload = {HEAD_SERVO_MAP["yaw"]: float(degrees)}
+        payload = {HEAD_SERVO_MAP["yaw"]: _clamp(degrees, HEAD_YAW_LIMIT_DEG)}
         self.head_bus.sync_write("Goal_Position", payload)
         self._head_positions.update(payload)
 
     def turn_head_pitch(self, degrees: float) -> Dict[int, float]:
-        payload = {HEAD_SERVO_MAP["pitch"]: float(degrees)}
+        payload = {HEAD_SERVO_MAP["pitch"]: _clamp(degrees, HEAD_PITCH_LIMIT_DEG)}
         self.head_bus.sync_write("Goal_Position", payload)
         self._head_positions.update(payload)
 
@@ -209,27 +304,85 @@ class ServoControler:
         self._arm_positions.update({name: float(value) for name, value in positions.items()})
         return self._arm_positions.copy()
 
+    def read_arm_present_position(self, arm_side: Literal["left", "right", "both"] = "both") -> Dict[str, float]:
+        right_map = ARM_SERVO_MAPS["right"]
+        left_map = ARM_SERVO_MAPS["left"]
+
+        def _read_present(bus: FeetechMotorsBus, ids: tuple[int, ...]) -> Dict[int, float]:
+            try:
+                raw = bus.sync_read("Present_Position", list(ids))
+                if isinstance(raw, dict):
+                    return {int(k): float(v) for k, v in raw.items()}
+                return {sid: float(value) for sid, value in zip(ids, raw)}
+            except Exception:
+                return {sid: float(bus.read("Present_Position", sid)) for sid in ids}
+
+        if arm_side in ("right", "both") and hasattr(self, "wheel_bus"):
+            right_data = _read_present(self.wheel_bus, self._right_arm_ids)
+            self._arm_positions_right.update(
+                {name: float(right_data[sid]) for name, sid in right_map.items() if sid in right_data}
+            )
+
+        if arm_side in ("left", "both") and hasattr(self, "head_bus"):
+            left_data = _read_present(self.head_bus, self._left_arm_ids)
+            self._arm_positions_left.update(
+                {name: float(left_data[sid]) for name, sid in left_map.items() if sid in left_data}
+            )
+
+        self._arm_positions.update(self._arm_positions_left)
+        self._arm_positions.update(self._arm_positions_right)
+        if arm_side == "left":
+            return self._arm_positions_left.copy()
+        if arm_side == "right":
+            return self._arm_positions_right.copy()
+        return self._arm_positions.copy()
+
     def _arm_position_file(self, position_name: str, base_dir: str = DEFAULT_ARM_POSITION_DIR) -> Path:
         file_name = position_name if position_name.endswith(".json") else f"{position_name}.json"
         return Path(base_dir).expanduser() / file_name
 
     def save_arm_position(self, position_name: str = "arm_positions", arm_side: Literal["left", "right", "both"] = "both") -> str:
         if arm_side == "left":
-            data = self._arm_positions_left.copy()
+            positions = self._arm_positions_left.copy()
         elif arm_side == "right":
-            data = self._arm_positions_right.copy()
+            positions = self._arm_positions_right.copy()
         else:
-            data = {
+            positions = {
                 "left": self._arm_positions_left.copy(),
                 "right": self._arm_positions_right.copy(),
             }
+        data = {
+            "arm_side": arm_side,
+            "positions": positions,
+        }
         file_path = self._arm_position_file(position_name)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return str(file_path)
 
-    def read_arm_position(self, position_name: str, arm_side: Literal["left", "right", "both"] = "both") -> Dict[str, float]:
-        data = json.loads(self._arm_position_file(position_name).read_text(encoding="utf-8"))
+    def set_saved_position(self, position_name: str, arm_side: Literal["left", "right", "both"] = "both") -> Dict[str, float]:
+        raw_data = json.loads(self._arm_position_file(position_name).read_text(encoding="utf-8"))
+
+        saved_side: Literal["left", "right", "both"]
+        data: Dict[str, float] | Dict[str, Dict[str, float]]
+        if isinstance(raw_data, dict) and "arm_side" in raw_data and "positions" in raw_data:
+            saved_side = raw_data["arm_side"]
+            data = raw_data["positions"]
+        elif isinstance(raw_data, dict) and "left" in raw_data and "right" in raw_data:
+            # Backward compatibility: old both-arm files had no metadata.
+            saved_side = "both"
+            data = raw_data
+        else:
+            raise ValueError(
+                "Position file is missing arm-side metadata. Re-save the pose with a recent RoboCrew version."
+            )
+
+        if saved_side != arm_side:
+            raise ValueError(
+                f"Saved pose is for '{saved_side}' but requested '{arm_side}'. "
+                "Use matching --arms value or re-save the pose."
+            )
+
         if arm_side == "both":
             if isinstance(data, dict) and "left" in data and "right" in data:
                 self.set_arm_position(data["left"], "left")
@@ -241,9 +394,9 @@ class ServoControler:
         return self.set_arm_position(data, arm_side)
 
     def disconnect(self) -> None:
-        self._wheels_stop()
-        time.sleep(0.5)
         if hasattr(self, 'wheel_bus'):
+            self._wheels_stop()
+            time.sleep(0.5)
             self.wheel_bus.disconnect()
         if hasattr(self, 'head_bus'):
             self.head_bus.disconnect()
