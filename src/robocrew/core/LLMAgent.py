@@ -158,11 +158,27 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         return content
 
     def fetch_camera_images_base64(self):
-        image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
-        return [base64.b64encode(image_bytes).decode('utf-8')]
+        for attempt in range(3):
+            try:
+                image_bytes = self.main_camera.capture_image(
+                    camera_fov=self.camera_fov,
+                    navigation_mode=self.navigation_mode,
+                )
+                return [base64.b64encode(image_bytes).decode('utf-8')]
+            except RuntimeError as exc:
+                print(f"Camera capture failed (attempt {attempt + 1}/3): {exc}")
+                # Camera can be briefly unavailable after manipulation tools release/reacquire it.
+                time.sleep(0.3 * (attempt + 1))
+                self.main_camera.reopen()
+        raise RuntimeError("Failed to fetch camera image after retries.")
     
     def main_loop_content(self):
-        camera_images = self.fetch_camera_images_base64()
+        try:
+            camera_images = self.fetch_camera_images_base64()
+        except RuntimeError as exc:
+            print(f"Skipping this loop because camera is unavailable: {exc}")
+            time.sleep(0.5)
+            return
         
         content=[
                 {"type": "text", "text": "Main camera view:"},
