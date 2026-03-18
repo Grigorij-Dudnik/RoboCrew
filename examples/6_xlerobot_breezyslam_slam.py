@@ -37,7 +37,7 @@ from robocrew.robots.XLeRobot.tools import (
 # ---------------------------------------------------------------------------
 servo_controler = ServoControler(
     right_arm_wheel_usb="/dev/arm_right",
-    left_arm_head_usb="/dev/left_arm",
+    left_arm_head_usb="/dev/arm_left",
 )
 main_camera = RobotCamera("/dev/camera_center")
 
@@ -73,13 +73,14 @@ SYSTEM_PROMPT = """
 - Align within ±15° before moving forward.
 - Use look_around when the target is not visible in the camera.
 - Never move forward 3+ times if nothing changes — re-plan instead.
+- do not make movements bigger then 0,5 m and 45 degrees at once.
 """
 
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
 agent = LLMAgent(
-    model="google_genai:gemini-2.0-flash",
+    model="google_genai:gemini-3-flash-preview",
     system_prompt=SYSTEM_PROMPT,
     tools=[
         create_move_forward(servo_controler),
@@ -91,16 +92,16 @@ agent = LLMAgent(
         create_look_around(servo_controler, main_camera),
         create_go_to_precision_mode(servo_controler),
         create_go_to_normal_mode(servo_controler),
-        finish_task,
+        #finish_task,
     ],
     history_len=6,
     main_camera=main_camera,
     camera_fov=90,
     servo_controler=servo_controler,
-    lidar_usb_port="/dev/lidar",
+    lidar_usb_port="/dev/ttyUSB0",
     slam_mapper=slam_mapper,
 )
 
-agent.task = "Explore the environment and build a map of the room. Avoid obstacles."
+agent.task = "Go to the room with opened door. (look around if you can't see the door)"
 agent.go()
 # SLAM map is saved automatically on shutdown (Ctrl+C)

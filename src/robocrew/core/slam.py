@@ -43,6 +43,9 @@ class SlamMapper:
             map_size_pixels,
             map_size_meters,
             random_seed=random_seed,
+            map_quality=200,
+            sigma_xy_mm=500,
+            sigma_theta_degrees=45,
         )
         self.mapbytes = bytearray(map_size_pixels * map_size_pixels)
         self.x_mm: float = 0.0
