@@ -57,6 +57,10 @@ class SoundReceiver:
         self._listening = False
         self._recording = False
         self.RMS_THRESHOLD = 400.0
+        self.current_ambient_rms = 200.0 
+        self.current_ambient_rms = 200.0  
+        self.last_rms = 200.0            
+        self.start_talk_time = 0.0 
         self.reciver_thread = threading.Thread(target=self._recorder_loop)
         self.reciver_thread.daemon = True
         self.recorded_frames = []
@@ -130,14 +134,41 @@ class SoundReceiver:
                 time.sleep(0.1)
                 continue
             loop_start_time = time.perf_counter()
+            current_rms = self.get_rms()
+            skok_glosnosci = current_rms - self.last_rms
             if not self._recording:
+
+                if current_rms < self.RMS_THRESHOLD:
+                    # Kiedy nikt nie mówi (jest cisza w stosunku do progu), to znaczy, że słyszymy szum tła.
+                    # Mieszamy stary poziom szumu (95%) z nowym (5%), co daje gładkie dostosowywanie.
+                    wspolczynnik_uczenia = 0.05
+                    self.current_ambient_rms = (wspolczynnik_uczenia * current_rms) + ((1 - wspolczynnik_uczenia) * self.current_ambient_rms)
+                    print(self.current_ambient_rms)
+                    # Na bieżąco, w czasie rzeczywistym, obliczamy i podmieniamy nasz próg:
+                    # (1.5x wyższy niż szum tła, zabezpieczony przed zejściem poniżej 300)
+                    self.RMS_THRESHOLD = max(50+.0, self.current_ambient_rms * 1.5)
                 
-                if self.get_rms() > self.RMS_THRESHOLD:
+                if current_rms > self.RMS_THRESHOLD and skok_glosnosci > 100.0: 
+                
                     self._recording = True
+                    self.start_talk_time = time.time()  
+                    print(f"🎤 Speech detected! (RMS: {self.RMS_THRESHOLD:.2f})")
                     pre_roll_data = self.get_last_recorded_bytes(2.0)
                     with self._lock:
                         self.recorded_frames = [pre_roll_data]
             else:
+                # If recording more then 15 seconds it means that it's just noise 
+                if time.time() - self.start_talk_time > 15.0: 
+                    print("🌪️ It's just noice")
+                    self.current_ambient_rms = current_rms
+                    self.RMS_THRESHOLD = max(50.0, current_rms * 1.5)
+                    self._recording = False
+                    self.first_timestamp_below_threshold = None
+                    with self._lock:
+                        self.recorded_frames = [] 
+                    
+                    self.last_rms = current_rms  
+                    continue 
 
                 if self.get_rms() < self.RMS_THRESHOLD:
                     if self.first_timestamp_below_threshold is None:
@@ -145,7 +176,7 @@ class SoundReceiver:
                     elif time.time() - self.first_timestamp_below_threshold > 2.0:
                         self._recording = False
                         self.first_timestamp_below_threshold = None
-                        # TUTAJ WHISPER BIERZE RECORDED FRAMES
+                        print("🔕 End of speech")
                         with self._lock:
                             audio_data = b''.join(self.recorded_frames)
                             self.recorded_frames = []
@@ -157,7 +188,8 @@ class SoundReceiver:
                         ).start()
                 else:
                     self.first_timestamp_below_threshold = None
-                        
+
+            self.last_rms = current_rms     
             loop_execution_time = time.perf_counter() - loop_start_time 
             time.sleep(self.recording_loop_delay - loop_execution_time)
 
@@ -272,7 +304,7 @@ class SoundReceiver:
 
 # Minimal CLI demo
 if __name__ == "__main__":
-    rec = SoundReceiver()
+    rec = SoundReceiver("mic_main") 
     try:
         # optionally set DEVICE_INDEX env var before running, or pass device_index to start_listening
         rec.start_listening()  # non-blocking
