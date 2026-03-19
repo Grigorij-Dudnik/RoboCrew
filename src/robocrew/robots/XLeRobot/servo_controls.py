@@ -361,7 +361,10 @@ class ServoControler:
         return str(file_path)
 
     def set_saved_position(self, position_name: str, arm_side: Literal["left", "right", "both"] = "both") -> Dict[str, float]:
-        raw_data = json.loads(self._arm_position_file(position_name).read_text(encoding="utf-8"))
+        try:
+            raw_data = json.loads(self._arm_position_file(position_name).read_text(encoding="utf-8"))
+        except:
+            return
 
         saved_side: Literal["left", "right", "both"]
         data: Dict[str, float] | Dict[str, Dict[str, float]]

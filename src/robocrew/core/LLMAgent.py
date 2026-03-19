@@ -121,6 +121,8 @@ class LLMAgent():
             self.lidar, self.lidar_bg, self.lidar_scale = init_lidar(lidar_usb_port)
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
+            self.servo_controler.set_saved_position("default", "both")  # optionally if you have saved positions (example 5_xlerobot_test_save_recall_positions), set a default position for both arms before starting the agent.
+
 
     def invoke_tool(self, tool_call):
         # convert string to real function
