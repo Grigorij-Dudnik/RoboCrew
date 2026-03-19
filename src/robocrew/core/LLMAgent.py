@@ -99,7 +99,7 @@ class LLMAgent():
         if thinking_level is not None:
             model_kwargs["generation_config"] = {"thinking_config": {"thinking_level": thinking_level.upper()}}
 
-        llm = init_chat_model(model, model_kwargs=model_kwargs or None)
+        llm = init_chat_model(model, model_kwargs=model_kwargs or {})
         #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
         self.tools = tools
