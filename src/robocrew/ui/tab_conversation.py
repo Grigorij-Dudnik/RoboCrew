@@ -22,6 +22,11 @@ def render_conversation_tab():
             if imgs: st.image(f"data:image/jpeg;base64,{imgs[0]}", width="stretch")
         except: st.error("Vision broken")
         
+        try:
+            if getattr(st.session_state.agent, "latest_lidar_b64", None):
+                st.image(f"data:image/png;base64,{st.session_state.agent.latest_lidar_b64}", width="stretch")
+        except: pass
+        
         # Puste miejsce, do którego zaraz wstrzykniemy przycisk STOP i spinner
         status_container = st.container()
                 

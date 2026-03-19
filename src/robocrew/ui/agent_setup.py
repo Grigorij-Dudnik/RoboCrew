@@ -69,10 +69,11 @@ def init_agent():
                 tools=tools,
                 main_camera=main_camera,
                 servo_controler=servo_controller,
+                lidar_usb_port="/dev/lidar" if os.path.exists("/dev/lidar") else None,
                 history_len=8
             )
             st.session_state.init_error = ""
         except Exception as e:
             st.session_state.agent = None
-            st.session_state.init_error = str(e)
+            st.session_state.init_error = str(e) #TODO: wywalić
             st.error(f"Init failed: {e}")

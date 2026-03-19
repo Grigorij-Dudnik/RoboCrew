@@ -69,15 +69,17 @@ with st.sidebar:
     if hw_status:
         status_lines = []
         for name, info in hw_status.items():
-            if info["state"] == "error": 
+            if info["state"] == "disconnected":
+                status_lines.append(f"<span style='color:grey;'>⚪ **{name}**: {info['label']}</span>")
+            elif info["state"] == "error": 
                 status_lines.append(f"🔴 **{name}**: {info['label']}")
             elif info["state"] == "warning": 
                 status_lines.append(f"🟡 **{name}**: {info['label']}")
             else: 
                 status_lines.append(f"🟢 **{name}**: {info['label']}")
-        st.markdown("  \n".join(status_lines))
+        st.markdown("  \n".join(status_lines), unsafe_allow_html=True)
     else:
-        st.info("No udev aliases found.")
+        st.info("No hardware aliases found.")
             
     st.divider()
 
@@ -103,20 +105,33 @@ with st.sidebar:
             st.rerun()
 
 # --- MAIN UI ---
-if st.session_state.recording_process:
+missing_required = []
+if hw_status:
+    for name, info in hw_status.items():
+        if info.get("required") and info["state"] == "disconnected":
+            missing_required.append(name)
+
+if missing_required:
+    pass # Message handled below before rendering tabs
+elif st.session_state.recording_process:
     st.warning("🎥 Dataset recording is active! LLM Agent is suspended.")
 elif not st.session_state.agent:
-    st.error("Robot is offline. Check connections and power.")
+    st.error("Robot cannot be initialized.")
 
-tab_chat, tab_udev, tab_vla, tab_dataset, tab_manual = st.tabs(["💬 Conversation", "🛠️ Config", "🦾 VLA Tools", "🎥 Data Collection", "🕹️ Manual"])
-
-with tab_chat:
-    render_conversation_tab()
-with tab_udev:
+if missing_required:
+    st.error(f"⚠️ Missing required hardware: **{', '.join(missing_required)}**.")
+    st.info("Please use the Udev Rules Wizard below to connect the missing devices before proceeding.")
     render_config_tab()
-with tab_dataset:
-    render_dataset_tab()
-with tab_vla:
-    render_vla_tab()
-with tab_manual:
-    render_manual_tab()
+else:
+    tab_chat, tab_udev, tab_vla, tab_dataset, tab_manual = st.tabs(["💬 Conversation", "🛠️ Config", "🦾 VLA Tools", "🎥 Data Collection", "🕹️ Manual"])
+
+    with tab_chat:
+        render_conversation_tab()
+    with tab_udev:
+        render_config_tab()
+    with tab_dataset:
+        render_dataset_tab()
+    with tab_vla:
+        render_vla_tab()
+    with tab_manual:
+        render_manual_tab()

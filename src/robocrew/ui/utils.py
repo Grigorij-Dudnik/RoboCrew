@@ -40,14 +40,13 @@ def save_udev_rules(new_content):
         return False, str(e)
 
 def get_hardware_status():
-    aliases = []
+    aliases = set(["camera_center", "camera_left", "camera_right", "arm_left", "arm_right"])
     if os.path.exists(RULES_FILE):
         with open(RULES_FILE, "r") as f:
             content = f.read()
-        aliases = sorted(list(set(re.findall(r'SYMLINK\+="(.*?)"', content))))
+        aliases.update(re.findall(r'SYMLINK\+="(.*?)"', content))
     
-    if not aliases:
-        return None
+    aliases = sorted(list(aliases))
 
     status = {}
     err_msg = st.session_state.get("init_error", "")
@@ -55,16 +54,16 @@ def get_hardware_status():
     
     for alias in aliases:
         path = f"/dev/{alias}"
-        name = alias.replace("_", " ").title()
+        is_required = alias in ["camera_center", "camera_left", "camera_right", "arm_left", "arm_right"]
         
         if not os.path.exists(path):
-            status[name] = {"state": "error", "label": "Disconnected"}
+            status[alias] = {"state": "disconnected", "label": "Disconnected", "required": is_required}
         elif is_recording:
-            status[name] = {"state": "warning", "label": "Busy (Recording)"}
+            status[alias] = {"state": "warning", "label": "Busy (Recording)", "required": is_required}
         elif err_msg and path in err_msg:
-            status[name] = {"state": "error", "label": "Power/Comm Error"}
+            status[alias] = {"state": "error", "label": "Power/Comm Error", "required": is_required}
         elif not st.session_state.agent:
-            status[name] = {"state": "warning", "label": "Standby"}
+            status[alias] = {"state": "warning", "label": "Standby", "required": is_required}
         else:
-            status[name] = {"state": "success", "label": "Ready"}
+            status[alias] = {"state": "success", "label": "Ready", "required": is_required}
     return status
