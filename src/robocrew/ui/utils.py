@@ -40,11 +40,14 @@ def save_udev_rules(new_content):
         return False, str(e)
 
 def get_hardware_status():
-    aliases = set(["camera_center", "camera_left", "camera_right", "arm_left", "arm_right"])
+    aliases_in_rules = set()
     if os.path.exists(RULES_FILE):
         with open(RULES_FILE, "r") as f:
             content = f.read()
-        aliases.update(re.findall(r'SYMLINK\+="(.*?)"', content))
+        aliases_in_rules.update(re.findall(r'SYMLINK\+="(.*?)"', content))
+    
+    aliases = set(["camera_center", "camera_left", "camera_right", "arm_left", "arm_right"])
+    aliases.update(aliases_in_rules)
     
     aliases = sorted(list(aliases))
 
@@ -56,7 +59,9 @@ def get_hardware_status():
         path = f"/dev/{alias}"
         is_required = alias in ["camera_center", "camera_left", "camera_right", "arm_left", "arm_right"]
         
-        if not os.path.exists(path):
+        if alias not in aliases_in_rules:
+            status[alias] = {"state": "undefined", "label": "No Rule", "required": is_required}
+        elif not os.path.exists(path):
             status[alias] = {"state": "disconnected", "label": "Disconnected", "required": is_required}
         elif is_recording:
             status[alias] = {"state": "warning", "label": "Busy (Recording)", "required": is_required}

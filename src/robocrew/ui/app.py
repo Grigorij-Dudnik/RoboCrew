@@ -58,20 +58,17 @@ if "init_attempted" not in st.session_state:
     st.session_state.init_attempted = True
     init_agent()
 
-# --- SIDEBAR ---
-with st.sidebar:
-    st.markdown("## RoboCrew Control Center")
-    st.divider()
-
+@st.fragment(run_every="2s")
+def render_hardware_health():
     st.markdown("### 🔌 Hardware Health")
     hw_status = get_hardware_status()
     
     if hw_status:
         status_lines = []
         for name, info in hw_status.items():
-            if info["state"] == "disconnected":
+            if info["state"] == "undefined":
                 status_lines.append(f"<span style='color:grey;'>⚪ **{name}**: {info['label']}</span>")
-            elif info["state"] == "error": 
+            elif info["state"] in ["disconnected", "error"]: 
                 status_lines.append(f"🔴 **{name}**: {info['label']}")
             elif info["state"] == "warning": 
                 status_lines.append(f"🟡 **{name}**: {info['label']}")
@@ -80,6 +77,13 @@ with st.sidebar:
         st.markdown("  \n".join(status_lines), unsafe_allow_html=True)
     else:
         st.info("No hardware aliases found.")
+
+# --- SIDEBAR ---
+with st.sidebar:
+    st.markdown("## RoboCrew Control Center")
+    st.divider()
+
+    render_hardware_health()
             
     st.divider()
 
@@ -106,9 +110,10 @@ with st.sidebar:
 
 # --- MAIN UI ---
 missing_required = []
+hw_status = get_hardware_status()
 if hw_status:
     for name, info in hw_status.items():
-        if info.get("required") and info["state"] == "disconnected":
+        if info.get("required") and info["state"] in ["disconnected", "undefined"]:
             missing_required.append(name)
 
 if missing_required:
@@ -123,7 +128,7 @@ if missing_required:
     st.info("Please use the Udev Rules Wizard below to connect the missing devices before proceeding.")
     render_config_tab()
 else:
-    tab_chat, tab_udev, tab_vla, tab_dataset, tab_manual = st.tabs(["💬 Conversation", "🛠️ Config", "🦾 VLA Tools", "🎥 Data Collection", "🕹️ Manual"])
+    tab_chat, tab_udev, tab_vla, tab_dataset, tab_manual = st.tabs(["💬 Conversation", "🛠️ Config", "🦾 VLA Tools", "🎥 VLA Dataset Collection", "🕹️ Manual"])
 
     with tab_chat:
         render_conversation_tab()

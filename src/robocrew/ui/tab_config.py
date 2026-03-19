@@ -4,8 +4,8 @@ import os
 import re
 from utils import RULES_FILE, save_udev_rules
 
-def render_config_tab():
-    # Odczyt i wyświetlanie reguł (jeśli plik istnieje)
+@st.fragment(run_every="2s")
+def render_device_list():
     lines = []
     if os.path.exists(RULES_FILE):
         with open(RULES_FILE, "r") as f: 
@@ -30,6 +30,9 @@ def render_config_tab():
                         st.error("Failed to delete.")
     else: 
         st.info("No udev rules file found yet.")
+
+def render_config_tab():
+    render_device_list()
     
     st.divider()
     st.subheader("➕ Add/Edit Device")
@@ -41,7 +44,7 @@ def render_config_tab():
         get_devs = lambda: {(d["subsystem"], d["kernel"], d["phys"]): d for d in capture_devices()}
         
         if st.session_state.step == 0:
-            alias_options = ["camera_center", "camera_left", "camera_right", "arm_left", "arm_right", "lidar", "Other..."]
+            alias_options = ["camera_center", "camera_left", "camera_right", "arm_left", "arm_right", "lidar", "mic_main", "Other..."]
             selected_alias = st.selectbox("Select Alias", alias_options)
             
             if selected_alias == "Other...":
@@ -75,6 +78,9 @@ def render_config_tab():
                     curr = get_devs()
                     if diff := set(curr.keys()) - set(st.session_state.base.keys()):
                         rule = build_rule(curr[list(diff)[0]], st.session_state.target)
+                        lines = []
+                        if os.path.exists(RULES_FILE):
+                            with open(RULES_FILE, "r") as f: lines = f.readlines()
                         # Poprawiony warunek (bez backslasha) + dołączenie nowej reguły
                         final = [l for l in lines if f'SYMLINK+="{st.session_state.target}"' not in l] + [rule + "\n"]
                         
