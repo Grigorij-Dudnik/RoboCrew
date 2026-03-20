@@ -6,8 +6,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 from pathlib import Path
 from utils import get_local_ip
-from huggingface_hub import HfFolder, HfApi, login, logout
+from huggingface_hub import HfApi, login, logout
 from agent_setup import get_hardware, init_agent
+
+    # Available in newer huggingface_hub releases.
+from huggingface_hub import get_token as hf_get_token
 
 @st.fragment(run_every="2s")
 def auto_refresh_on_finish():
@@ -23,7 +26,13 @@ def render_dataset_tab():
         with open(hf_token_path, "r") as f:
             cached_token = f.read().strip()
             
-    current_token = cached_token or HfFolder.get_token() or os.environ.get("HF_TOKEN")
+    token_from_hf = hf_get_token() if hf_get_token else None
+    current_token = (
+        cached_token
+        or token_from_hf
+        or os.environ.get("HF_TOKEN")
+        or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    )
     
     if current_token:
         os.environ["HF_TOKEN"] = current_token
@@ -44,7 +53,6 @@ def render_dataset_tab():
                     with open(hf_token_path, "w") as f:
                         f.write(hf_token)
                         
-                    HfFolder.save_token(hf_token)
                     try:
                         login(token=hf_token, add_to_git_credential=True)
                     except TypeError:
@@ -61,8 +69,6 @@ def render_dataset_tab():
     if c_logout.button("🚪 Logout"):
         os.environ.pop("HF_TOKEN", None)
         os.environ.pop("HUGGING_FACE_HUB_TOKEN", None)
-        HfFolder.delete_token()
-        
         # Ręczne kasowanie pliku cache
         if hf_token_path.exists():
             hf_token_path.unlink()

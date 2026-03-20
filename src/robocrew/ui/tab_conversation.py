@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
-try: import speech_recognition as sr
-except: pass
+import speech_recognition as sr
+
 
 def render_conversation_tab():
     if not st.session_state.agent: return st.info("LLM Agent offline.")
