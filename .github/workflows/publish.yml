@@ -1,3 +1,5 @@
+name: Publish to PyPI or TestPyPI
+
 on:
   push:
     tags:
