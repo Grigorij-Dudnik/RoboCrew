@@ -60,6 +60,10 @@ This closed-loop system creates AI agents that perceive → reason → act, but 
 ```bash
 pip install robocrew
 ```
+To run GUI use:
+```bash
+robocrew-gui
+```
 
 ### 📱 Mobile Robot (XLeRobot)
 

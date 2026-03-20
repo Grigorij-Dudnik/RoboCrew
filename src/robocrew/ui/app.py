@@ -14,7 +14,6 @@ logging.getLogger('watchdog').setLevel(logging.ERROR)
 
 st.set_page_config(page_title="RoboCrew Dashboard", layout="wide", page_icon="🦾")
 
-# --- STYLE CSS ---
 st.markdown("""
     <style>
     [data-testid="stHeader"], [data-testid="stSidebarHeader"] { display: none !important; }
@@ -41,7 +40,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- RESZTA KODU BEZ ZMIAN ---
 if "agent" not in st.session_state:
     st.session_state.agent = None
 if "init_error" not in st.session_state:
