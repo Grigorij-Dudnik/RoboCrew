@@ -116,6 +116,7 @@ class LLMAgent():
         self.lidar = None
         self.lidar_bg = None
         self.lidar_scale = None
+        self.latest_lidar_b64 = None
         
         if lidar_usb_port:
             self.lidar, self.lidar_bg, self.lidar_scale = init_lidar(lidar_usb_port)
@@ -154,6 +155,8 @@ class LLMAgent():
     def lidar_content(self, content):
         lidar_buf, lidar_front_dist = run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
         lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
+        
+        self.latest_lidar_b64 = lidar_image_base64
         
         content.extend([{
             "type": "text", 

@@ -20,6 +20,8 @@ test-req.txt
 *.log
 *.onnx
 *.onnx.json
+sterowanie.py
+tts/
 
 examples/xlerobot_controler.py
 examples/xlerobot_controller.py

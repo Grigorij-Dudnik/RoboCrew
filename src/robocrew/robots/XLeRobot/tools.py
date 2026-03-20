@@ -244,11 +244,10 @@ def create_vla_single_arm_manipulation(
                 return "Failed to connect to robot server."
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
-            threading.Timer(execution_time, client.robot.disconnect).start()
+            threading.Timer(execution_time, _shutdown_robot_client, args=(client,)).start()
             try:
                 client.control_loop(task=task_prompt)
-            # catch DeviceNotConnectedError exception after robot finishes work and got disconnected by timer
-            except:
+            except Exception:
                 pass
         
         finally:
