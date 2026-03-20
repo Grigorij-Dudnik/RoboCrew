@@ -99,7 +99,7 @@ class LLMAgent():
         if thinking_level is not None:
             model_kwargs["generation_config"] = {"thinking_config": {"thinking_level": thinking_level.upper()}}
 
-        llm = init_chat_model(model, model_kwargs=model_kwargs or None)
+        llm = init_chat_model(model, model_kwargs=model_kwargs or {})
         #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
         self.tools = tools
@@ -116,11 +116,14 @@ class LLMAgent():
         self.lidar = None
         self.lidar_bg = None
         self.lidar_scale = None
+        self.latest_lidar_b64 = None
         
         if lidar_usb_port:
             self.lidar, self.lidar_bg, self.lidar_scale = init_lidar(lidar_usb_port)
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
+            self.servo_controler.set_saved_position("default", "both")  # optionally if you have saved positions (example 5_xlerobot_test_save_recall_positions), set a default position for both arms before starting the agent.
+
 
     def invoke_tool(self, tool_call):
         # convert string to real function
@@ -152,6 +155,8 @@ class LLMAgent():
     def lidar_content(self, content):
         lidar_buf, lidar_front_dist = run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
         lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
+        
+        self.latest_lidar_b64 = lidar_image_base64
         
         content.extend([{
             "type": "text", 

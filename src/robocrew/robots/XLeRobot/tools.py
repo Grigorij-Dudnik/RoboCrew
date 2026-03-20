@@ -244,11 +244,10 @@ def create_vla_single_arm_manipulation(
                 return "Failed to connect to robot server."
 
             threading.Thread(target=client.receive_actions, daemon=True).start()
-            threading.Timer(execution_time, client.robot.disconnect).start()
+            threading.Timer(execution_time, _shutdown_robot_client, args=(client,)).start()
             try:
                 client.control_loop(task=task_prompt)
-            # catch DeviceNotConnectedError exception after robot finishes work and got disconnected by timer
-            except:
+            except Exception:
                 pass
         
         finally:
@@ -271,8 +270,8 @@ def create_vla_single_arm_manipulation(
     tool_name_to_override.description = tool_description
 
     return tool_name_to_override
-  
-  
+
+
 def _shutdown_robot_client(client: "RobotClient") -> None:
     """Gracefully stop the control loop before disconnecting the robot.
 
