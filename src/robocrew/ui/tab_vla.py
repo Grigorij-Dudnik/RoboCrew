@@ -3,6 +3,8 @@ import streamlit as st
 import json
 import os
 
+from agent_setup import init_agent
+
 VLA_FILE = "vla_tools.json"
 
 def load_vla():
@@ -28,7 +30,7 @@ def render_vla_tab():
             
             c1, c2, c3, c4 = st.columns([0.5, 4, 0.5, 0.5], vertical_alignment="center")
             if c1.checkbox("Toggle", t["active"], key=f"act_{i}", label_visibility="collapsed") != t["active"]:
-                t["active"] = not t["active"]; save_vla(cfg); st.rerun()
+                t["active"] = not t["active"]; save_vla(cfg); init_agent(); st.rerun()
             
             c2.markdown(f"<span class='vla-row vla-row-{i}'></span>🦾 **{t['tool_name']}** (`{t['policy_name']}`)", unsafe_allow_html=True)
             
@@ -36,7 +38,7 @@ def render_vla_tab():
                 st.session_state.edit_idx = i
                 st.rerun()
             if c4.button("🗑️", key=f"del_vla_{i}"):
-                cfg.pop(i); save_vla(cfg); st.rerun()
+                cfg.pop(i); save_vla(cfg); init_agent(); st.rerun()
     else:
         st.info("No custom VLA tools defined.")
         
@@ -80,7 +82,8 @@ def render_vla_tab():
                 cfg.append(new_data)
             
             save_vla(cfg)
-            st.success("Saved! Restart the agent to apply changes.")
+            init_agent()
+            st.success("Saved and applied!")
             st.rerun()
 
     if is_edit:
