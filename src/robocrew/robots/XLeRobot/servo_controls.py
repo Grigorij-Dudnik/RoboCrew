@@ -52,9 +52,25 @@ def _clamp(value: float, bounds: tuple[float, float]) -> float:
     return max(low, min(high, float(value)))
 
 
+DEFAULT_ARM_SERVO_MAP = {
+    "shoulder_pan": 1,
+    "shoulder_lift": 2,
+    "elbow_flex": 3,
+    "wrist_flex": 4,
+    "wrist_roll": 5,
+    "gripper": 6,
+}
+
+
 def _load_arm_servo_map(file_name: str) -> Dict[str, int]:
-    config = json.loads((Path(__file__).resolve().parents[4] / file_name).read_text(encoding="utf-8"))
-    return {name: int(item["id"]) for name, item in config.items()}
+    local_path = Path(__file__).resolve().with_name(file_name)
+    repo_path = Path(__file__).resolve().parents[4] / file_name
+    if local_path.exists() or repo_path.exists():
+        source_path = local_path if local_path.exists() else repo_path
+        config = json.loads(source_path.read_text(encoding="utf-8"))
+        return {name: int(item["id"]) for name, item in config.items()}
+    # Fallback for wheel installations that don't ship root-level arm json files.
+    return DEFAULT_ARM_SERVO_MAP.copy()
 
 
 ARM_SERVO_MAPS = {
