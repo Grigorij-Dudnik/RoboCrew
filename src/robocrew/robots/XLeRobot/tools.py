@@ -198,7 +198,8 @@ def create_vla_single_arm_manipulation(
         cameras=configured_cameras,
     )
     robot_config.type = "so101_follower"
-    robot_config.id="robot_arm"
+    robot_config.id="right_arm"
+    # Ensure attribute exists; None keeps LeRobot's default calibration lookup path.
     robot_config.calibration_dir = None
 
     cfg = RobotClientConfig(
