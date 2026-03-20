@@ -6,7 +6,7 @@ import streamlit as st
 from robocrew.core.camera import RobotCamera
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
-from robocrew.core.tools import finish_task, save_checkpoint
+from robocrew.core.tools import finish_task
 from robocrew.robots.XLeRobot.tools import (
     create_move_forward, create_move_backward, create_turn_left, 
     create_turn_right, create_look_around, create_strafe_left, 
@@ -26,18 +26,14 @@ def init_agent():
         try:
             main_camera, servo_controller = get_hardware()
             
-            # Ładowanie dynamicznych narzędzi VLA
             vla_tools = []
             if os.path.exists("vla_tools.json"):
                 with open("vla_tools.json", "r") as f:
                     for t in json.load(f):
-                        # Pomijanie nieaktywnych narzędzi
+
                         if not t.get("active", True): 
                             continue
                             
-                        # Automatyczne mapowanie np. /dev/arm_right na /dev/camera_right
-                        #cam_port = t["arm_port"].replace("arm", "camera") 
-                        #cam_cfg = {"main": {"index_or_path": "/dev/camera_center"}, "arm": {"index_or_path": cam_port}}
                         cam_cfg = {"main": {"index_or_path": "/dev/camera_center"}, "right_arm": {"index_or_path": "/dev/camera_right"}}
                         
                         vla_tools.append(create_vla_single_arm_manipulation(
@@ -61,7 +57,6 @@ def init_agent():
                 create_go_to_normal_mode(servo_controller),
                 create_look_around(servo_controller, main_camera),
                 finish_task,
-                save_checkpoint
             ] + vla_tools
             
             st.session_state.agent = XLeRobotAgent(
