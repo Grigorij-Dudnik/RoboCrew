@@ -16,8 +16,8 @@ dependencies = [
   "langchain==1.1.0",
   "langchain-google-genai==3.2.0",
   "langchain-openai==1.1.0",
-  "lerobot==0.4.3",
-  "lerobot[async]==0.4.3",
+  "lerobot==0.5.0",
+  "lerobot[async]==0.5.0",
   "opencv-python==4.10.0.84",
   "python-dotenv==1.2.1",
   "openai==2.8.1",
@@ -41,7 +41,13 @@ license-files = ["LICEN[CS]E*"]
 robocrew-setup-usb-modules = "robocrew.scripts.robocrew_setup_usb_modules:main"
 robocrew-set-wifi-priority = "robocrew.scripts.robocrew_set_wifi_priority:set_priority"
 robocrew-gui = "robocrew.ui.cli:main"
+robocrew-record-positions = "robocrew.scripts.robocrew_record_positions:main"
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

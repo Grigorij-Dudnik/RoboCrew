@@ -26,33 +26,39 @@ base_system_prompt = """
 class LLMAgent():
     def __init__(
             self,
-            model,
-            tools,
+            model: str,
+            tools: list,
             main_camera,
-            system_prompt=None,
-            camera_fov=90,
+            name: str | None = None,
+            system_prompt: str | None = None,
+            thinking_level: str | None = None,
+            camera_fov: int = 90,
             sounddevice_index_or_alias=None,
             servo_controler=None,
-            wakeword="robot",
-            tts=False,
-            history_len=None,
-            use_memory=False,
-            lidar_usb_port=None,
+            wakeword: str = "robot",
+            tts: bool = False,
+            history_len: int | None = None,
+            use_memory: bool = False,
+            lidar_usb_port: str | None = None,
         ):
         """
-        model: name of the model to use
-        tools: list of langchain tools
-        system_prompt: custom system prompt - optional
-        main_camera: provide your robot front camera object.
-        camera_fov: field of view (degrees) of your main camera.
-        sounddevice_index: provide sounddevice index of your microphone if you want robot to hear.
-        wakeword: custom wakeword hearing which robot will set your sentence as a task o do.
-        history_len: if you want agent to have messages history cuttof, provide number of newest request-response pairs to keep.
+        model: name of the model to use (e.g. 'google_genai:gemini-3.1-pro-preview').
+        tools: list of langchain tools.
+        main_camera: robot front camera object.
+        name: optional agent name shown in logs (e.g. 'Planner', 'Controller').
+        system_prompt: custom system prompt - optional.
+        thinking_level: Gemini 3.x thinking effort level. Options: 'minimal', 'low', 'medium', 'high'.
+            Gemini 3.1 Pro supports 'low' and 'high' only. Gemini 3 Flash supports all four levels.
+        camera_fov: field of view (degrees) of the main camera.
+        sounddevice_index_or_alias: sounddevice index or alias of the microphone for voice input.
+        wakeword: wakeword that triggers the robot to accept a new task.
+        history_len: number of newest request-response pairs to keep in context.
         use_memory: set to True to enable long-term memory (requires sqlite3).
-        tts: set to True to enable text-to-speech (robot can speak).
-        lidar_usb_port: provide usb port of your lidar if you want robot to support your navigation with lidar.
+        tts: set to True to enable text-to-speech.
+        lidar_usb_port: USB port of the LiDAR sensor for navigation support.
         """
         system_prompt = system_prompt or base_system_prompt
+        self.name = name
         
         if use_memory:
             
@@ -89,7 +95,11 @@ class LLMAgent():
             system_prompt += tts_prompt
 
 
-        llm = init_chat_model(model)
+        model_kwargs = {}
+        if thinking_level is not None:
+            model_kwargs["generation_config"] = {"thinking_config": {"thinking_level": thinking_level.upper()}}
+
+        llm = init_chat_model(model, model_kwargs=model_kwargs or {})
         #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
         self.tools = tools
@@ -112,6 +122,8 @@ class LLMAgent():
             self.lidar, self.lidar_bg, self.lidar_scale = init_lidar(lidar_usb_port)
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
+            self.servo_controler.set_saved_position("default", "both")  # optionally if you have saved positions (example 5_xlerobot_test_save_recall_positions), set a default position for both arms before starting the agent.
+
 
     def invoke_tool(self, tool_call):
         # convert string to real function
@@ -161,11 +173,27 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         return content
 
     def fetch_camera_images_base64(self):
-        image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
-        return [base64.b64encode(image_bytes).decode('utf-8')]
+        for attempt in range(3):
+            try:
+                image_bytes = self.main_camera.capture_image(
+                    camera_fov=self.camera_fov,
+                    navigation_mode=self.navigation_mode,
+                )
+                return [base64.b64encode(image_bytes).decode('utf-8')]
+            except RuntimeError as exc:
+                print(f"Camera capture failed (attempt {attempt + 1}/3): {exc}")
+                # Camera can be briefly unavailable after manipulation tools release/reacquire it.
+                time.sleep(0.3 * (attempt + 1))
+                self.main_camera.reopen()
+        raise RuntimeError("Failed to fetch camera image after retries.")
     
     def main_loop_content(self):
-        camera_images = self.fetch_camera_images_base64()
+        try:
+            camera_images = self.fetch_camera_images_base64()
+        except RuntimeError as exc:
+            print(f"Skipping this loop because camera is unavailable: {exc}")
+            time.sleep(0.5)
+            return
         
         content=[
                 {"type": "text", "text": "Main camera view:"},
@@ -183,7 +211,12 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         self.message_history.append(message)
         response = self.llm.invoke(self.message_history)
         print(response.content)
-        print(response.tool_calls)
+        reasoning_tokens = response.usage_metadata.get('output_token_details', {}).get('reasoning', 0)
+        if reasoning_tokens:
+            print(f"[thinking: {reasoning_tokens} tokens]")
+        for tool_call in response.tool_calls:
+                    print(f"Calling {tool_call['name']} with {tool_call['args']} args")
+        
         
         self.message_history.append(response)
         if self.history_len:
@@ -194,18 +227,15 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             self.message_history.append(tool_response)
             if additional_response:
                 self.message_history.append(additional_response)
-            # Special handling for special tools
-            if tool_call["name"] == "save_checkpoint":
-                checkpoint_info = tool_call["args"].get("checkpont_query")
-                self.system_message.content += f"\n[CHECKPOINT DONE] {checkpoint_info}"
             if tool_call["name"] == "go_to_precision_mode":
                 self.navigation_mode = "precision"
             elif tool_call["name"] == "go_to_normal_mode":
                 self.navigation_mode = "normal"
             if tool_call["name"] == "finish_task":
+                report = tool_call["args"].get("report", "Task finished")
                 self.task = None
-                print("Task finished, going idle.")
-                return "Task finished, going idle."
+                print(f"Task finished: {report}")
+                return report
 
     def go(self):
         try:

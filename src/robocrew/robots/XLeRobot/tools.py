@@ -173,6 +173,16 @@ def create_vla_single_arm_manipulation(
         actions_per_chunk (int, optional): Number of actions VLA calculates at once.
         load_on_startup (bool, optional): Whether to load the VLA policy on startup. If False, the policy will be loaded every time the tool used, which may cause a delay. If True for many tools, you may overload server's GPU.
     """
+    right_port = getattr(servo_controler, "right_arm_wheel_usb", None)
+    left_port = getattr(servo_controler, "left_arm_head_usb", None)
+    arm_side = (
+        "right" if arm_port == right_port else
+        "left" if arm_port == left_port else
+        "right" if "right" in str(arm_port).lower() else
+        "left" if "left" in str(arm_port).lower() else
+        None
+    )
+
     configured_cameras = {}
     for cam_name, cam_settings in camera_config.items():
         # Unpack the dictionary settings directly into the Config class
@@ -203,16 +213,15 @@ def create_vla_single_arm_manipulation(
         fps=fps
     )
 
-    preloaded_client = None
     if load_on_startup:
         print(f" Loading Policy for {tool_name}...")
         # release main camera from agent
         main_camera_object.release()
         time.sleep(1) 
 
-        preloaded_client = RobotClient(cfg)
-        preloaded_client.robot.disconnect()
-
+        # Warm up once at startup so server loads policy weights before first real execution.
+        warmup_client = RobotClient(cfg)
+        warmup_client.robot.disconnect()
         #assign main camera back to agent
         time.sleep(0.5)
         main_camera_object.reopen()
@@ -221,6 +230,7 @@ def create_vla_single_arm_manipulation(
     def tool_name_to_override() -> str:
         """Tool description to override."""
         print("Manipulation tool activated")
+        servo_controler.set_saved_position("cobra", arm_side=arm_side)
         servo_controler.turn_head_to_vla_position()
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
@@ -228,11 +238,8 @@ def create_vla_single_arm_manipulation(
 
         client = None
         try:
-            if not load_on_startup:
-                client = RobotClient(cfg)
-            else:
-                client = preloaded_client
-                client.robot.connect()
+            # Use a fresh RobotClient per invocation so worker threads can be stopped cleanly.
+            client = RobotClient(cfg)
             if not client.start():
                 return "Failed to connect to robot server."
 
@@ -244,14 +251,18 @@ def create_vla_single_arm_manipulation(
                 pass
         
         finally:
-            #if client and client.robot.is_connected:
-            if not load_on_startup and client:
-                client.stop()
+            if client:
+                try:
+                    client.stop()
+                except Exception:
+                    pass
             # Re-open main camera for agent use. 
             time.sleep(1)
             main_camera_object.reopen()
+            time.sleep(0.3)
             # set head back to precize mode
             servo_controler.turn_head_to_vla_position(50)
+            servo_controler.set_saved_position("default", arm_side="both")  # optionally set a default position for both arms after manipulation
         
         return "Arm manipulation done"
     
