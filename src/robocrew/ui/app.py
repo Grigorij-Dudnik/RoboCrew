@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import subprocess
 import logging
 
@@ -12,31 +12,30 @@ from tab_vla import render_vla_tab
 
 logging.getLogger('watchdog').setLevel(logging.ERROR)
 
-st.set_page_config(page_title="RoboCrew Dashboard", layout="wide", page_icon="🤖")
+st.set_page_config(page_title="RoboCrew Dashboard", layout="wide", page_icon="🦾")
 
 # --- STYLE CSS ---
 st.markdown("""
     <style>
-    /* 1. Ukrycie nagłówków i reset marginesów */
     [data-testid="stHeader"], [data-testid="stSidebarHeader"] { display: none !important; }
     .block-container, [data-testid="stSidebarUserContent"] { padding-top: 1rem !important; }
-
-    /* 2. CHIRURGICZNE ODBLOKOWANIE: Tylko wewnętrzne kontenery, zachowujemy natywny sidebar! */
-    [data-testid="stMainBlockContainer"], [data-testid="stTabs"] {
-        overflow: visible !important;
-    }
-
-    /* 3. ZAKŁADKI STICKY */
+    [data-testid="stMainBlockContainer"], [data-testid="stTabs"] { overflow: visible !important; }
+    
+    /* LIGHT MODE (DEFAULT) */
     [data-testid="stTabs"] > div > div:first-of-type {
-        position: sticky !important;
-        top: 0 !important;
-        z-index: 9999 !important;
-        background-color: rgb(14, 17, 23) !important; /* Tło pod zakładkami */
+        position: sticky !important; top: 0 !important; z-index: 9999 !important;
+        background-color: rgb(255, 255, 255) !important; /* Solid White */
         padding: 1rem 0 0.5rem 0 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-bottom: 1px solid rgba(128, 128, 128, 0.2) !important;
     }
     
-    /* Kosmetyka */
+    /* DARK MODE OVERRIDE */
+    @media (prefers-color-scheme: dark) {
+        [data-testid="stTabs"] > div > div:first-of-type {
+            background-color: rgb(14, 17, 23) !important; /* Streamlit Dark */
+        }
+    }
+    
     button[data-baseweb="tab"] p { font-size: 1.15rem !important; }
     h2, h3 { margin-top: 0 !important; padding-top: 0 !important; }
     </style>
@@ -117,26 +116,16 @@ if hw_status:
             missing_required.append(name)
 
 if missing_required:
-    pass # Message handled below before rendering tabs
-elif st.session_state.recording_process:
-    st.warning("🎥 Dataset recording is active! LLM Agent is suspended.")
-elif not st.session_state.agent:
-    st.error("Robot cannot be initialized.")
-
-if missing_required:
     st.error(f"⚠️ Missing required hardware: **{', '.join(missing_required)}**.")
     st.info("Please use the Udev Rules Wizard below to connect the missing devices before proceeding.")
     render_config_tab()
+elif st.session_state.recording_process:
+    st.info("📌 You are currently recording a dataset. Navigation is locked.")
+    render_dataset_tab()
 else:
-    tab_chat, tab_udev, tab_vla, tab_dataset, tab_manual = st.tabs(["💬 Conversation", "🛠️ Config", "🦾 VLA Tools", "🎥 VLA Dataset Collection", "🕹️ Manual"])
-
-    with tab_chat:
-        render_conversation_tab()
-    with tab_udev:
-        render_config_tab()
-    with tab_dataset:
-        render_dataset_tab()
-    with tab_vla:
-        render_vla_tab()
-    with tab_manual:
-        render_manual_tab()
+    tabs = st.tabs(["💬 Conversation", "🛠️ Config", "🦾 VLA Tools", "🎥 VLA Dataset", "🕹️ Manual"])
+    funcs = [render_conversation_tab, render_config_tab, render_vla_tab, render_dataset_tab, render_manual_tab]
+    
+    for tab, render_func in zip(tabs, funcs):
+        with tab:
+            render_func()

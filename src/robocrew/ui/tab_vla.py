@@ -48,23 +48,24 @@ def render_vla_tab():
     cur = cfg[idx] if is_edit else {}
 
     with st.form("vla_form", clear_on_submit=not is_edit):
-        st.subheader("📝 Edytuj narzędzie" if is_edit else "➕ Dodaj nowe narzędzie VLA")
+        st.subheader("📝 Edit Tool" if is_edit else "➕ Add New VLA Manipulation Tool")
         c1, c2 = st.columns(2)
-        name = c1.text_input("Tool Name", cur.get("tool_name", "Pick_up_object"))
-        desc = c2.text_input("Description", cur.get("tool_description", "Uses arm to pick up an object."))
-        prompt = c1.text_input("Task Prompt", cur.get("task_prompt", "Pick up the object."))
+        name = c1.text_input("Tool Name", placeholder="Pick_up_object", value=cur.get("tool_name", ""))
+        desc = c2.text_input("Description", placeholder="Tool description that LLM sees", value=cur.get("tool_description", ""))
+        prompt = c1.text_input("Task Prompt", placeholder="Task instruction that VLA sees", value=cur.get("task_prompt", ""))
         server = c2.text_input("Server Address", cur.get("server_address", "0.0.0.0:8080"))
         
         c3, c4, c5 = st.columns(3)
-        p_name = c3.text_input("Policy Repo", cur.get("policy_name", "Grigorij/act_right_arm"))
-        p_type = c4.selectbox("Type", ["act", "diffusion", "vqbet"], index=["act", "diffusion", "vqbet"].index(cur.get("policy_type", "act")))
+        p_name = c3.text_input("Policy Repo", placeholder="username/policy-name", value=cur.get("policy_name", ""))
+        policy_types = ["act", "smolvla", "pi0", "pi05", "groot", "xvla"]
+        p_type = c4.selectbox("Type", policy_types, index=policy_types.index(cur.get("policy_type", "act")))
         p_dev = c5.selectbox("Device", ["cpu", "cuda", "mps"], index=["cpu", "cuda", "mps"].index(cur.get("policy_device", "cpu")))
         
         c6, c7 = st.columns(2)
         port = c6.text_input("Arm Port", cur.get("arm_port", "/dev/arm_right"))
         ex_time = c7.number_input("Execution Time (s)", 5, 120, cur.get("execution_time", 30))
         
-        submit_label = "Zapisz zmiany" if is_edit else "➕ Dodaj narzędzie"
+        submit_label = "Save" if is_edit else "➕ Add Tool"
         if st.form_submit_button(submit_label, use_container_width=True):
             new_data = {
                 "tool_name": name, "tool_description": desc, "task_prompt": prompt, 
@@ -79,10 +80,10 @@ def render_vla_tab():
                 cfg.append(new_data)
             
             save_vla(cfg)
-            st.success("Zapisano! Zrestartuj agenta, aby zastosować zmiany.")
+            st.success("Saved! Restart the agent to apply changes.")
             st.rerun()
 
     if is_edit:
-        if st.button("❌ Anuluj edycję", use_container_width=True):
+        if st.button("❌ Cancel Edit", use_container_width=True):
             st.session_state.edit_idx = None
             st.rerun()

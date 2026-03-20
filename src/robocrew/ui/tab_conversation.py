@@ -72,7 +72,14 @@ def render_conversation_tab():
                 st.rerun()
                 
             with st.spinner(f"🧠 Step {st.session_state.agent_step+1}"):
-                res = st.session_state.agent.main_loop_content()
+                try:
+                    res = st.session_state.agent.main_loop_content()
+                except Exception as e:
+                    if "Check bit not equal to 1" in str(e) or "Wrong body size" in str(e):
+                        # Lidar serial port desync (typical in stateless GUI), just rerun to retry
+                        st.rerun()
+                    else:
+                        raise e
                 st.session_state.agent_step += 1
         
         last_msg = st.session_state.agent.message_history[-1]

@@ -7,6 +7,13 @@ import streamlit.components.v1 as components
 from pathlib import Path
 from utils import get_local_ip
 from huggingface_hub import HfFolder, HfApi, login, logout
+from agent_setup import get_hardware, init_agent
+
+@st.fragment(run_every="2s")
+def auto_refresh_on_finish():
+    rec = st.session_state.recording_process
+    if rec is not None and rec.poll() is not None:
+        st.rerun()
 
 def render_dataset_tab():
     # Odczyt tokena bezpośrednio z pliku, do którego HF domyślnie go zapisuje
@@ -70,6 +77,8 @@ def render_dataset_tab():
     is_rec = rec is not None and rec.poll() is None
     if not is_rec and st.session_state.recording_process is not None:
         st.session_state.recording_process = None
+        init_agent() # Automatyczna inicjalizacja Agenta z nowym stanem portów
+        st.rerun()
 
     with st.form("data_form"):
         st.subheader("Dataset Parameters")
@@ -89,12 +98,14 @@ def render_dataset_tab():
             f_port = st.selectbox("Robot Port", ["/dev/arm_right", "/dev/arm_left"])
             robot_id = st.text_input("Robot Calibration Name", placeholder="my_awesome_follower_arm")
             cam1 = st.selectbox("Camera 1 Port", ["/dev/camera_center"])
+            cam1_fps = st.number_input("Camera 1 FPS", value=30, min_value=1, max_value=120)
             
         with c4:
             teleop_type = st.selectbox("Teleop Type", ["so101_leader"])
             l_port = st.text_input("Teleop Port", placeholder="/dev/ttyACM4")
             teleop_id = st.text_input("Teleop Calibration Name", placeholder="my_awesome_leader_arm")
             cam2 = st.selectbox("Camera 2 Port", ["/dev/camera_right", "/dev/camera_left"])
+            cam2_fps = st.number_input("Camera 2 FPS", value=30, min_value=1, max_value=120)
         
         c5, c6 = st.columns(2)
         overwrite_record = c5.checkbox("⚠️ Overwrite existing dataset", value=False)
@@ -110,7 +121,8 @@ def render_dataset_tab():
                 st.session_state.agent.servo_controler.disconnect()
             except Exception as e: 
                 st.warning(f"Hardware resources cleanup warning: {e}")
-            st.session_state.agent = None
+        st.session_state.agent = None
+        get_hardware.clear() # <- To krytyczne! Czyści zapisane porty w pamięci, by init_agent() połączył się od nowa
             
         if overwrite_record:
             local_dir = Path.home() / ".cache" / "huggingface" / "lerobot" / repo
@@ -121,8 +133,8 @@ def render_dataset_tab():
                 except Exception as e:
                     st.error(f"Failed to delete old dataset: {e}")
         
-        cam_cfg = f'{{ camera1: {{type: opencv, index_or_path: {cam1}, width: 640, height: 480, fps: 25}}'
-        if cam2: cam_cfg += f', camera2: {{type: opencv, index_or_path: {cam2}, width: 640, height: 480, fps: 25}}'
+        cam_cfg = f'{{ camera1: {{type: opencv, index_or_path: {cam1}, width: 640, height: 480, fps: {cam1_fps}}}'
+        if cam2: cam_cfg += f', camera2: {{type: opencv, index_or_path: {cam2}, width: 640, height: 480, fps: {cam2_fps}}}'
         cam_cfg += ' }'
         
         lerobot_cmd = [
@@ -143,7 +155,10 @@ def render_dataset_tab():
             f"--dataset.single_task={task}"
         ]
         
-        ttyd_cmd = ["ttyd", "-W", "-p", "8282"] + lerobot_cmd
+        import shlex
+        lerobot_cmd_str = " ".join(shlex.quote(str(arg)) for arg in lerobot_cmd)
+        bash_cmd = f"{lerobot_cmd_str}; sleep 3; kill -9 $PPID"
+        ttyd_cmd = ["ttyd", "-W", "-p", "8282", "bash", "-c", bash_cmd]
         
         env = os.environ.copy()
         if current_token:
@@ -157,7 +172,4 @@ def render_dataset_tab():
         st.subheader("🖥️ Interactive LeRobot Terminal")
         
         components.iframe(f"http://{get_local_ip()}:8282", height=500, scrolling=True)
-        
-        if st.button("⏹️ Stop Recording & Upload Dataset", type="primary"):
-            st.info("Wysyłanie sygnału zatrzymania... Poczekaj na zakończenie wysyłania (uploadu) w terminalu wyżej.")
-            subprocess.run(["pkill", "-2", "-f", "lerobot-record"])
+        auto_refresh_on_finish()
