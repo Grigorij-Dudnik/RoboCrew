@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Dict, Literal, Mapping, Optional
@@ -74,9 +78,40 @@ def _default_calibration(ids: tuple[int, ...]) -> Dict[int, MotorCalibration]:
     }
 
 
-def _load_arm_calibration(file_name: str, ids: tuple[int, ...]) -> Dict[int, MotorCalibration]:
+def _run_lerobot_calibrate(port: str, calibration_id: str, output_path: Path) -> None:
+    env = dict(os.environ)
+    env["HF_LEROBOT_CALIBRATION"] = str(Path(DEFAULT_ARM_CALIBRATION_DIR).expanduser())
+    cmd = [
+        sys.executable,
+        "-m",
+        "lerobot.scripts.lerobot_calibrate",
+        "--robot.type=so101_follower",
+        f"--robot.port={port}",
+        f"--robot.id={calibration_id}",
+    ]
+    subprocess.run(cmd, check=True, env=env)
+    generated = Path(env["HF_LEROBOT_CALIBRATION"]).expanduser() / "robots" / "so_follower" / f"{calibration_id}.json"
+    if generated.exists():
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(generated, output_path)
+
+
+def _load_arm_calibration(
+    file_name: str,
+    ids: tuple[int, ...],
+    arm_usb_port: Optional[str] = None,
+) -> Dict[int, MotorCalibration]:
     path = Path(DEFAULT_ARM_CALIBRATION_DIR).expanduser() / file_name
     if not path.exists():
+        if arm_usb_port:
+            calibration_id = Path(file_name).stem
+            print(f"Calibration file '{path}' not found. Running LeRobot calibration for '{calibration_id}'...")
+            try:
+                _run_lerobot_calibrate(arm_usb_port, calibration_id, path)
+            except Exception as exc:
+                print(f"Warning: auto calibration failed for '{calibration_id}': {exc}")
+        if not path.exists():
+            print(f"Warning: calibration file still missing: '{path}'. Using default calibration.")
         return _default_calibration(ids)
 
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -117,8 +152,8 @@ class ServoControler:
         self._arm_positions_right = {name: 0.0 for name in ARM_SERVO_MAPS["right"].keys()}
         self._arm_positions_left = {name: 0.0 for name in ARM_SERVO_MAPS["left"].keys()}
         self._arm_positions = {name: 0.0 for name in ARM_SERVO_MAPS["right"].keys()}
-        right_arm_calibration = _load_arm_calibration("right_arm.json", self._right_arm_ids)
-        left_arm_calibration = _load_arm_calibration("left_arm.json", self._left_arm_ids)
+        right_arm_calibration = _load_arm_calibration("right_arm.json", self._right_arm_ids, right_arm_wheel_usb)
+        left_arm_calibration = _load_arm_calibration("left_arm.json", self._left_arm_ids, left_arm_head_usb)
 
         # Initialize FeetechMotorsBus with the three wheel motors
         if right_arm_wheel_usb:
