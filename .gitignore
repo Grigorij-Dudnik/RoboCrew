@@ -22,6 +22,7 @@ test-req.txt
 *.onnx.json
 documentation/
 sterowanie.py
+tts/
 
 examples/xlerobot_controler.py
 examples/xlerobot_controller.py
