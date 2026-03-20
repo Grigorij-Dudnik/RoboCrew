@@ -26,6 +26,7 @@ dependencies = [
   "rplidar>=0.9.2",
   "pygame>=2.6.1",
   "piper-tts>=1.4.1",
+  "streamlit>=1.54.0",
 ]
 readme = "README.md"
 requires-python = ">=3.10"
