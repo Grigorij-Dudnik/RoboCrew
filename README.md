@@ -1,10 +1,12 @@
+![images/main2.jpg](https://github.com/Grigorij-Dudnik/RoboCrew/blob/573b6ff33e961676ad349b694b8c20b4cb8cd9ac/images/main2.jpg)
+
 # 🤖 RoboCrew 
 
 **Build AI-powered robots that see, move, and manipulate objects — in a few lines of code.**
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
-![images/main.jpg](https://github.com/Grigorij-Dudnik/RoboCrew/blob/573b6ff33e961676ad349b694b8c20b4cb8cd9ac/images/main.jpg)
+
 
 <div align="center">
 
