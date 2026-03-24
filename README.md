@@ -1,4 +1,4 @@
-![images/main2.jpg](https://github.com/Grigorij-Dudnik/RoboCrew/blob/573b6ff33e961676ad349b694b8c20b4cb8cd9ac/images/main2.jpg)
+![images/main2.jpg](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/master/images/main2.jpg)
 
 # 🤖 RoboCrew 
 
