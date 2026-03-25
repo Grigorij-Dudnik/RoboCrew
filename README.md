@@ -1,20 +1,23 @@
-![images/main2.jpg](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/feature/readme_improvement/images/main2.jpg)
-
-# 🤖 RoboCrew 
-
-**Build AI-powered robots that see, move, and manipulate objects — in a few lines of code.**
+![Logo](https://raw.githubusercontent.comGrigorij-Dudnik/RoboCrew-assets/master/Logo/logo_writing.png)
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Demo_videos/robocrew_v3_9fps.gif" alt="RoboCrew demo" width="700">
+</p>
+<p align="center"><em>RoboCrew agent cleaning up a table.</em></p>
 
-<div align="center">
+<p align="center">
+  <a href="https://github.com/Grigorij-Dudnik/RoboCrew/stargazers"><img src="https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=for-the-badge&color=gold&label=⭐️ Stars" alt="Stars"></a>
+  <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/dm/robocrew?style=for-the-badge&color=green" alt="Downloads"></a>
+  <a href="https://discord.gg/BAe59y93"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://grigorij-dudnik.github.io/RoboCrew/"><img src="https://img.shields.io/badge/Docs-Read-orange?style=for-the-badge" alt="Docs"></a>
+  <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/v/robocrew?style=for-the-badge&color=blue" alt="PyPI version"></a>
+</p>
 
-[![PyPI version](https://badge.fury.io/py/robocrew.svg)](https://badge.fury.io/py/robocrew)
-[![GitHub stars](https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=social)](https://github.com/Grigorij-Dudnik/RoboCrew)
-[![Docs](https://img.shields.io/badge/docs-latest-lightblue)](https://grigorij-dudnik.github.io/RoboCrew/)
-[![Discord](https://img.shields.io/static/v1?logo=discord&label=discord&message=Join&color=brightgreen)](https://discord.gg/BAe59y93)
-</div>
+
+
 
 ---
 
@@ -28,6 +31,16 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 - 🧠 **Intelligence** - LLM agent control provides complete autonomy and decision making
 - 📚 **Memory** - Long-term memory to remember environment details
 
+## 🚀 Quick Start
+
+```bash
+pip install robocrew
+```
+To run GUI use:
+```bash
+robocrew-gui
+```
+![images/main2.jpg](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/feature/readme_improvement/images/main2.jpg)
 
 ## 🎯 How It Works
 
@@ -57,17 +70,9 @@ This closed-loop system creates AI agents that perceive → reason → act, but 
 - 🔜 More robot platforms coming soon! [Request your platform →](https://github.com/Grigorij-Dudnik/RoboCrew/issues)
 
 
-## 🚀 Quick Start
+## 📱 Scripts to Use:
 
-```bash
-pip install robocrew
-```
-To run GUI use:
-```bash
-robocrew-gui
-```
-
-### 📱 Mobile Robot (XLeRobot)
+Simplest example:
 
 ```python
 from robocrew.core.camera import RobotCamera
@@ -100,8 +105,12 @@ agent.task = "Approach a human."
 agent.go()
 ```
 
+### 🎤 Enable Listening and Speaking
 
-### 🎤 With Voice Commands
+https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/audio/
+
+
+
 
 Add a microphone and speaker to give your robot voice commands and enable it to speak back to you:
 
@@ -130,6 +139,8 @@ Now just say something like **"Hey robot, bring me a beer."** — the robot list
 ---
 
 ### 🦾 Add VLA Policy as a Tool
+
+https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/vla-as-tools/
 
 Let's make our robot manipulate with its arms! 
 
@@ -160,6 +171,10 @@ pick_up_notebook = create_vla_single_arm_manipulation(
 ```
 
 📖 **Full example:** [examples/3_xlerobot_arm_manipulation.py](examples/3_xlerobot_arm_manipulation.py)
+
+
+### 🧠 Increase intelligence by adding Planner agent:
+
 
 
 ## 🔧 Give USB Ports Constant Names (Udev Rules)
