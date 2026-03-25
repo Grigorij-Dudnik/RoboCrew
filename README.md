@@ -59,7 +59,7 @@ robocrew-gui
 
 1. 👂 **Input** - Voice commands, text tasks, or autonomous operation
 2. 🧠 **LLM Processing** - LLM analyzes the task and environment...
-3. 🛠️ **Tool Selection** - ...and chooses appropriate tools (move, turn, grab the apple, etc.)
+3. 🛠️ **Tool Selection** - ...and chooses appropriate tools (move, turn, grab an apple, etc.)
 4. 🤖 **Robot Actions** - Wheels and arms execute commands
 5. 📹 **Visual Feedback** - Cameras capture results with augmented overlay
 6. 🔄 **Repeat** - LLM evaluates results and adjusts strategy
@@ -125,6 +125,7 @@ Let's make our robot manipulate with its arms!
 
 💻 **Code example:** [examples/4_xlerobot_multiagent_cooperation.py](examples/4_xlerobot_multiagent_cooperation.py)
 
+---
 
 ## 💬 Community & Support
 
@@ -133,4 +134,4 @@ Let's make our robot manipulate with its arms!
 - 🐛 [Report Issues](https://github.com/Grigorij-Dudnik/RoboCrew/issues) - Found a bug? Let us know!
 - ⭐ [Star on GitHub](https://github.com/Grigorij-Dudnik/RoboCrew) - Show your support!
 
-Special thanks to all contributors and early adopters!
+❤️ Special thanks to all contributors and early adopters!
