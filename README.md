@@ -1,4 +1,11 @@
-![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Logo/logo_writing.png)
+![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/Logo/logo_writing.png)
+<p align="center">
+  <a href="https://github.com/Grigorij-Dudnik/RoboCrew/stargazers"><img src="https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=for-the-badge&color=gold&label=Stars" alt="Stars"></a>
+  <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/dm/robocrew?style=for-the-badge&color=green" alt="Downloads"></a>
+  <a href="https://discord.gg/BAe59y93"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://grigorij-dudnik.github.io/RoboCrew/"><img src="https://img.shields.io/badge/Docs-Read-orange?style=for-the-badge" alt="Docs"></a>
+  <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/v/robocrew?style=for-the-badge&color=blue" alt="PyPI version"></a>
+</p>
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
@@ -8,28 +15,8 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 </p>
 <p align="center"><em>RoboCrew agent cleaning up a table.</em></p>
 
-<p align="center">
-  <a href="https://github.com/Grigorij-Dudnik/RoboCrew/stargazers"><img src="https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=for-the-badge&color=gold&label=⭐️ Stars" alt="Stars"></a>
-  <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/dm/robocrew?style=for-the-badge&color=green" alt="Downloads"></a>
-  <a href="https://discord.gg/BAe59y93"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://grigorij-dudnik.github.io/RoboCrew/"><img src="https://img.shields.io/badge/Docs-Read-orange?style=for-the-badge" alt="Docs"></a>
-  <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/v/robocrew?style=for-the-badge&color=blue" alt="PyPI version"></a>
-</p>
 
 
-
-
----
-
-## ✨ Features
-
-- 🚗 **Movement** - Pre-built wheel controls for mobile robots
-- 🦾 **Manipulation** - VLA models as tools for arms control
-- 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
-- 🎤 **Voice** - Wake-word activated voice commands and TTS responses
-- 🗺️ **LiDAR** - Top-down mapping with LiDAR sensor
-- 🧠 **Intelligence** - LLM agent control provides complete autonomy and decision making
-- 📚 **Memory** - Long-term memory to remember environment details
 
 ## 🚀 Quick Start
 
@@ -40,13 +27,24 @@ To run GUI use:
 ```bash
 robocrew-gui
 ```
-![images/main2.jpg](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew/feature/readme_improvement/images/main2.jpg)
+
+## ✨ Features
+
+![Schema](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/main2.jpg)
+
+- 🚗 **Movement** - Pre-built wheel controls for mobile robots
+- 🦾 **Manipulation** - VLA models as tools for arms control
+- 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
+- 🎤 **Voice** - Wake-word activated voice commands and TTS responses
+- 🗺️ **LiDAR** - Top-down mapping with LiDAR sensor
+- 🧠 **Intelligence** - LLM agent control provides complete autonomy and decision making
+- 📚 **Memory** - Long-term memory to remember environment details
+
 
 ## 🎯 How It Works
 
 <div align="center">
-
-<img src="https://github.com/Grigorij-Dudnik/RoboCrew/blob/573b6ff33e961676ad349b694b8c20b4cb8cd9ac/images/robot_agent.png" alt="How It Works Diagram" width="500">
+<img src="https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/robot_agent.png" alt="How It Works Diagram" width="400">
 </div>
 
 
