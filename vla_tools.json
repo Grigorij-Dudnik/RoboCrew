@@ -1,1 +1,0 @@
-[{"tool_name": "test", "tool_description": "test", "task_prompt": "test", "server_address": "0.0.0.0:8080", "policy_name": "test", "policy_type": "act", "policy_device": "cpu", "arm_port": "/dev/arm_right", "execution_time": 30, "active": true}]
