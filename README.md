@@ -1,4 +1,4 @@
-![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/Logo/logo_writing.png)
+![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/Logo/logo_text_2.png)
 <p align="center">
   <a href="https://github.com/Grigorij-Dudnik/RoboCrew/stargazers"><img src="https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=for-the-badge&color=gold&label=Stars" alt="Stars"></a>
   <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/dm/robocrew?style=for-the-badge&color=green" alt="Downloads"></a>
@@ -23,7 +23,7 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 ```bash
 pip install robocrew
 ```
-To run GUI use:
+Run GUI app with:
 ```bash
 robocrew-gui
 ```
