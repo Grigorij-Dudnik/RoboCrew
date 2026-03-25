@@ -103,6 +103,8 @@ agent.go()
 
 ### 🎤 Enable Listening and Speaking
 
+Use voice to tell robot what to do.
+
 📖 **Docs:**  https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/audio/
 
 💻 **Code example:** [examples/2_xlerobot_listening_and_speaking.py](examples/2_xlerobot_listening_and_speaking.py)
@@ -111,7 +113,7 @@ agent.go()
 
 ### 🦾 Add VLA Policy as a Tool
 
-Let's make our robot manipulate with its arms! 
+Let's make our robot manipulate objects with its arms! 
 
 📖 **Docs:** https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/vla-as-tools/
 
@@ -120,6 +122,8 @@ Let's make our robot manipulate with its arms!
 ---
 
 ### 🧠 Increase intelligence with multiagent communication:
+
+One agent plans mission, another controls robot.
 
 📖 **Docs:** https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/multiagent/
 
