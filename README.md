@@ -1,4 +1,4 @@
-![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/Logo/logo_text_2.png)
+![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/Logo/logo_text2.png)
 <p align="center">
   <a href="https://github.com/Grigorij-Dudnik/RoboCrew/stargazers"><img src="https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=for-the-badge&color=gold&label=Stars" alt="Stars"></a>
   <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/dm/robocrew?style=for-the-badge&color=green" alt="Downloads"></a>
@@ -20,10 +20,12 @@ RoboCrew makes it stupidly simple to create LLM agents for physical robots. Thin
 
 ## 🚀 Quick Start
 
+Run on your robot:
+
 ```bash
 pip install robocrew
 ```
-Run GUI app with:
+Start GUI app with:
 ```bash
 robocrew-gui
 ```
@@ -40,6 +42,12 @@ robocrew-gui
 - 🧠 **Intelligence** - LLM agent control provides complete autonomy and decision making
 - 📚 **Memory** - Long-term memory to remember environment details
 
+## 🎨 Supported Robots
+
+- ✅ **XLeRobot** - Full support for all features
+- 🥝 **LeKiwi** - Use XLeRobot code (compatible platform)
+- 🚙 **Earth Rover mini plus** - Full support
+- 🔜 More robot platforms coming soon! [Request your platform →](https://github.com/Grigorij-Dudnik/RoboCrew/issues)
 
 ## 🎯 How It Works
 
@@ -58,14 +66,6 @@ robocrew-gui
 6. 🔄 **Adaptive Loop** - LLM evaluates results and adjusts strategy
 
 This closed-loop system creates AI agents that perceive → reason → act, but in the physical world!
-
-
-## 🎨 Supported Robots
-
-- ✅ **XLeRobot** - Full support for all features
-- 🥝 **LeKiwi** - Use XLeRobot code (compatible platform)
-- 🚙 **Earth Rover mini plus** - Full support
-- 🔜 More robot platforms coming soon! [Request your platform →](https://github.com/Grigorij-Dudnik/RoboCrew/issues)
 
 
 ## 📱 Scripts to Use:
