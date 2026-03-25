@@ -1,4 +1,4 @@
-![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/Logo/logo_text2.png)
+![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Images/Logo/Logo_text.png)
 <p align="center">
   <a href="https://github.com/Grigorij-Dudnik/RoboCrew/stargazers"><img src="https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=for-the-badge&color=gold&label=Stars" alt="Stars"></a>
   <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/dm/robocrew?style=for-the-badge&color=green" alt="Downloads"></a>
@@ -63,8 +63,6 @@ robocrew-gui
 4. 🤖 **Robot Actions** - Wheels and arms execute commands
 5. 📹 **Visual Feedback** - Cameras capture results with augmented overlay
 6. 🔄 **Repeat** - LLM evaluates results and adjusts strategy
-
-This closed-loop system creates AI agents that perceive → reason → act, but in the physical world!
 
 
 ## 📱 Scripts to Use:
