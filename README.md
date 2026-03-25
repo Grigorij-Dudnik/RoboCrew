@@ -1,4 +1,4 @@
-![Logo](https://raw.githubusercontent.comGrigorij-Dudnik/RoboCrew-assets/master/Logo/logo_writing.png)
+![Logo](https://raw.githubusercontent.com/Grigorij-Dudnik/RoboCrew-assets/master/Logo/logo_writing.png)
 
 RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
 
@@ -72,7 +72,7 @@ This closed-loop system creates AI agents that perceive → reason → act, but 
 
 ## 📱 Scripts to Use:
 
-Simplest example:
+To gain full control over RoboCrew features, you can create your own script. Simplest example:
 
 ```python
 from robocrew.core.camera import RobotCamera
@@ -104,105 +104,31 @@ agent = LLMAgent(
 agent.task = "Approach a human."
 agent.go()
 ```
+---
 
 ### 🎤 Enable Listening and Speaking
 
-https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/audio/
+📖 **Docs:**  https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/audio/
 
-
-
-
-Add a microphone and speaker to give your robot voice commands and enable it to speak back to you:
-
-```python
-agent = LLMAgent(
-    model="google_genai:gemini-3-flash-preview",
-    tools=[move_forward, turn_left, turn_right],
-    main_camera=main_camera,
-    servo_controler=servo_controler,
-    sounddevice_index=2,  # 🎙️ provide your microphone device index
-    tts=True,  # 🔊 enable text-to-speech (robot can speak)
-)
-```
-
-Then install Portaudio and Pyaudio for audio support:
-
-```bash
-sudo apt install portaudio19-dev
-pip install pyaudio
-```
-
-Now just say something like **"Hey robot, bring me a beer."** — the robot listens continuously and when it hears the wakeword "robot" anywhere in your command, it'll use the entire phrase as its new task.
-
-📖 **Full example:** [examples/2_xlerobot_listening_and_speaking.py](examples/2_xlerobot_listening_and_speaking.py)
+💻 **Code example:** [examples/2_xlerobot_listening_and_speaking.py](examples/2_xlerobot_listening_and_speaking.py)
 
 ---
 
 ### 🦾 Add VLA Policy as a Tool
 
-https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/vla-as-tools/
-
 Let's make our robot manipulate with its arms! 
 
-First, you need to pretrain your own policy for it - [reference here](https://xlerobot.readthedocs.io/en/latest/software/getting_started/RL_VLA.html).
+📖 **Docs:** https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/vla-as-tools/
 
-After you have your policy, run the policy server in a separate terminal. Let's create a tool for the agent to enable it to use a VLA policy:
+💻 **Code example:** [examples/3_xlerobot_arm_manipulation.py](examples/3_xlerobot_arm_manipulation.py)
 
-```python
-from robocrew.robots.XLeRobot.tools import create_vla_single_arm_manipulation
+---
 
-# 🎯 Create a specialized manipulation tool
-pick_up_notebook = create_vla_single_arm_manipulation(
-    tool_name="Grab_a_notebook",
-    tool_description="Manipulation tool to grab a notebook from the table and put it to your basket.",
-    task_prompt="Grab a notebook.",
-    server_address="0.0.0.0:8080",
-    policy_name="Grigorij/act_right-arm-grab-notebook-2",
-    policy_type="act",
-    arm_port=right_arm_wheel_usb,
-    servo_controler=servo_controler,
-    camera_config={
-        "main": {"index_or_path": "/dev/camera_center"},
-        "right_arm": {"index_or_path": "/dev/camera_right"}
-    },
-    main_camera_object=main_camera,
-    policy_device="cpu",
-)
-```
+### 🧠 Increase intelligence with multiagent communication:
 
-📖 **Full example:** [examples/3_xlerobot_arm_manipulation.py](examples/3_xlerobot_arm_manipulation.py)
+📖 **Docs:** https://grigorij-dudnik.github.io/RoboCrew-docs/guides/examples/multiagent/
 
-
-### 🧠 Increase intelligence by adding Planner agent:
-
-
-
-## 🔧 Give USB Ports Constant Names (Udev Rules)
-
-To ensure your robot's components (cameras, arms, etc.) are always mapped to the same device paths, run the following script to generate udev rules:
-
-```bash
-robocrew-setup-usb-modules
-```
-
-This script will guide you through connecting each component one by one and will create the necessary udev rules to maintain consistent device naming.
-
-**After running the script**, you can check the generated rules at `/etc/udev/rules.d/99-robocrew.rules`, or check the symlinks:
-
-```bash
-pi@raspberrypi:~ $ ls -l /dev/arm*
-lrwxrwxrwx 1 root root 7 Dec 2 11:40 /dev/arm_left -> ttyACM4
-lrwxrwxrwx 1 root root 7 Dec 2 11:40 /dev/arm_right -> ttyACM2
-
-pi@raspberrypi:~ $ ls -l /dev/cam*
-lrwxrwxrwx 1 root root 6 Dec 2 11:40 /dev/camera_center -> video0
-lrwxrwxrwx 1 root root 6 Dec 2 11:40 /dev/camera_right -> video2
-```
-
-
-## 📚 Documentation
-
-For detailed documentation, tutorials, and API references, visit our [official documentation](https://grigorij-dudnik.github.io/RoboCrew/).
+💻 **Code example:** [examples/4_xlerobot_multiagent_cooperation.py](examples/4_xlerobot_multiagent_cooperation.py)
 
 
 ## 💬 Community & Support
