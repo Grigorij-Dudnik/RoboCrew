@@ -2,12 +2,12 @@
 <p align="center">
   <a href="https://github.com/Grigorij-Dudnik/RoboCrew/stargazers"><img src="https://img.shields.io/github/stars/Grigorij-Dudnik/RoboCrew?style=for-the-badge&color=gold&label=Stars" alt="Stars"></a>
   <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/dm/robocrew?style=for-the-badge&color=green" alt="Downloads"></a>
-  <a href="https://discord.gg/BAe59y93"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://grigorij-dudnik.github.io/RoboCrew/"><img src="https://img.shields.io/badge/Docs-Read-orange?style=for-the-badge" alt="Docs"></a>
+  <a href="https://discord.gg/qRMy7Vff"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://grigorij-dudnik.github.io/RoboCrew-docs/"><img src="https://img.shields.io/badge/Docs-Read-orange?style=for-the-badge" alt="Docs"></a>
   <a href="https://pypi.org/project/robocrew/"><img src="https://img.shields.io/pypi/v/robocrew?style=for-the-badge&color=blue" alt="PyPI version"></a>
 </p>
 
-RoboCrew makes it stupidly simple to create LLM agents for physical robots. Think of it like building agents with CrewAI or AutoGen, except your agents live in the real world with cameras, microphones, wheels, and arms.
+Create LLM agent for your robot. Connect movement tools, VLA policies and sensor scans just in a few lines of code.
 
 
 <p align="center">
@@ -36,11 +36,10 @@ robocrew-gui
 
 - 🚗 **Movement** - Pre-built wheel controls for mobile robots
 - 🦾 **Manipulation** - VLA models as tools for arms control
-- 👁️ **Vision** - Camera feed with automatic angle grid overlay for spatial understanding
+- 👁️ **Vision** - Camera feed with image augmentation for better spatial understanding
 - 🎤 **Voice** - Wake-word activated voice commands and TTS responses
 - 🗺️ **LiDAR** - Top-down mapping with LiDAR sensor
-- 🧠 **Intelligence** - LLM agent control provides complete autonomy and decision making
-- 📚 **Memory** - Long-term memory to remember environment details
+- 🧠 **Intelligence** - Multi-agent control provides autonomy in decision making
 
 ## 🎨 Supported Robots
 
@@ -59,11 +58,11 @@ robocrew-gui
 **The RoboCrew Intelligence Loop:**
 
 1. 👂 **Input** - Voice commands, text tasks, or autonomous operation
-2. 🧠 **LLM Processing** - Gemini analyzes the task and environment
-3. 🛠️ **Tool Selection** - AI chooses appropriate tools (move, turn, grab the apple, etc.)
+2. 🧠 **LLM Processing** - LLM analyzes the task and environment...
+3. 🛠️ **Tool Selection** - ...and chooses appropriate tools (move, turn, grab the apple, etc.)
 4. 🤖 **Robot Actions** - Wheels and arms execute commands
 5. 📹 **Visual Feedback** - Cameras capture results with augmented overlay
-6. 🔄 **Adaptive Loop** - LLM evaluates results and adjusts strategy
+6. 🔄 **Repeat** - LLM evaluates results and adjusts strategy
 
 This closed-loop system creates AI agents that perceive → reason → act, but in the physical world!
 
@@ -136,8 +135,4 @@ Let's make our robot manipulate with its arms!
 - 🐛 [Report Issues](https://github.com/Grigorij-Dudnik/RoboCrew/issues) - Found a bug? Let us know!
 - ⭐ [Star on GitHub](https://github.com/Grigorij-Dudnik/RoboCrew) - Show your support!
 
-
-## 🙏 Acknowledgments
-
-
-Built with ❤️ for the robotics and AI community. Special thanks to all contributors and early adopters!
+Special thanks to all contributors and early adopters!
