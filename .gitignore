@@ -20,8 +20,9 @@ test-req.txt
 *.log
 *.onnx
 *.onnx.json
-<<<<<<< HEAD
-node_modules/
+
+sterowanie.py
+tts/
 =======
 sterowanie.py
 tts/

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from os import getenv
 from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
