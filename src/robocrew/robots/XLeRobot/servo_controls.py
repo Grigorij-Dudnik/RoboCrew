@@ -78,7 +78,7 @@ ARM_SERVO_MAPS = {
     "right": _load_arm_servo_map("right_arm.json"),
 }
 DEFAULT_ARM_POSITION_DIR = "~/.cache/robocrew/positions/"
-DEFAULT_ARM_CALIBRATION_DIR = "~/.cache/robocrew/calibrations/"
+DEFAULT_ARM_CALIBRATION_DIR = "~/.cache/robocrew/calibrations/robots/so_follower/"
 
 
 def _default_calibration(ids: tuple[int, ...]) -> Dict[int, MotorCalibration]:
@@ -111,13 +111,16 @@ def _run_lerobot_calibrate(port: str, calibration_id: str, output_path: Path) ->
         output_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(generated, output_path)
 
+def _check_calibration_file(file_name: str) -> Path:
+    path = Path(DEFAULT_ARM_CALIBRATION_DIR).expanduser() / file_name
+    return path
 
 def _load_arm_calibration(
     file_name: str,
     ids: tuple[int, ...],
     arm_usb_port: Optional[str] = None,
 ) -> Dict[int, MotorCalibration]:
-    path = Path(DEFAULT_ARM_CALIBRATION_DIR).expanduser() / file_name
+    path = _check_calibration_file(file_name)
     if not path.exists():
         if arm_usb_port:
             calibration_id = Path(file_name).stem

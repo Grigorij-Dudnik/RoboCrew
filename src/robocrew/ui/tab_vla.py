@@ -1,17 +1,19 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 import json
 import os
 
-from agent_setup import init_agent
-
-VLA_FILE = "vla_tools.json"
+from agent_setup import init_agent, VLA_FILE
 
 def load_vla():
-    return json.load(open(VLA_FILE, "r")) if os.path.exists(VLA_FILE) else []
+    if not os.path.exists(VLA_FILE):
+        return []
+    with open(VLA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def save_vla(data):
-    json.dump(data, open(VLA_FILE, "w"))
+    os.makedirs(os.path.dirname(VLA_FILE), exist_ok=True)
+    with open(VLA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f)
 
 def render_vla_tab():    
     if "vla_cfg" not in st.session_state:
@@ -21,7 +23,6 @@ def render_vla_tab():
         
     cfg = st.session_state.vla_cfg
     
-    # --- LISTA NARZĘDZI ---
     if cfg:
         for i, t in enumerate(cfg):
             t.setdefault("active", True)
@@ -44,7 +45,6 @@ def render_vla_tab():
         
     st.divider()
 
-    # --- FORMULARZ (DODAWANIE / EDYCJA) ---
     idx = st.session_state.edit_idx
     is_edit = idx is not None
     cur = cfg[idx] if is_edit else {}

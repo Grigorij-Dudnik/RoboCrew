@@ -1,5 +1,7 @@
 import base64
 
+from pathlib import Path
+
 import math
 import cv2
 import numpy as np
@@ -12,13 +14,8 @@ from lerobot.motors import Motor, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
 from robocrew.robots.XLeRobot.groot_client import PolicyClient
 
-from langchain_core.tools import tool  # type: ignore[import]
-from lerobot.async_inference.robot_client import RobotClient 
-from lerobot.async_inference.configs import RobotClientConfig
-from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
-from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
-
 from robocrew.core.utils import stop_listening_during_tool_execution
+from robocrew.robots.XLeRobot.servo_controls import DEFAULT_ARM_CALIBRATION_DIR
 import time
 import threading
 
@@ -213,18 +210,14 @@ def create_vla_single_arm_manipulation(
         port=arm_port,
         cameras=configured_cameras,
     )
+
     robot_config.type = "so101_follower"
 
     robot_config.id="robot_arm"
-=======
-    robot_config.id="right_arm"
-    # Ensure attribute exists; None keeps LeRobot's default calibration lookup path.
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
-=======
-    robot_config.id="right_arm"
-    # Ensure attribute exists; None keeps LeRobot's default calibration lookup path.
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
-    robot_config.calibration_dir = None
+
+    # LeRobot expects a Path-like object here (it calls mkdir on this value).
+    robot_config.calibration_dir = Path(DEFAULT_ARM_CALIBRATION_DIR).expanduser()
+    
 
     cfg = RobotClientConfig(
         robot=robot_config,
@@ -240,10 +233,7 @@ def create_vla_single_arm_manipulation(
 
 
     preloaded_client = None
-=======
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
-=======
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
+
     if load_on_startup:
         print(f" Loading Policy for {tool_name}...")
         # release main camera from agent
@@ -253,16 +243,10 @@ def create_vla_single_arm_manipulation(
         preloaded_client = RobotClient(cfg)
         preloaded_client.robot.disconnect()
 
-=======
         # Warm up once at startup so server loads policy weights before first real execution.
         warmup_client = RobotClient(cfg)
         warmup_client.robot.disconnect()
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
-=======
-        # Warm up once at startup so server loads policy weights before first real execution.
-        warmup_client = RobotClient(cfg)
-        warmup_client.robot.disconnect()
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
+
         #assign main camera back to agent
         time.sleep(0.5)
         main_camera_object.reopen()
@@ -273,10 +257,7 @@ def create_vla_single_arm_manipulation(
         print("Manipulation tool activated")
 
         servo_controler.set_saved_position("cobra", arm_side=arm_side)
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
-=======
-        servo_controler.set_saved_position("cobra", arm_side=arm_side)
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
+
         servo_controler.turn_head_to_vla_position()
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
@@ -290,14 +271,10 @@ def create_vla_single_arm_manipulation(
             else:
                 client = preloaded_client
                 client.robot.connect()
-=======
+
             # Use a fresh RobotClient per invocation so worker threads can be stopped cleanly.
             client = RobotClient(cfg)
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
-=======
-            # Use a fresh RobotClient per invocation so worker threads can be stopped cleanly.
-            client = RobotClient(cfg)
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
+
             if not client.start():
                 return "Failed to connect to robot server."
 
@@ -318,9 +295,7 @@ def create_vla_single_arm_manipulation(
             main_camera_object.reopen()
             # set head back to precize mode
             servo_controler.turn_head_to_vla_position(50)
-=======
-=======
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
+
             if client:
                 try:
                     client.stop()
@@ -556,7 +531,3 @@ def _shutdown_robot_client(client: "RobotClient") -> None:
     hardware disconnection, preventing race conditions.
     """
     client.stop()
-=======
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
-=======
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49

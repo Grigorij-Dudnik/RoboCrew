@@ -1,8 +1,9 @@
 ﻿import streamlit as st
 import subprocess
 import logging
+import streamlit.components.v1 as components
 
-from utils import get_hardware_status
+from utils import get_hardware_status, get_local_ip
 from agent_setup import init_agent
 from tab_conversation import render_conversation_tab
 from tab_manual import render_manual_tab
@@ -46,6 +47,8 @@ if "init_error" not in st.session_state:
     st.session_state.init_error = ""
 if "recording_process" not in st.session_state:
     st.session_state.recording_process = None
+if "calibration_process" not in st.session_state:
+    st.session_state.calibration_process = None
 if "agent_active" not in st.session_state:
     st.session_state.agent_active = False
 if "agent_step" not in st.session_state:
@@ -75,7 +78,14 @@ def render_hardware_health():
     else:
         st.info("No hardware aliases found.")
 
-# --- SIDEBAR ---
+@st.fragment(run_every="2s")
+def auto_refresh_on_calibration_finish():
+    cal = st.session_state.calibration_process
+    if cal is not None and cal.poll() is not None:
+        st.session_state.calibration_process = None
+        init_agent()
+        st.rerun()
+
 with st.sidebar:
     st.markdown("## RoboCrew Control Center")
     st.divider()
@@ -95,17 +105,20 @@ with st.sidebar:
             subprocess.run(["pkill", "-f", "lerobot-record"])
             subprocess.run(["pkill", "-f", "ttyd"])
             st.session_state.recording_process = None
+        if st.session_state.calibration_process:
+            st.session_state.calibration_process.terminate()
+            subprocess.run(["pkill", "-f", "ttyd"])
+            st.session_state.calibration_process = None
             
         st.toast("🛑 System force-stopped by user!", icon="🛑")
         st.rerun()
 
-    if not st.session_state.agent and not st.session_state.recording_process:
+    if not st.session_state.agent and not st.session_state.recording_process and not st.session_state.calibration_process:
         st.divider()
         if st.button("🔄 Retry Initialization", use_container_width=True):
             init_agent()
             st.rerun()
 
-# --- MAIN UI ---
 missing_required = []
 hw_status = get_hardware_status()
 if hw_status:
@@ -113,7 +126,15 @@ if hw_status:
         if info.get("required") and info["state"] in ["disconnected", "undefined"]:
             missing_required.append(name)
 
-if missing_required:
+cal_proc = st.session_state.calibration_process
+is_calibrating = cal_proc is not None and cal_proc.poll() is None
+
+if is_calibrating:
+    st.info("🛠️ Missing calibration file detected. Running LeRobot calibration...")
+    st.subheader("🖥️ Interactive Calibration Terminal")
+    components.iframe(f"http://{get_local_ip()}:8283", height=500, scrolling=True)
+    auto_refresh_on_calibration_finish()
+elif missing_required:
     st.error(f"⚠️ Missing required hardware: **{', '.join(missing_required)}**.")
     st.info("Please use the Udev Rules Wizard below to connect the missing devices before proceeding.")
     render_config_tab()
