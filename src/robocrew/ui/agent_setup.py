@@ -22,8 +22,7 @@ from robocrew.robots.XLeRobot.tools import (
 )
 
 CALIBRATION_TTYD_PORT = 8283
-VLA_FILE = os.path.join(os.path.dirname(__file__), "vla_tools.json")
-
+VLA_FILE = os.path.join(os.path.expanduser("~"), ".cache", "robocrew", "tools", "vla_tools.json")
 
 def _is_process_running(process) -> bool:
     return process is not None and process.poll() is None
