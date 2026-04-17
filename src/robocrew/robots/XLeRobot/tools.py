@@ -1,4 +1,5 @@
 import base64
+<<<<<<< HEAD
 import math
 import cv2
 import numpy as np
@@ -10,6 +11,13 @@ from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 from lerobot.motors import Motor, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
 from robocrew.robots.XLeRobot.groot_client import PolicyClient
+=======
+from langchain_core.tools import tool  # type: ignore[import]
+from lerobot.async_inference.robot_client import RobotClient 
+from lerobot.async_inference.configs import RobotClientConfig
+from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
+from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
 from robocrew.core.utils import stop_listening_during_tool_execution
 import time
 import threading
@@ -179,6 +187,19 @@ def create_vla_single_arm_manipulation(
         actions_per_chunk (int, optional): Number of actions VLA calculates at once.
         load_on_startup (bool, optional): Whether to load the VLA policy on startup. If False, the policy will be loaded every time the tool used, which may cause a delay. If True for many tools, you may overload server's GPU.
     """
+<<<<<<< HEAD
+=======
+    right_port = getattr(servo_controler, "right_arm_wheel_usb", None)
+    left_port = getattr(servo_controler, "left_arm_head_usb", None)
+    arm_side = (
+        "right" if arm_port == right_port else
+        "left" if arm_port == left_port else
+        "right" if "right" in str(arm_port).lower() else
+        "left" if "left" in str(arm_port).lower() else
+        None
+    )
+
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
     configured_cameras = {}
     for cam_name, cam_settings in camera_config.items():
         # Unpack the dictionary settings directly into the Config class
@@ -194,7 +215,12 @@ def create_vla_single_arm_manipulation(
         cameras=configured_cameras,
     )
     robot_config.type = "so101_follower"
+<<<<<<< HEAD
     robot_config.id="robot_arm"
+=======
+    robot_config.id="right_arm"
+    # Ensure attribute exists; None keeps LeRobot's default calibration lookup path.
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
     robot_config.calibration_dir = None
 
     cfg = RobotClientConfig(
@@ -209,16 +235,25 @@ def create_vla_single_arm_manipulation(
         fps=fps
     )
 
+<<<<<<< HEAD
     preloaded_client = None
+=======
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
     if load_on_startup:
         print(f" Loading Policy for {tool_name}...")
         # release main camera from agent
         main_camera_object.release()
         time.sleep(1) 
 
+<<<<<<< HEAD
         preloaded_client = RobotClient(cfg)
         preloaded_client.robot.disconnect()
 
+=======
+        # Warm up once at startup so server loads policy weights before first real execution.
+        warmup_client = RobotClient(cfg)
+        warmup_client.robot.disconnect()
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
         #assign main camera back to agent
         time.sleep(0.5)
         main_camera_object.reopen()
@@ -227,6 +262,10 @@ def create_vla_single_arm_manipulation(
     def tool_name_to_override() -> str:
         """Tool description to override."""
         print("Manipulation tool activated")
+<<<<<<< HEAD
+=======
+        servo_controler.set_saved_position("cobra", arm_side=arm_side)
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
         servo_controler.turn_head_to_vla_position()
         # release main camera from agent, so arm policy can use it
         main_camera_object.release()
@@ -234,11 +273,16 @@ def create_vla_single_arm_manipulation(
 
         client = None
         try:
+<<<<<<< HEAD
             if not load_on_startup:
                 client = RobotClient(cfg)
             else:
                 client = preloaded_client
                 client.robot.connect()
+=======
+            # Use a fresh RobotClient per invocation so worker threads can be stopped cleanly.
+            client = RobotClient(cfg)
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
             if not client.start():
                 return "Failed to connect to robot server."
 
@@ -250,6 +294,7 @@ def create_vla_single_arm_manipulation(
                 pass
         
         finally:
+<<<<<<< HEAD
             #if client and client.robot.is_connected:
             if not load_on_startup and client:
                 client.stop()
@@ -258,6 +303,20 @@ def create_vla_single_arm_manipulation(
             main_camera_object.reopen()
             # set head back to precize mode
             servo_controler.turn_head_to_vla_position(50)
+=======
+            if client:
+                try:
+                    client.stop()
+                except Exception:
+                    pass
+            # Re-open main camera for agent use. 
+            time.sleep(1)
+            main_camera_object.reopen()
+            time.sleep(0.3)
+            # set head back to precize mode
+            servo_controler.turn_head_to_vla_position(50)
+            servo_controler.set_saved_position("default", arm_side="both")  # optionally set a default position for both arms after manipulation
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
         
         return "Arm manipulation done"
     
@@ -274,6 +333,7 @@ def _shutdown_robot_client(client: "RobotClient") -> None:
     hardware disconnection, preventing race conditions.
     """
     client.stop()
+<<<<<<< HEAD
 
 
 def _groot_recursive_add_extra_dim(obs: dict) -> dict:
@@ -479,3 +539,5 @@ def _shutdown_robot_client(client: "RobotClient") -> None:
     hardware disconnection, preventing race conditions.
     """
     client.stop()
+=======
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49

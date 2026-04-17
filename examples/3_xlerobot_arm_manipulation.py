@@ -103,4 +103,5 @@ agent = XLeRobotAgent(
 
 agent.task = "Approach blue notebook, grab it from the table and give it to human. Do not approach human until you grabbed a notebook."
 
+
 agent.go()

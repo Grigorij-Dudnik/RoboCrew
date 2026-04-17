@@ -34,8 +34,6 @@ def recall_thing(query: str):
     return robot_memory.search_memory(query)
 
 
-
-
 def create_say(sound_receiver=None):
     """
     Factory function to create the 'say' tool with optional sound_receiver integration.

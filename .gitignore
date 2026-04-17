@@ -20,7 +20,12 @@ test-req.txt
 *.log
 *.onnx
 *.onnx.json
+<<<<<<< HEAD
 node_modules/
+=======
+sterowanie.py
+tts/
+>>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
 
 examples/xlerobot_controler.py
 examples/xlerobot_controller.py
