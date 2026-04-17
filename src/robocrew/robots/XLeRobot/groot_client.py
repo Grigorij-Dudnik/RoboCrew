@@ -7,9 +7,9 @@ from __future__ import annotations
 import io
 from typing import Any
 
-import msgpack
+#import msgpack
 import numpy as np
-import zmq
+#import zmq
 
 
 class _MsgSerializer:

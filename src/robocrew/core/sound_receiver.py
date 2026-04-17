@@ -129,26 +129,25 @@ class SoundReceiver:
 
     def _recorder_loop(self):
         while True:
-            # Wait if not listening
             if not self._listening:
                 time.sleep(0.1)
                 continue
             loop_start_time = time.perf_counter()
             current_rms = self.get_rms()
-            skok_glosnosci = current_rms - self.last_rms
+            volume_jump = current_rms - self.last_rms
             if not self._recording:
 
                 if current_rms < self.RMS_THRESHOLD:
-                    # Kiedy nikt nie mówi (jest cisza w stosunku do progu), to znaczy, że słyszymy szum tła.
-                    # Mieszamy stary poziom szumu (95%) z nowym (5%), co daje gładkie dostosowywanie.
-                    wspolczynnik_uczenia = 0.05
-                    self.current_ambient_rms = (wspolczynnik_uczenia * current_rms) + ((1 - wspolczynnik_uczenia) * self.current_ambient_rms)
+                    # When no one is talking (silence relative to the threshold), we can hear background noise.
+                    # We blend the old noise level (95%) with the new one (5%), which results in smooth adjustments.
+                    learning_rate = 0.05
+                    self.current_ambient_rms = (learning_rate * current_rms) + ((1 - learning_rate) * self.current_ambient_rms)
                     print(self.current_ambient_rms)
-                    # Na bieżąco, w czasie rzeczywistym, obliczamy i podmieniamy nasz próg:
-                    # (1.5x wyższy niż szum tła, zabezpieczony przed zejściem poniżej 300)
-                    self.RMS_THRESHOLD = max(50+.0, self.current_ambient_rms * 1.5)
+                    # In real-time, we calculate and update our threshold:
+                    # (1.5x higher than background noise, protected from dropping below 300)
+                    self.RMS_THRESHOLD = max(50.0, self.current_ambient_rms * 1.5)
                 
-                if current_rms > self.RMS_THRESHOLD and skok_glosnosci > 100.0: 
+                if current_rms > self.RMS_THRESHOLD and volume_jump > 100.0: 
                 
                     self._recording = True
                     self.start_talk_time = time.time()  

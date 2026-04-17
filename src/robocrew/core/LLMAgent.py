@@ -100,7 +100,8 @@ class LLMAgent():
             model_kwargs["generation_config"] = {"thinking_config": {"thinking_level": thinking_level.upper()}}
 
         llm = init_chat_model(model, model_kwargs=model_kwargs or {})
-        #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
+        #llm = ChatNVIDIA(model=model)  #Michal zamienil na tą z wyrzej
+        llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
         self.tools = tools
         self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
@@ -124,7 +125,13 @@ class LLMAgent():
 
     def invoke_tool(self, tool_call):
         # convert string to real function
-        requested_tool = self.tool_name_to_tool[tool_call["name"]]
+        requested_tool = self.tool_name_to_tool.get(tool_call["name"])
+        
+        if not requested_tool:
+            print(f"[LLMAgent] Uwaga: Model próbował wywołać nieistniejące narzędzie: '{tool_call['name']}'")
+            # Zwracamy AI informację o błędzie, żeby nie wywalać programu
+            return ToolMessage(content="Error: This tool does not exist.", tool_call_id=tool_call["id"]), None
+            
         args = tool_call["args"]
         tool_output = requested_tool.invoke(args)
         # f aitional output is present
@@ -188,9 +195,18 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         message = HumanMessage(content)
         
         self.message_history.append(message)
-        response = self.llm.invoke(self.message_history)
+        
+        try:
+            response = self.llm.invoke(self.message_history)
+        except Exception as e:
+            print(f"[LLMAgent] Błąd podczas komunikacji z API modelu: {e}")
+            self.message_history.pop() # Usuwamy niedokończoną akcję z historii
+            time.sleep(2) # Czekamy chwilę przed kolejną próbą
+            return
+            
         print(response.content)
-        reasoning_tokens = response.usage_metadata.get('output_token_details', {}).get('reasoning', 0)
+        usage_meta = getattr(response, 'usage_metadata', None) or {}
+        reasoning_tokens = usage_meta.get('output_token_details', {}).get('reasoning', 0)
         if reasoning_tokens:
             print(f"[thinking: {reasoning_tokens} tokens]")
         for tool_call in response.tool_calls:
