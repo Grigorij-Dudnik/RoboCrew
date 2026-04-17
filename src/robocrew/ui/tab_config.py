@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 import os
 import re
@@ -23,7 +22,6 @@ def render_device_list():
                     
             with col_d:
                 if st.button("🗑️", key=f"del_{al}", use_container_width=True):
-                    # Poprawiony warunek usuwania (bez backslasha)
                     if save_udev_rules("".join([l for l in lines if f'SYMLINK+="{al}"' not in l]))[0]: 
                         st.rerun()
                     else: 
@@ -40,7 +38,6 @@ def render_config_tab():
     
     try:
         from robocrew.scripts.robocrew_setup_usb_modules import capture_devices, build_rule
-        # Kompaktowy helper do pobierania stanu urządzeń
         get_devs = lambda: {(d["subsystem"], d["kernel"], d["phys"]): d for d in capture_devices()}
         
         if st.session_state.step == 0:
@@ -81,7 +78,6 @@ def render_config_tab():
                         lines = []
                         if os.path.exists(RULES_FILE):
                             with open(RULES_FILE, "r") as f: lines = f.readlines()
-                        # Poprawiony warunek (bez backslasha) + dołączenie nowej reguły
                         final = [l for l in lines if f'SYMLINK+="{st.session_state.target}"' not in l] + [rule + "\n"]
                         
                         if save_udev_rules("".join(final))[0]:

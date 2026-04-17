@@ -1,9 +1,11 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 from robocrew.robots.XLeRobot.tools import (
-    create_move_forward, create_move_backward, 
-    create_turn_left, create_turn_right,
-    create_strafe_left, create_strafe_right
+    create_move_forward, \
+    create_move_backward, \
+    create_turn_left, \
+    create_turn_right, \
+    create_strafe_left, \
+    create_strafe_right
 )
 
 def render_manual_tab():
@@ -19,13 +21,11 @@ def render_manual_tab():
         with col_btn:
             ctrl = st.session_state.agent.servo_controler
             
-            # Pierwszy wiersz: Obrót w lewo, Do przodu, Obrót w prawo
             c1, c2, c3 = st.columns(3)
             if c1.button("↺", key="t_l", use_container_width=True): create_turn_left(ctrl).invoke({"angle_degrees": 15}); st.rerun()
             if c2.button("⬆️", key="m_f", use_container_width=True): create_move_forward(ctrl).invoke({"distance_meters": 0.1}); st.rerun()
             if c3.button("↻", key="t_r", use_container_width=True): create_turn_right(ctrl).invoke({"angle_degrees": 15}); st.rerun()
             
-            # Drugi wiersz: Krok w lewo, Do tyłu, Krok w prawo
             c4, c5, c6 = st.columns(3)
             if c4.button("⬅️", key="s_l", use_container_width=True): create_strafe_left(ctrl).invoke({"distance_meters": 0.1}); st.rerun()
             if c5.button("⬇️", key="m_b", use_container_width=True): create_move_backward(ctrl).invoke({"distance_meters": 0.1}); st.rerun()

@@ -1,10 +1,12 @@
 import base64
+from pathlib import Path
 from langchain_core.tools import tool  # type: ignore[import]
 from lerobot.async_inference.robot_client import RobotClient 
 from lerobot.async_inference.configs import RobotClientConfig
 from lerobot.robots.so_follower.config_so_follower import SOFollowerConfig
 from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
 from robocrew.core.utils import stop_listening_during_tool_execution
+from robocrew.robots.XLeRobot.servo_controls import DEFAULT_ARM_CALIBRATION_DIR
 import time
 import threading
 
@@ -197,11 +199,12 @@ def create_vla_single_arm_manipulation(
         port=arm_port,
         cameras=configured_cameras,
     )
+
     robot_config.type = "so101_follower"
     robot_config.id="right_arm"
-    # Ensure attribute exists; None keeps LeRobot's default calibration lookup path.
-    robot_config.calibration_dir = None
-
+    # LeRobot expects a Path-like object here (it calls mkdir on this value).
+    robot_config.calibration_dir = Path(DEFAULT_ARM_CALIBRATION_DIR).expanduser()
+    
     cfg = RobotClientConfig(
         robot=robot_config,
         task=task_prompt,

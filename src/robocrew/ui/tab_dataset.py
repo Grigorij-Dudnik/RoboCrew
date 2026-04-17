@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import shutil
 import subprocess
@@ -9,7 +8,6 @@ from utils import get_local_ip
 from huggingface_hub import HfApi, login, logout
 from agent_setup import get_hardware, init_agent
 
-    # Available in newer huggingface_hub releases.
 from huggingface_hub import get_token as hf_get_token
 
 @st.fragment(run_every="2s")
@@ -19,7 +17,6 @@ def auto_refresh_on_finish():
         st.rerun()
 
 def render_dataset_tab():
-    # Odczyt tokena bezpośrednio z pliku, do którego HF domyślnie go zapisuje
     hf_token_path = Path.home() / ".cache" / "huggingface" / "token"
     cached_token = None
     if hf_token_path.exists():
@@ -47,8 +44,6 @@ def render_dataset_tab():
             if hf_token:
                 try:
                     HfApi(token=hf_token).whoami()
-                    
-                    # Ręczny zapis tokenu do pliku cache (jako fallback)
                     hf_token_path.parent.mkdir(parents=True, exist_ok=True)
                     with open(hf_token_path, "w") as f:
                         f.write(hf_token)
@@ -69,7 +64,7 @@ def render_dataset_tab():
     if c_logout.button("🚪 Logout"):
         os.environ.pop("HF_TOKEN", None)
         os.environ.pop("HUGGING_FACE_HUB_TOKEN", None)
-        # Ręczne kasowanie pliku cache
+
         if hf_token_path.exists():
             hf_token_path.unlink()
             
@@ -83,7 +78,7 @@ def render_dataset_tab():
     is_rec = rec is not None and rec.poll() is None
     if not is_rec and st.session_state.recording_process is not None:
         st.session_state.recording_process = None
-        init_agent() # Automatyczna inicjalizacja Agenta z nowym stanem portów
+        init_agent()
         st.rerun()
 
     with st.form("data_form"):
@@ -128,8 +123,8 @@ def render_dataset_tab():
             except Exception as e: 
                 st.warning(f"Hardware resources cleanup warning: {e}")
         st.session_state.agent = None
-        get_hardware.clear() # <- To krytyczne! Czyści zapisane porty w pamięci, by init_agent() połączył się od nowa
-            
+        get_hardware.clear()
+        
         if overwrite_record:
             local_dir = Path.home() / ".cache" / "huggingface" / "lerobot" / repo
             if local_dir.exists():

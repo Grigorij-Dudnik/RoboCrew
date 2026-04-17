@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 import speech_recognition as sr
 
-
 def render_conversation_tab():
     if not st.session_state.agent: return st.info("LLM Agent offline.")
-    
-    # CSS: Ukrycie strzałki w st.chat_input i usunięcie zbędnych marginesów
+
     st.markdown("""
         <style>
         button[data-testid="stChatInputSubmitButton"] { display: none !important; }
@@ -27,7 +24,6 @@ def render_conversation_tab():
                 st.image(f"data:image/png;base64,{st.session_state.agent.latest_lidar_b64}", width="stretch")
         except: pass
         
-        # Puste miejsce, do którego zaraz wstrzykniemy przycisk STOP i spinner
         status_container = st.container()
                 
     with col_c:
@@ -64,7 +60,6 @@ def render_conversation_tab():
             st.session_state.agent.task, st.session_state.agent_active, st.session_state.agent_step = final_p, True, 0
             st.rerun()
 
-    # Logika agenta odpalana na końcu, ale renderowana w lewej kolumnie
     if st.session_state.agent_active:
         with status_container:
             if st.button("🛑 STOP", use_container_width=True):
@@ -76,7 +71,6 @@ def render_conversation_tab():
                     res = st.session_state.agent.main_loop_content()
                 except Exception as e:
                     if "Check bit not equal to 1" in str(e) or "Wrong body size" in str(e):
-                        # Lidar serial port desync (typical in stateless GUI), just rerun to retry
                         st.rerun()
                     else:
                         raise e
@@ -84,7 +78,6 @@ def render_conversation_tab():
         
         last_msg = st.session_state.agent.message_history[-1]
         
-        # Zakończ jeśli narzędzie finish_task to zgłosi, LUB jeśli ostatnia wiadomość to czyste AI bez użycia narzędzi
         if res == "Task finished, going idle." or (last_msg.type == "ai" and not getattr(last_msg, "tool_calls", [])):
             st.session_state.agent_active, st.session_state.agent.task = False, None
             
