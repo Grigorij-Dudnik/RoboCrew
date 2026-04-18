@@ -250,7 +250,6 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         finally:
             if self.servo_controler:
                 print("Disconnecting servo controller...")
-=======
 from os import getenv
 from robocrew.core.tools import create_say, remember_thing, recall_thing
 from dotenv import find_dotenv, load_dotenv
@@ -508,5 +507,5 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         finally:
             if self.servo_controler:
                 print("Disconnecting servo controller...")
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
+
                 self.servo_controler.disconnect()

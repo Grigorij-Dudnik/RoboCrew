@@ -23,10 +23,10 @@ test-req.txt
 
 sterowanie.py
 tts/
-=======
+
 sterowanie.py
 tts/
->>>>>>> a677287499bdf3751f32d69f3349af86602c1c49
+
 
 examples/xlerobot_controler.py
 examples/xlerobot_controller.py
