@@ -1,5 +1,6 @@
 __pycache__/
 venv/
+venv12/
 .venv/
 .env
 pypi-robocrew/
@@ -20,9 +21,8 @@ test-req.txt
 *.log
 *.onnx
 *.onnx.json
+Agents.md
 
-sterowanie.py
-tts/
 sterowanie.py
 tts/
 

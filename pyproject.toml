@@ -29,6 +29,7 @@ dependencies = [
   "streamlit>=1.54.0",
   "huggingface-hub>=0.35.3",
   "SpeechRecognition>=3.15.1",
+  "djitellopy>=2.5.0",
   ]
 readme = "README.md"
 requires-python = ">=3.10"
