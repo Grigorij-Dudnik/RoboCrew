@@ -3,12 +3,15 @@
 import base64
 from pathlib import Path
 
+import av
 import cv2
 from djitellopy import Tello
 from langchain_core.messages import HumanMessage
 
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.core.utils import basic_augmentation
+
+av.logging.set_level(av.logging.PANIC)
 
 
 class TelloAgent(LLMAgent):
@@ -19,13 +22,16 @@ class TelloAgent(LLMAgent):
         model: str,
         tools: list,
         tello: Tello,
+        system_prompt: str | None = None,
+        history_len: int | None = None,
     ):
         super().__init__(
             model=model,
             tools=tools,
             main_camera=tello,
-            system_prompt=Path(__file__).with_name("tello.prompt").read_text(encoding="utf-8"),
+            system_prompt=system_prompt or Path(__file__).with_name("tello.prompt").read_text(encoding="utf-8"),
             camera_fov=82,
+            history_len=history_len,
         )
 
     def fetch_camera_images_base64(self):

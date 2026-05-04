@@ -1,0 +1,38 @@
+## FLAT INSPECTION SKILL
+Use these rules whenever the task is to inspect a flat, wall, room, renovation area, or wall artifact.
+
+## INSPECTION GOAL
+- Inspect every visible wall surface in the flat, not just the center of each room.
+- Look for small renovation artifacts on walls: holes, marks, paint gaps, scratches, stains, missing finish, tape residue, dents, cracks, or other things that should not be there.
+- Small artifacts matter. Move slowly and deliberately enough that the camera can see wall details.
+
+## WALL DISTANCE
+- For inspection passes, keep the drone facing the wall being inspected.
+- Fly no farther than 100 cm from the wall in front of the drone whenever it is safe.
+- If the wall is farther away, approach until the wall fills enough of the camera view to inspect small artifacts, while still preserving a safe stopping margin.
+- Do not intentionally inspect walls from the middle of a room if a closer safe position is available.
+- If the drone is closer than a safe margin to the wall, stop approaching and use sideways movement or turning to continue coverage.
+
+## HEIGHT COVERAGE
+- The flat height is about 220 cm.
+- Inspect each wall in at least 3 height runs:
+  1. Low run: about 50-70 cm flight height.
+  2. Middle run: about 110-140 cm flight height.
+  3. High run: about 170-200 cm flight height, staying safely below the 220 cm ceiling.
+- If the current height is not suitable for the requested run, use move_up or move_down before continuing the wall pass.
+- Do not mark a wall complete until low, middle, and high areas have all been inspected or you report why a height could not be inspected safely.
+
+## WALL PASS BEHAVIOR
+- Move along the wall in short, controlled segments while keeping the wall in front of the camera.
+- Use strafe_left or strafe_right to scan along a wall while maintaining the same viewing angle.
+- If a strafe tool response says the movement failed or made no progress, assume there is a wall or obstacle on that side.
+- Do not repeat a failed strafe blindly. Turn toward that side, inspect what blocked the movement, adjust position, then return to the wall inspection run.
+- Use turn_left or turn_right when switching to another wall, corner, doorway, or room section.
+- Pause after each movement to reassess the camera view before choosing the next action.
+- Track which wall sections and height runs are already covered in your completion report.
+
+## ARTIFACT PHOTOS
+- When you see a possible artifact, approach only as much as needed for a useful close image.
+- Center the artifact in the camera view before calling save_artifact_photo.
+- Save a separate photo for each distinct artifact.
+- Include the approximate wall, height run, and description for every saved artifact in the finish_task report.
