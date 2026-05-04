@@ -24,29 +24,34 @@ class TelloAgent(LLMAgent):
         tello: Tello,
         system_prompt: str | None = None,
         history_len: int | None = None,
+        skills: list | None = None,
     ):
         super().__init__(
             model=model,
             tools=tools,
-            main_camera=tello,
+            main_camera=None,
             system_prompt=system_prompt or Path(__file__).with_name("tello.prompt").read_text(encoding="utf-8"),
-            camera_fov=82,
+            camera_fov=82.5,
             history_len=history_len,
+            skills=skills,
+            skills_dir=Path(__file__).with_name("skills"),
+            skill_context=tello,
         )
+        self.tello = tello
 
     def fetch_camera_images_base64(self):
-        if not self.main_camera.stream_on:
-            self.main_camera.streamon()
+        if not self.tello.stream_on:
+            self.tello.streamon()
 
-        frame = cv2.cvtColor(self.main_camera.get_frame_read().frame, cv2.COLOR_RGB2BGR)
+        frame = cv2.cvtColor(self.tello.get_frame_read().frame, cv2.COLOR_RGB2BGR)
         image = basic_augmentation(frame, h_fov=self.camera_fov, navigation_mode=self.navigation_mode)
         return [base64.b64encode(cv2.imencode(".jpg", image)[1]).decode("utf-8")]
 
     def main_loop_content(self):
         camera_images = self.fetch_camera_images_base64()
         telemetry = (
-            f"Current flight height: {self.main_camera.get_height()} cm\n"
-            f"Yaw: {self.main_camera.get_yaw()} degrees"
+            f"Current flight height: {self.tello.get_distance_tof()} cm\n"
+            f"Yaw: {self.tello.get_yaw()} degrees"
         )
         content = [
             {"type": "text", "text": "Main camera view:"},
@@ -85,8 +90,5 @@ class TelloAgent(LLMAgent):
                 print(f"Task finished: {report}")
                 return report
 
-    def go(self):
-        try:
-            return super().go()
-        finally:
-            self.main_camera.end()
+    def cleanup(self):
+        self.tello.end()

@@ -9,14 +9,13 @@ pypi-robocrew/
 *.wav
 .idea/
 /dist/
-old_sdk.py
+artifacts/
 uv.lock
 physical_path.sh
 robot_memory.db
 logs/
 requirements.txt
 constraints.txt
-test-req.txt
 *.rules
 *.log
 *.onnx

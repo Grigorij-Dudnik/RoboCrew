@@ -1,5 +1,6 @@
 from os import getenv
 from robocrew.core.tools import create_say, remember_thing, recall_thing
+from robocrew.core.skills import load_skills
 from dotenv import find_dotenv, load_dotenv
 import time
 import base64
@@ -32,7 +33,7 @@ class LLMAgent():
             name: str | None = None,
             system_prompt: str | None = None,
             thinking_level: str | None = None,
-            camera_fov: int = 90,
+            camera_fov: float = 90,
             sounddevice_index_or_alias=None,
             servo_controler=None,
             wakeword: str = "robot",
@@ -40,6 +41,9 @@ class LLMAgent():
             history_len: int | None = None,
             use_memory: bool = False,
             lidar_usb_port: str | None = None,
+            skills: list | None = None,
+            skills_dir=None,
+            skill_context=None,
         ):
         """
         model: name of the model to use (e.g. 'google_genai:gemini-3.1-pro-preview').
@@ -56,6 +60,9 @@ class LLMAgent():
         use_memory: set to True to enable long-term memory (requires sqlite3).
         tts: set to True to enable text-to-speech.
         lidar_usb_port: USB port of the LiDAR sensor for navigation support.
+        skills: optional SKILL.md folder names or paths.
+        skills_dir: base directory for skill names.
+        skill_context: object passed to optional skill tool factories.
         """
         system_prompt = system_prompt or base_system_prompt
         self.name = name
@@ -94,6 +101,10 @@ class LLMAgent():
             )
             system_prompt += tts_prompt
 
+        if skills:
+            skills_prompt, skills_tools = load_skills(skills, skills_dir=skills_dir, context=skill_context)
+            system_prompt += "\n\n" + skills_prompt
+            tools.extend(skills_tools)
 
         model_kwargs = {}
         if thinking_level is not None:
@@ -242,6 +253,11 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
                 print(f"Task finished: {report}")
                 return report
 
+    def cleanup(self):
+        if self.servo_controler:
+            print("Disconnecting servo controller...")
+            self.servo_controler.disconnect()
+
     def go(self):
         try:
             while True:
@@ -258,7 +274,4 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             print("Interrupted by user, shutting down.")
 
         finally:
-            if self.servo_controler:
-                print("Disconnecting servo controller...")
-
-                self.servo_controler.disconnect()
+            self.cleanup()

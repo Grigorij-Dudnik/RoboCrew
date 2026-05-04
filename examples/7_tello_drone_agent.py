@@ -20,7 +20,6 @@ from robocrew.robots.Tello.tools import (
 
 tello = Tello()
 tello.connect()
-print(f"Tello battery: {tello.get_battery()}%")
 
 agent = TelloAgent(
     model="google_genai:gemini-robotics-er-1.6-preview",
@@ -37,6 +36,7 @@ agent = TelloAgent(
         finish_task,
     ],
     tello=tello,
+    skills=["flat_inspection"],
 )
 
 agent.task = (
