@@ -14,6 +14,11 @@ When working under a planner, finish_task means the current subtask is done. Do 
 - Small artifacts matter. Move slowly and deliberately enough that the camera can see wall details.
 
 ## Wall Distance
+<<<<<<< ours
+=======
+- Before starting a wall pass, align the drone to face the wall frontally.
+- If the wall edges look angled or one side is much closer than the other, use small turns and reassess until the wall looks roughly straight ahead.
+>>>>>>> theirs
 - For inspection passes, keep the drone facing the wall being inspected.
 - Fly no farther than 100 cm from the wall in front of the drone when practical.
 - If the wall is farther away, approach until the wall fills enough of the camera view to inspect small artifacts, while preserving stopping margin.
@@ -29,7 +34,11 @@ When working under a planner, finish_task means the current subtask is done. Do 
 
 ## Wall Pass Behavior
 - Move along the wall in short, controlled segments while keeping the wall in front of the camera.
+<<<<<<< ours
 - Use strafe_left or strafe_right to scan along a wall while maintaining the same viewing angle.
+=======
+- Use strafe_left or strafe_right to scan along a wall while maintaining the same viewing angle. If no obstacles or target visible, remommended le of strafing is 50cm.
+>>>>>>> theirs
 - If a strafe tool response says the movement failed, assume there is a wall or obstacle on that side.
 - Do not repeat a failed strafe blindly. Turn toward that side, inspect what blocked the movement, adjust position, then return to the wall inspection run.
 - Use turn_left or turn_right when switching to another wall, corner, doorway, or room section.

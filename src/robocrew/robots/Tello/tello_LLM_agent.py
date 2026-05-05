@@ -1,10 +1,13 @@
 """Tello specific LLM agent."""
 
 import base64
+import logging
+import time
 from pathlib import Path
 
 import av
 import cv2
+import numpy as np
 from djitellopy import Tello
 from langchain_core.messages import HumanMessage
 
@@ -12,6 +15,9 @@ from robocrew.core.LLMAgent import LLMAgent
 from robocrew.core.utils import basic_augmentation
 
 av.logging.set_level(av.logging.PANIC)
+Tello.LOGGER.setLevel(logging.WARNING)
+logging.getLogger("djitellopy").setLevel(logging.WARNING)
+logging.getLogger("djitellopy").propagate = False
 
 
 class TelloAgent(LLMAgent):
@@ -43,7 +49,16 @@ class TelloAgent(LLMAgent):
         if not self.tello.stream_on:
             self.tello.streamon()
 
-        frame = cv2.cvtColor(self.tello.get_frame_read().frame, cv2.COLOR_RGB2BGR)
+        frame_reader = self.tello.get_frame_read()
+        frame = frame_reader.frame
+        deadline = time.monotonic() + 20.0
+        while time.monotonic() < deadline:
+            if frame is not None and frame.size and np.any(frame):
+                break
+            time.sleep(0.1)
+            frame = frame_reader.frame
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         image = basic_augmentation(frame, h_fov=self.camera_fov, navigation_mode=self.navigation_mode)
         return [base64.b64encode(cv2.imencode(".jpg", image)[1]).decode("utf-8")]
 
@@ -89,6 +104,10 @@ class TelloAgent(LLMAgent):
                 self.task = None
                 print(f"Task finished: {report}")
                 return report
+            
+    def go(self):
+        print(f"Battery: {self.tello.get_battery()}%")
+        return super().go()
 
     def cleanup(self):
         self.tello.end()

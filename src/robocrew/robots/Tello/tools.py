@@ -1,7 +1,26 @@
 """Tello movement tools for RoboCrew agents."""
 
-from djitellopy import Tello, TelloException
+import time
+
+from djitellopy import Tello
 from langchain_core.tools import tool  # type: ignore[import]
+
+RC_VELOCITY = 20
+RC_TICK_SECONDS = 0.1
+
+def _rc_move(tello: Tello, centimeters: int, rc_values: tuple[int, int, int, int]) -> None:
+    duration = abs(int(centimeters)) / RC_VELOCITY
+    elapsed = 0.0
+
+    tello.set_speed(RC_VELOCITY)
+
+    try:
+        while elapsed < duration:
+            tello.send_rc_control(*rc_values)
+            time.sleep(RC_TICK_SECONDS)
+            elapsed += RC_TICK_SECONDS
+    finally:
+        tello.send_rc_control(0, 0, 0, 0)
 
 
 def create_takeoff(tello: Tello):
@@ -28,8 +47,8 @@ def create_move_forward(tello: Tello):
     @tool
     def move_forward(centimeters: int) -> str:
         """Move the Tello forward by 20-150 centimeters."""
-        tello.move_forward(int(centimeters))
-        return f"Moved forward {centimeters} cm."
+        _rc_move(tello, int(centimeters), (0, RC_VELOCITY, 0, 0))
+        return f"Moved forward about {centimeters} cm."
 
     return move_forward
 
@@ -37,9 +56,9 @@ def create_move_forward(tello: Tello):
 def create_move_up(tello: Tello):
     @tool
     def move_up(centimeters: int) -> str:
-        """Move the Tello up by 20-150 centimeters."""
-        tello.move_up(int(centimeters))
-        return f"Moved up {centimeters} cm."
+        """Move the Tello up by 20-70 centimeters."""
+        _rc_move(tello, int(centimeters), (0, 0, RC_VELOCITY, 0))
+        return f"Moved up about {centimeters} cm."
 
     return move_up
 
@@ -47,9 +66,9 @@ def create_move_up(tello: Tello):
 def create_move_down(tello: Tello):
     @tool
     def move_down(centimeters: int) -> str:
-        """Move the Tello down by 20-150 centimeters."""
-        tello.move_down(int(centimeters))
-        return f"Moved down {centimeters} cm."
+        """Move the Tello down by 20-70 centimeters."""
+        _rc_move(tello, int(centimeters), (0, 0, -RC_VELOCITY, 0))
+        return f"Moved down about {centimeters} cm."
 
     return move_down
 
@@ -57,12 +76,9 @@ def create_move_down(tello: Tello):
 def create_strafe_left(tello: Tello):
     @tool
     def strafe_left(centimeters: int) -> str:
-        """Move the Tello left by 20-150 centimeters."""
-        try:
-            tello.move_left(int(centimeters))
-        except TelloException as exc:
-            return f"Strafe left failed: {exc}"
-        return f"Moved left {centimeters} cm."
+        """Move the Tello left by 20-50 centimeters."""
+        _rc_move(tello, int(centimeters), (-RC_VELOCITY, 0, 0, 0))
+        return f"Moved left about {centimeters} cm."
 
     return strafe_left
 
@@ -70,12 +86,9 @@ def create_strafe_left(tello: Tello):
 def create_strafe_right(tello: Tello):
     @tool
     def strafe_right(centimeters: int) -> str:
-        """Move the Tello right by 20-150 centimeters."""
-        try:
-            tello.move_right(int(centimeters))
-        except TelloException as exc:
-            return f"Strafe right failed: {exc}"
-        return f"Moved right {centimeters} cm."
+        """Move the Tello right by 20-50 centimeters."""
+        _rc_move(tello, int(centimeters), (RC_VELOCITY, 0, 0, 0))
+        return f"Moved right about {centimeters} cm."
 
     return strafe_right
 
