@@ -12,6 +12,7 @@ from robocrew.core.tools import (
 from robocrew.robots.Tello.tello_LLM_agent import TelloAgent
 from robocrew.robots.Tello.tools import (
     create_land,
+    create_move_backward,
     create_move_down,
     create_move_forward,
     create_move_up,
@@ -33,6 +34,7 @@ controller = TelloAgent(
     tools=[
         create_takeoff(tello),
         create_move_forward(tello),
+        create_move_backward(tello),
         create_move_up(tello),
         create_move_down(tello),
         create_strafe_left(tello),

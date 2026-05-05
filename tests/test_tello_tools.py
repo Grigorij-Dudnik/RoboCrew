@@ -45,6 +45,9 @@ class TestTelloMovementTools(unittest.TestCase):
     def test_move_forward_mapping(self):
         self._assert_tool_mapping(tello_tools.create_move_forward, (0, 20, 0, 0))
 
+    def test_move_backward_mapping(self):
+        self._assert_tool_mapping(tello_tools.create_move_backward, (0, -20, 0, 0))
+
     def test_strafe_right_mapping(self):
         self._assert_tool_mapping(tello_tools.create_strafe_right, (20, 0, 0, 0))
 

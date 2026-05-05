@@ -53,6 +53,16 @@ def create_move_forward(tello: Tello):
     return move_forward
 
 
+def create_move_backward(tello: Tello):
+    @tool
+    def move_backward(centimeters: int) -> str:
+        """Move the Tello backward by 20-50 centimeters."""
+        _rc_move(tello, int(centimeters), (0, -RC_VELOCITY, 0, 0))
+        return f"Moved backward about {centimeters} cm."
+
+    return move_backward
+
+
 def create_move_up(tello: Tello):
     @tool
     def move_up(centimeters: int) -> str:
