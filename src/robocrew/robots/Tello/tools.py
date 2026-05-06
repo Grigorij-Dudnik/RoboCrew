@@ -5,7 +5,7 @@ import time
 from djitellopy import Tello
 from langchain_core.tools import tool  # type: ignore[import]
 
-RC_VELOCITY = 30
+RC_VELOCITY = 25
 RC_TICK_SECONDS = 0.1
 
 def _rc_move(tello: Tello, centimeters: int, rc_values: tuple[int, int, int, int]) -> bool:
@@ -72,7 +72,7 @@ def create_move_backward(tello: Tello):
 def create_move_up(tello: Tello):
     @tool
     def move_up(centimeters: int) -> str:
-        """Move the Tello up by 20-70 centimeters."""
+        """Move the Tello up by 20-50 centimeters."""
         tello.move_up(int(centimeters))
         return f"Moved up about {centimeters} cm."
 
@@ -82,7 +82,7 @@ def create_move_up(tello: Tello):
 def create_move_down(tello: Tello):
     @tool
     def move_down(centimeters: int) -> str:
-        """Move the Tello down by 20-70 centimeters."""
+        """Move the Tello down by 20-50 centimeters."""
         tello.move_down(int(centimeters))
         return f"Moved down about {centimeters} cm."
 

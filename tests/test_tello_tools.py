@@ -33,10 +33,10 @@ class TestTelloRcMove(unittest.TestCase):
         tello = FakeTello()
 
         with patch("robocrew.robots.Tello.tools.time.sleep"):
-            result = tello_tools._rc_move(tello, 30, (0, 30, 0, 0))
+            result = tello_tools._rc_move(tello, 25, (0, 25, 0, 0))
 
         self.assertTrue(result)
-        self.assertEqual(tello.commands[0], (0, 30, 0, 0))
+        self.assertEqual(tello.commands[0], (0, 25, 0, 0))
         self.assertEqual(tello.commands[-1], (0, 0, 0, 0))
 
     def test_rc_move_does_not_claim_movement_when_landed(self):
@@ -61,16 +61,16 @@ class TestTelloMovementTools(unittest.TestCase):
         rc_move.assert_called_once_with(tello, 30, expected_rc)
 
     def test_move_forward_mapping(self):
-        self._assert_tool_mapping(tello_tools.create_move_forward, (0, 30, 0, 0))
+        self._assert_tool_mapping(tello_tools.create_move_forward, (0, 25, 0, 0))
 
     def test_move_backward_mapping(self):
-        self._assert_tool_mapping(tello_tools.create_move_backward, (0, -30, 0, 0))
+        self._assert_tool_mapping(tello_tools.create_move_backward, (0, -25, 0, 0))
 
     def test_strafe_right_mapping(self):
-        self._assert_tool_mapping(tello_tools.create_strafe_right, (30, 0, 0, 0))
+        self._assert_tool_mapping(tello_tools.create_strafe_right, (25, 0, 0, 0))
 
     def test_strafe_left_mapping(self):
-        self._assert_tool_mapping(tello_tools.create_strafe_left, (-30, 0, 0, 0))
+        self._assert_tool_mapping(tello_tools.create_strafe_left, (-25, 0, 0, 0))
 
     def test_move_up_uses_tello_move_tool(self):
         tello = FakeTello()

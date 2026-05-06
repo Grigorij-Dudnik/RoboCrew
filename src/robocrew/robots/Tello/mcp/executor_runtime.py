@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import time
-from dataclasses import asdict, dataclass
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -29,15 +29,6 @@ from robocrew.robots.Tello.tools import (
 )
 
 
-@dataclass
-class Snapshot:
-    path: str
-    reason: str
-    step: int
-    captured_at: str
-    telemetry: dict[str, Any]
-
-
 class TelloExecutorRuntime:
     """Owns the Tello executor, snapshots, and reports for MCP tools."""
 
@@ -56,12 +47,12 @@ class TelloExecutorRuntime:
         self.last_target: str | None = None
         self.last_executor_task: str | None = None
         self.last_report: str | None = None
-        self.snapshots: list[Snapshot] = []
+        self.snapshots: list[dict[str, Any]] = []
         self.step_count = 0
 
     def connect_drone(self) -> dict[str, Any]:
-        """Connect or reconnect to the Tello drone."""
-        self._close_tello()
+        """Connect or reconnect to the Tello drone, then take off."""
+        self.shutdown()
         self.snapshots = []
         self.current_target = None
         self.last_target = None
@@ -70,12 +61,16 @@ class TelloExecutorRuntime:
         self.step_count = 0
         self.tello = Tello()
         self.tello.connect()
+        self.tello.streamon()
         self.executor = self._create_executor(self.tello)
+        if not getattr(self.tello, "is_flying", False):
+            self.tello.takeoff()
         return self.drone_status()
 
     def drone_status(self) -> dict[str, Any]:
         """Capture current camera view and return telemetry, reports, and artifacts."""
-        self._require_connected()
+        if self.tello is None:
+            return {"connected": False, "telemetry": {"fresh": False}}
         telemetry = self._telemetry()
         snapshot = self._capture_snapshot("status", telemetry) if telemetry["fresh"] else None
         return {
@@ -84,10 +79,10 @@ class TelloExecutorRuntime:
             "last_target": self.last_target,
             "last_executor_task": self.last_executor_task,
             "last_report": self.last_report,
-            "environment_state": self._environment_state(snapshot),
             "telemetry": telemetry,
             "artifacts": self._artifact_paths(),
-            "latest_snapshot": asdict(snapshot) if snapshot else None,
+            "latest_snapshot": snapshot,
+            "recent_snapshots": self.snapshots[-5:],
         }
 
     def inspect_target(
@@ -131,9 +126,12 @@ class TelloExecutorRuntime:
                     self.last_report = report
             self._capture_snapshot("inspection_complete")
             status = "completed"
+            error = None
         except Exception as exc:
             status = "interrupted"
+            error = traceback.format_exc()
             self.last_report = f"Inspection interrupted for {target}: {exc}"
+            print(error)
             if self.executor:
                 self.executor.task = None
             self._capture_snapshot("inspection_interrupted")
@@ -150,13 +148,14 @@ class TelloExecutorRuntime:
             "reference_image_paths": reference_image_paths or [],
             "yaw_degrees": yaw_degrees,
             "telemetry": self._telemetry(),
+            "error": error,
         }
 
     def snapshots_resource(self) -> str:
         """Sampled inspection image metadata and base64 JPEGs."""
         return json.dumps(
             [
-                {**asdict(snapshot), "image_base64": self._read_base64(snapshot.path)}
+                {**snapshot, "image_base64": self._read_base64(snapshot["path"])}
                 for snapshot in self.snapshots[-20:]
             ],
             indent=2,
@@ -206,72 +205,55 @@ class TelloExecutorRuntime:
             "artifacts saved; suggested next local target."
         )
 
-    def _capture_snapshot(self, reason: str, telemetry: dict[str, Any] | None = None) -> Snapshot | None:
+    def _capture_snapshot(self, reason: str, telemetry: dict[str, Any] | None = None) -> dict[str, Any] | None:
         if self.tello is None:
             return None
         self.snapshots_dir.mkdir(parents=True, exist_ok=True)
         if not self.tello.stream_on:
             self.tello.streamon()
-        frame = self.tello.get_frame_read().frame
-        deadline = time.monotonic() + 20.0
+        deadline = time.monotonic() + 5.0
         while time.monotonic() < deadline:
+            frame = self.tello.get_frame_read().frame
             if frame is not None and frame.size and frame.any():
                 break
             time.sleep(0.1)
-            frame = self.tello.get_frame_read().frame
-        if frame is None or not frame.size or not frame.any():
+        else:
             return None
         captured_at = datetime.now().isoformat(timespec="seconds")
         filename = f"{captured_at.replace(':', '-')}_{reason}_{len(self.snapshots) + 1}.jpg"
         path = self.snapshots_dir / filename
         cv2.imwrite(str(path), cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        snapshot = Snapshot(
-            path=str(path),
-            reason=reason,
-            step=self.step_count,
-            captured_at=captured_at,
-            telemetry=telemetry or self._telemetry(),
-        )
+        snapshot = {
+            "path": str(path),
+            "reason": reason,
+            "step": self.step_count,
+            "captured_at": captured_at,
+            "telemetry": telemetry or self._telemetry(),
+        }
         self.snapshots.append(snapshot)
         return snapshot
-
-    def _environment_state(self, snapshot: Snapshot | None) -> dict[str, Any]:
-        return {
-            "last_target": self.last_target,
-            "last_report": self.last_report,
-            "latest_snapshot": asdict(snapshot) if snapshot else None,
-            "recent_snapshots": [asdict(item) for item in self.snapshots[-5:]],
-        }
 
     def _environment_update(self, target: str, status: str) -> dict[str, Any]:
         return {
             "target": target,
             "status": status,
             "report": self.last_report,
-            "snapshots": [asdict(item) for item in self.snapshots[-10:]],
+            "snapshots": self.snapshots[-10:],
             "artifacts": self._artifact_paths(),
         }
 
     def _telemetry(self) -> dict[str, Any]:
         if self.tello is None:
             return {"fresh": False}
-        telemetry: dict[str, Any] = {"fresh": False}
-        queries = {
-            "battery": self.tello.query_battery,
-            "height_cm": self.tello.query_height,
-        }
-        for key, query in queries.items():
-            try:
-                telemetry[key] = query()
-                telemetry["fresh"] = True
-            except Exception as exc:
-                telemetry[key] = f"unavailable: {exc}"
         try:
-            telemetry["yaw_degrees"] = self.tello.query_attitude().get("yaw")
-            telemetry["fresh"] = True
+            return {
+                "fresh": True,
+                "battery": self.tello.get_battery(),
+                "height_cm": self.tello.get_height(),
+                "yaw_degrees": self.tello.get_yaw(),
+            }
         except Exception as exc:
-            telemetry["yaw_degrees"] = f"unavailable: {exc}"
-        return telemetry
+            return {"fresh": False, "error": str(exc)}
 
     def _artifact_paths(self) -> list[str]:
         if not self.artifacts_dir.exists():
@@ -295,12 +277,20 @@ class TelloExecutorRuntime:
         if self.tello is None or self.executor is None:
             self.connect_drone()
 
-    def _close_tello(self) -> None:
+    def shutdown(self) -> None:
+        """Release local Tello resources without sending slow network commands."""
         if self.tello is None:
             return
-        try:
-            self.tello.end()
-        except Exception:
-            pass
+        tello = self.tello
+        frame_reader = getattr(tello, "background_frame_read", None)
+        if frame_reader is not None:
+            frame_reader.stop()
+            container = getattr(frame_reader, "container", None)
+            if container is not None:
+                container.close()
+            tello.background_frame_read = None
+        tello.stream_on = False
+        tello.is_flying = False
+        tello.end = lambda: None
         self.tello = None
         self.executor = None
