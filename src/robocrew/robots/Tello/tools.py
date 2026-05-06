@@ -5,10 +5,13 @@ import time
 from djitellopy import Tello
 from langchain_core.tools import tool  # type: ignore[import]
 
-RC_VELOCITY = 20
+RC_VELOCITY = 30
 RC_TICK_SECONDS = 0.1
 
-def _rc_move(tello: Tello, centimeters: int, rc_values: tuple[int, int, int, int]) -> None:
+def _rc_move(tello: Tello, centimeters: int, rc_values: tuple[int, int, int, int]) -> bool:
+    if not getattr(tello, "is_flying", True):
+        return False
+
     duration = abs(int(centimeters)) / RC_VELOCITY
     elapsed = 0.0
 
@@ -21,6 +24,7 @@ def _rc_move(tello: Tello, centimeters: int, rc_values: tuple[int, int, int, int
             elapsed += RC_TICK_SECONDS
     finally:
         tello.send_rc_control(0, 0, 0, 0)
+    return True
 
 
 def create_takeoff(tello: Tello):
@@ -47,7 +51,8 @@ def create_move_forward(tello: Tello):
     @tool
     def move_forward(centimeters: int) -> str:
         """Move the Tello forward by 20-150 centimeters."""
-        _rc_move(tello, int(centimeters), (0, RC_VELOCITY, 0, 0))
+        if not _rc_move(tello, int(centimeters), (0, RC_VELOCITY, 0, 0)):
+            return "Tello is not flying. Call takeoff first."
         return f"Moved forward about {centimeters} cm."
 
     return move_forward
@@ -57,7 +62,8 @@ def create_move_backward(tello: Tello):
     @tool
     def move_backward(centimeters: int) -> str:
         """Move the Tello backward by 20-50 centimeters."""
-        _rc_move(tello, int(centimeters), (0, -RC_VELOCITY, 0, 0))
+        if not _rc_move(tello, int(centimeters), (0, -RC_VELOCITY, 0, 0)):
+            return "Tello is not flying. Call takeoff first."
         return f"Moved backward about {centimeters} cm."
 
     return move_backward
@@ -67,7 +73,7 @@ def create_move_up(tello: Tello):
     @tool
     def move_up(centimeters: int) -> str:
         """Move the Tello up by 20-70 centimeters."""
-        _rc_move(tello, int(centimeters), (0, 0, RC_VELOCITY, 0))
+        tello.move_up(int(centimeters))
         return f"Moved up about {centimeters} cm."
 
     return move_up
@@ -77,7 +83,7 @@ def create_move_down(tello: Tello):
     @tool
     def move_down(centimeters: int) -> str:
         """Move the Tello down by 20-70 centimeters."""
-        _rc_move(tello, int(centimeters), (0, 0, -RC_VELOCITY, 0))
+        tello.move_down(int(centimeters))
         return f"Moved down about {centimeters} cm."
 
     return move_down
@@ -87,7 +93,8 @@ def create_strafe_left(tello: Tello):
     @tool
     def strafe_left(centimeters: int) -> str:
         """Move the Tello left by 20-50 centimeters."""
-        _rc_move(tello, int(centimeters), (-RC_VELOCITY, 0, 0, 0))
+        if not _rc_move(tello, int(centimeters), (-RC_VELOCITY, 0, 0, 0)):
+            return "Tello is not flying. Call takeoff first."
         return f"Moved left about {centimeters} cm."
 
     return strafe_left
@@ -97,7 +104,8 @@ def create_strafe_right(tello: Tello):
     @tool
     def strafe_right(centimeters: int) -> str:
         """Move the Tello right by 20-50 centimeters."""
-        _rc_move(tello, int(centimeters), (RC_VELOCITY, 0, 0, 0))
+        if not _rc_move(tello, int(centimeters), (RC_VELOCITY, 0, 0, 0)):
+            return "Tello is not flying. Call takeoff first."
         return f"Moved right about {centimeters} cm."
 
     return strafe_right

@@ -1,17 +1,13 @@
 ## ROBOT SPECS
 - DJI Tello drone controlled through RoboCrew tools.
-- You can fly, move forward or sideways in centimeters, turn in degrees, observe through the front camera, and land.
+- You can move forward/backward/sideways, move up/down, turn, observe through the front camera, and land.
 
 ## FLIGHT RULES
 - Always take off before movement commands.
-- Keep every movement conservative and deliberate.
+- If flight state is landed, call takeoff before move_up or translation tools.
+- Movement distances are centimeters.
 - The text telemetry includes measured flight height and yaw.
-- Movement tools use centimeters. Do not convert centimeters to meters.
-- Use move_up to fly higher and move_down to fly lower.
-- Use turn_left or turn_right only for reorientation, switching walls, or correcting view alignment.
-- Do not spin in place to inspect a room. Rotation-only loops are invalid behavior.
-- Use strafe_left and strafe_right to scan along a wall while keeping the same viewing angle.
-- Use move_forward to approach a wall for detail visibility, then continue coverage mainly with strafing.
-- After each movement, reassess before the next command.
-- If the task is complete, call finish_task with a short report.
-- If blocked or stuck, call finish_task with a brief reason.
+- Use short movement commands, then reassess.
+- Use move_up and move_down for flight height.
+- Use turn_left and turn_right only when the drone needs to face a different direction.
+- If the task is complete or blocked, call finish_task with a short report.

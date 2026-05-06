@@ -44,6 +44,7 @@ class TelloAgent(LLMAgent):
             skill_context=tello,
         )
         self.tello = tello
+        self.reference_images_base64: list[str] = []
 
     def fetch_camera_images_base64(self):
         if not self.tello.stream_on:
@@ -64,9 +65,12 @@ class TelloAgent(LLMAgent):
 
     def main_loop_content(self):
         camera_images = self.fetch_camera_images_base64()
+        height = self.tello.query_height()
+        attitude = self.tello.query_attitude()
         telemetry = (
-            f"Current flight height: {self.tello.get_distance_tof()} cm\n"
-            f"Yaw: {self.tello.get_yaw()} degrees"
+            f"Flight state: {'airborne' if height else 'landed'}\n"
+            f"Current flight height: {height} cm\n"
+            f"Yaw: {attitude.get('yaw')} degrees"
         )
         content = [
             {"type": "text", "text": "Main camera view:"},
@@ -74,9 +78,16 @@ class TelloAgent(LLMAgent):
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"},
             },
+        ]
+        if self.reference_images_base64:
+            content.append({"type": "text", "text": "\n\nReference image(s) from planner:"})
+            for image in self.reference_images_base64:
+                content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image}"}})
+            self.reference_images_base64 = []
+        content.extend([
             {"type": "text", "text": f"\n\n{telemetry}"},
             {"type": "text", "text": f"\n\nYour task is: '{self.task}'"},
-        ]
+        ])
 
         self.message_history.append(HumanMessage(content))
         response = self.llm.invoke(self.message_history)
@@ -88,7 +99,8 @@ class TelloAgent(LLMAgent):
             print(f"[thinking: {reasoning_tokens} tokens]")
 
         for tool_call in response.tool_calls:
-            print(f"Calling {tool_call['name']} with {tool_call['args']} args")
+            if tool_call["name"] != "finish_task":
+                print(f"Calling {tool_call['name']} with {tool_call['args']} args")
 
         self.message_history.append(response)
         if self.history_len:

@@ -5,6 +5,7 @@ venv12/
 .env
 pypi-robocrew/
 .clean_coder/
+.codex/
 .coderrules
 *.wav
 .idea/

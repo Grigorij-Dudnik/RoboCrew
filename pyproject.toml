@@ -30,6 +30,7 @@ dependencies = [
   "huggingface-hub>=0.35.3",
   "SpeechRecognition>=3.15.1",
   "djitellopy>=2.5.0",
+  "mcp>=1.27.0",
   ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -45,6 +46,7 @@ robocrew-setup-usb-modules = "robocrew.scripts.robocrew_setup_usb_modules:main"
 robocrew-set-wifi-priority = "robocrew.scripts.robocrew_set_wifi_priority:set_priority"
 robocrew-gui = "robocrew.ui.cli:main"
 robocrew-record-positions = "robocrew.scripts.robocrew_record_positions:main"
+robocrew-tello-mcp = "robocrew.robots.Tello.mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
