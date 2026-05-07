@@ -9,7 +9,7 @@ from langchain_core.tools import tool  # type: ignore[import]
 def create_save_artifact_photo(tello, output_dir: str | Path = "artifacts"):
     @tool
     def save_artifact_photo(artifact_name: str) -> str:
-        """Save a report photo. Use only when the artifact is close and centered in the camera view."""
+        """Save a report photo of a visible wall problem or possible artifact."""
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 

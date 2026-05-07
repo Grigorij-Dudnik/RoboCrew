@@ -5,7 +5,7 @@ import time
 from djitellopy import Tello
 from langchain_core.tools import tool  # type: ignore[import]
 
-RC_VELOCITY = 25
+RC_VELOCITY = 20
 RC_TICK_SECONDS = 0.1
 
 def _rc_move(tello: Tello, centimeters: int, rc_values: tuple[int, int, int, int]) -> bool:

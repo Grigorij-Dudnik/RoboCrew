@@ -23,7 +23,7 @@ mcp.resource("tello://artifacts")(runtime.artifacts_resource)
 
 
 def main() -> None:
-    mcp.settings.host = os.getenv("ROBOCREW_TELLO_MCP_HOST", "127.0.0.1")
+    mcp.settings.host = os.getenv("ROBOCREW_TELLO_MCP_HOST", "0.0.0.0")
     mcp.settings.port = int(os.getenv("ROBOCREW_TELLO_MCP_PORT", "8765"))
     try:
         import uvicorn

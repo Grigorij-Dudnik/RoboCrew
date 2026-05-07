@@ -51,7 +51,7 @@ class TelloExecutorRuntime:
         self.step_count = 0
 
     def connect_drone(self) -> dict[str, Any]:
-        """Connect or reconnect to the Tello drone, then take off."""
+        """Connect or reconnect to the Tello drone and start the camera stream."""
         self.shutdown()
         self.snapshots = []
         self.current_target = None
@@ -63,8 +63,6 @@ class TelloExecutorRuntime:
         self.tello.connect()
         self.tello.streamon()
         self.executor = self._create_executor(self.tello)
-        if not getattr(self.tello, "is_flying", False):
-            self.tello.takeoff()
         return self.drone_status()
 
     def drone_status(self) -> dict[str, Any]:
@@ -89,9 +87,8 @@ class TelloExecutorRuntime:
         self,
         target: str,
         reference_image_paths: list[str] | None = None,
-        yaw_degrees: int | None = None,
     ) -> dict[str, Any]:
-        """Inspect one room, wall, or visible area, optionally with reference images or a yaw hint."""
+        """Inspect one room, wall, or visible area, optionally with reference images."""
         self._require_connected()
         telemetry = self._telemetry()
         if not telemetry["fresh"]:
@@ -101,17 +98,14 @@ class TelloExecutorRuntime:
                 "report": "Drone did not answer fresh telemetry queries. Call connect_drone before inspecting.",
                 "telemetry": telemetry,
             }
-        print(
-            f"[MCP] inspect_target target={target!r} "
-            f"yaw_degrees={yaw_degrees!r} reference_image_paths={reference_image_paths or []!r}"
-        )
+        print(f"[MCP] inspect_target target={target!r} reference_image_paths={reference_image_paths or []!r}")
         self.current_target = target
         self.last_target = target
         self.last_report = None
         self.step_count = 0
         self.executor.message_history = [self.executor.system_message]
         self.executor.reference_images_base64 = self._read_reference_images(reference_image_paths or [])
-        self.last_executor_task = self._inspection_task(target, yaw_degrees)
+        self.last_executor_task = self._inspection_task(target)
         print(f"[MCP] executor_task={self.last_executor_task!r}")
         self.executor.task = self.last_executor_task
         self._capture_snapshot("inspection_start")
@@ -146,7 +140,6 @@ class TelloExecutorRuntime:
             "report": self.last_report,
             "environment_update": self._environment_update(target, status),
             "reference_image_paths": reference_image_paths or [],
-            "yaw_degrees": yaw_degrees,
             "telemetry": self._telemetry(),
             "error": error,
         }
@@ -194,10 +187,8 @@ class TelloExecutorRuntime:
             history_len=30,
         )
 
-    def _inspection_task(self, target: str, yaw_degrees: int | None = None) -> str:
+    def _inspection_task(self, target: str) -> str:
         task = f"Inspect target: {target}."
-        if yaw_degrees is not None:
-            task += f" The target may be near yaw {yaw_degrees} degrees."
         return (
             f"{task} Do not treat height as part of the target; use the flat-inspection skill "
             "to cover its height passes. In finish_task report include: room or wall description; "
@@ -249,7 +240,7 @@ class TelloExecutorRuntime:
             return {
                 "fresh": True,
                 "battery": self.tello.get_battery(),
-                "height_cm": self.tello.get_height(),
+                "height_cm": self.tello.get_distance_tof(),
                 "yaw_degrees": self.tello.get_yaw(),
             }
         except Exception as exc:

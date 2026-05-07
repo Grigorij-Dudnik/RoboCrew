@@ -65,9 +65,8 @@ class TelloAgent(LLMAgent):
 
     def main_loop_content(self):
         camera_images = self.fetch_camera_images_base64()
-        height = self.tello.get_height()
+        height = self.tello.get_distance_tof()
         telemetry = (
-            f"Flight state: {'airborne' if height else 'landed'}\n"
             f"Current flight height: {height} cm\n"
             f"Yaw: {self.tello.get_yaw()} degrees"
         )
