@@ -65,7 +65,6 @@ class SoundReceiver:
         self.reciver_thread.daemon = True
         self.recorded_frames = []
         self.first_timestamp_below_threshold = None
-        self.num_recorded_buffers = 0
         self.openai_client = OpenAI()
         self.start_listening()
 
@@ -124,7 +123,6 @@ class SoundReceiver:
             if self._recording:
                 with self._lock:
                     self.recorded_frames.append(in_data)
-                    self.num_recorded_buffers = self.num_recorded_buffers+1
         return (None, pyaudio.paContinue)
 
     def _recorder_loop(self):
@@ -195,13 +193,7 @@ class SoundReceiver:
 
     def _transcribe_audio(self, audio_data: bytes) -> str:
         import io
-        
-        print(f"Buffer counter: {self.num_recorded_buffers}")
-        # ONLY FOR NOW - TO AVOID SHORT WHEEL NOISES
-        if self.num_recorded_buffers < 200: # Check for minimum audio length
-            print("Audio data too short to transcribe.")
-            return
-        self.num_recorded_buffers = 0
+
         ram_buffer = io.BytesIO()
         ram_buffer.name = "recorded.wav"
         with wave.open(ram_buffer, "wb") as wf:
