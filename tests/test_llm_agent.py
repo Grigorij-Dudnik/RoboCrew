@@ -1,6 +1,5 @@
 import os
 import sys
-import queue
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -28,8 +27,6 @@ def make_agent():
             model="fake-model",
             tools=[],
             main_camera=MagicMock(),
-            sounddevice_index_or_alias=None,
-            tts=False,
             lidar_usb_port=None,
             servo_controler=None,
         )

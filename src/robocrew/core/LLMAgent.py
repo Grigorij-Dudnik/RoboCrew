@@ -1,13 +1,12 @@
-from os import getenv
-from robocrew.core.tools import create_say, remember_thing, recall_thing
+from robocrew.core.tools import remember_thing, recall_thing
 from robocrew.core.skills import load_skills
 from dotenv import find_dotenv, load_dotenv
 import time
 import base64
-from robocrew.core.lidar import init_lidar, run_scanner
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain.chat_models import init_chat_model
-import queue
+
+
 load_dotenv(find_dotenv())
 
 
@@ -34,13 +33,9 @@ class LLMAgent():
             system_prompt: str | None = None,
             thinking_level: str | None = None,
             camera_fov: float = 90,
-            sounddevice_index_or_alias=None,
             servo_controler=None,
-            wakeword: str = "robot",
-            tts: bool = False,
             history_len: int | None = None,
             use_memory: bool = False,
-            lidar_usb_port: str | None = None,
             skills: list | None = None,
             skills_dir=None,
             skill_context=None,
@@ -54,12 +49,8 @@ class LLMAgent():
         thinking_level: Gemini 3.x thinking effort level. Options: 'minimal', 'low', 'medium', 'high'.
             Gemini 3.1 Pro supports 'low' and 'high' only. Gemini 3 Flash supports all four levels.
         camera_fov: field of view (degrees) of the main camera.
-        sounddevice_index_or_alias: sounddevice index or alias of the microphone for voice input.
-        wakeword: wakeword that triggers the robot to accept a new task.
         history_len: number of newest request-response pairs to keep in context.
         use_memory: set to True to enable long-term memory (requires sqlite3).
-        tts: set to True to enable text-to-speech.
-        lidar_usb_port: USB port of the LiDAR sensor for navigation support.
         skills: optional SKILL.md folder names or paths.
         skills_dir: base directory for skill names.
         skill_context: object passed to optional skill tool factories.
@@ -78,28 +69,9 @@ class LLMAgent():
             )
             system_prompt += memory_prompt
 
-        self.tts = tts
-        #self.sound_receiver = None
-
         self.task = None
-        
-        self.sounddevice_index_or_alias = sounddevice_index_or_alias
-        if self.sounddevice_index_or_alias is not None:
-            from robocrew.core.sound_receiver import SoundReceiver
-            self.task_queue = queue.Queue()
-            self.sound_receiver = SoundReceiver(self.sounddevice_index_or_alias, self.task_queue, wakeword)
-            
+        self.idle = True
         self.navigation_mode = "normal"  # or "precision"
-
-        # Add TTS tool if enabled (after sound_receiver is created so we can pass it)
-        if tts:
-            say_tool = create_say(getattr(self, 'sound_receiver', None))
-            tools.append(say_tool)
-            tts_prompt = (
-                " You can speak to the user using the `say` tool. "
-                "Use it to communicate important updates, greet users, or answer their questions verbally."
-            )
-            system_prompt += tts_prompt
 
         if skills:
             skills_prompt, skills_tools = load_skills(skills, skills_dir=skills_dir, context=skill_context)
@@ -123,14 +95,6 @@ class LLMAgent():
         self.camera_fov = camera_fov
         self.servo_controler = servo_controler
 
-        # lidar
-        self.lidar = None
-        self.lidar_bg = None
-        self.lidar_scale = None
-        self.latest_lidar_b64 = None
-        
-        if lidar_usb_port:
-            self.lidar, self.lidar_bg, self.lidar_scale = init_lidar(lidar_usb_port)
         if self.servo_controler and self.servo_controler.left_arm_head_usb:
             self.servo_controler.reset_head_position()
             self.servo_controler.set_saved_position("default", "both")  # optionally if you have saved positions (example 5_xlerobot_test_save_recall_positions), set a default position for both arms before starting the agent.
@@ -158,72 +122,32 @@ class LLMAgent():
             start_index = ai_indices[-nr_of_loops]
             self.message_history = [self.system_message] + self.message_history[start_index:]
 
-    def check_for_new_task(self):
-        """Non-blockingly checks the queue for a new task."""
-        if self.sounddevice_index_or_alias and not self.task_queue.empty():
-            self.task = self.task_queue.get()
-            
-    def lidar_content(self, content):
-        lidar_buf, lidar_front_dist = run_scanner(self.lidar, self.lidar_bg, self.lidar_scale, flip_x=True)
-        lidar_image_base64 = base64.b64encode(lidar_buf.getvalue()).decode('utf-8')
-        
-        self.latest_lidar_b64 = lidar_image_base64
-        
-        content.extend([{
-            "type": "text", 
-            "text": f"""\n\nLiDAR Sensor: Distance from your front edge to nearest obstacle in front: {lidar_front_dist:.1f} cm.
-            
-Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles above or below that plane may not be detected.
-            """
-        },
-        {"type": "text", "text": "\n\nLiDAR Map (Top-down view, obstacles are marked in red):"},
-        {
-            "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{lidar_image_base64}"}
-        }])
-        return content
-
-
     def fetch_camera_images_base64(self):
             image_bytes = self.main_camera.capture_image(camera_fov=self.camera_fov, navigation_mode=self.navigation_mode)
             return [base64.b64encode(image_bytes).decode('utf-8')]
 
-    # def fetch_camera_images_base64(self):
-    #     for attempt in range(3):
-    #         try:
-    #             image_bytes = self.main_camera.capture_image(
-    #                 camera_fov=self.camera_fov,
-    #                 navigation_mode=self.navigation_mode,
-    #             )
-    #             return [base64.b64encode(image_bytes).decode('utf-8')]
-    #         except RuntimeError as exc:
-    #             print(f"Camera capture failed (attempt {attempt + 1}/3): {exc}")
-    #             # Camera can be briefly unavailable after manipulation tools release/reacquire it.
-    #             time.sleep(0.3 * (attempt + 1))
-    #             self.main_camera.reopen()
-    #     raise RuntimeError("Failed to fetch camera image after retries.")
-    
+    def extra_loop_content(self):
+        return []
+
     def main_loop_content(self):
-        try:
-            camera_images = self.fetch_camera_images_base64()
-        except RuntimeError as exc:
-            print(f"Skipping this loop because camera is unavailable: {exc}")
-            time.sleep(0.5)
-            return
+        camera_images = self.fetch_camera_images_base64()
         
         content=[
                 {"type": "text", "text": "Main camera view:"},
                 {
                     "type": "image_url",
                     "image_url": {"url": f"data:image/jpeg;base64,{camera_images[0]}"}
-                },
-                {"type": "text", "text": f"\n\nYour task is: '{self.task}'"}
+                }
         ]
+        if self.task:
+            content.append({"type": "text", "text": f"\n\nYour task is: '{self.task}'"})
         
-        if self.lidar:
-            content = self.lidar_content(content)
+        content.extend(self.extra_loop_content())
+
         message = HumanMessage(content)
-        
+        return self.invoke_llm_with_message(message)
+
+    def invoke_llm_with_message(self, message):
         self.message_history.append(message)
         response = self.llm.invoke(self.message_history)
         print(response.content)
@@ -231,14 +155,17 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
         if reasoning_tokens:
             print(f"[thinking: {reasoning_tokens} tokens]")
         for tool_call in response.tool_calls:
-                    print(f"Calling {tool_call['name']} with {tool_call['args']} args")
+            print(f"Calling {tool_call['name']} with {tool_call['args']} args")
         
         
         self.message_history.append(response)
         if self.history_len:
             self.cut_off_context(self.history_len)
-        # execute tool
-        for tool_call in response.tool_calls:
+        return self.execute_tool_calls(response.tool_calls)
+
+    def execute_tool_calls(self, tool_calls):
+        result = None
+        for tool_call in tool_calls:
             tool_response, additional_response = self.invoke_tool(tool_call)
             self.message_history.append(tool_response)
             if additional_response:
@@ -250,25 +177,29 @@ Remember that lidar scans only in one horizontal plane (0.5m high), so obstacles
             if tool_call["name"] == "finish_task":
                 report = tool_call["args"].get("report", "Task finished")
                 self.task = None
+                self.idle = True
                 print(f"Task finished: {report}")
-                return report
+                result = report
+        return result
 
     def cleanup(self):
         if self.servo_controler:
             print("Disconnecting servo controller...")
             self.servo_controler.disconnect()
 
+    def check_for_new_input(self):
+        return False
+
     def go(self):
         try:
             while True:
-                if self.task:
+                if self.task or self.check_for_new_input():
+                    self.idle = False
+                if not self.idle:
                     self.main_loop_content()
                 else:
                     # idle mode
                     time.sleep(0.5)
-                    
-                if self.sounddevice_index_or_alias:
-                    self.check_for_new_task()
 
         except KeyboardInterrupt:
             print("Interrupted by user, shutting down.")

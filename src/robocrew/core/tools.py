@@ -48,6 +48,7 @@ def create_say(sound_receiver=None):
         Speak a sentence aloud to the user.
         Use this to communicate verbally with the user, for example to greet them,
         answer questions, or provide status updates.
+        Use only English language.
         """
         speak_and_play(query)
         return f"Said: {query}"

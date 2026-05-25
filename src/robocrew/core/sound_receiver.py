@@ -6,6 +6,7 @@ import numpy as np
 import time
 import os
 import re
+import io
 from openai import OpenAI
 from dotenv import find_dotenv, load_dotenv
 
@@ -14,7 +15,7 @@ load_dotenv(find_dotenv())
 
 
 class SoundReceiver:
-    def __init__(self, sounddevice_index_or_alias, task_queue=None, wakeword="robot"):
+    def __init__(self, sounddevice_index_or_alias, speech_queue=None, wakeword=None):
         self.FORMAT = pyaudio.paInt16
         self.CHANNELS = 1
         self.RATE = 48000
@@ -46,7 +47,7 @@ class SoundReceiver:
         self._sample_width = self._p.get_sample_size(self.FORMAT)
         self._bytes_per_second = int(self.RATE * self.CHANNELS * self._sample_width)
         self._buffer_capacity_bytes = int(self._bytes_per_second * self.BUFFER_SECONDS)
-        self.task_queue = task_queue
+        self.speech_queue = speech_queue
 
         self._buffer = bytearray(self._buffer_capacity_bytes)
         self._write_pos = 0
@@ -143,7 +144,7 @@ class SoundReceiver:
                     print(self.current_ambient_rms)
                     # In real-time, we calculate and update our threshold:
                     # (1.5x higher than background noise, protected from dropping below 300)
-                    self.RMS_THRESHOLD = max(50.0, self.current_ambient_rms * 1.5)
+                    self.RMS_THRESHOLD = max(50.0, self.current_ambient_rms * 1.7)
                 
                 if current_rms > self.RMS_THRESHOLD and volume_jump > 100.0: 
                 
@@ -158,7 +159,7 @@ class SoundReceiver:
                 if time.time() - self.start_talk_time > 15.0: 
                     print("🌪️ It's just noice")
                     self.current_ambient_rms = current_rms
-                    self.RMS_THRESHOLD = max(50.0, current_rms * 1.5)
+                    self.RMS_THRESHOLD = max(50.0, current_rms * 1.7)
                     self._recording = False
                     self.first_timestamp_below_threshold = None
                     with self._lock:
@@ -169,20 +170,28 @@ class SoundReceiver:
 
                 if self.get_rms() < self.RMS_THRESHOLD:
                     if self.first_timestamp_below_threshold is None:
+                        # Zapisujemy tylko czas pierwszej ciszy, NIE CZYŚCIMY jeszcze bufora
                         self.first_timestamp_below_threshold = time.time()
                     elif time.time() - self.first_timestamp_below_threshold > 2.0:
+                        # Minęły 2 sekundy ciszy. Kończymy nagrywanie!
                         self._recording = False
                         self.first_timestamp_below_threshold = None
-                        print("🔕 End of speech")
+                        
+                        # Zbieramy audio i czyścimy bufor (tylko w tym jednym miejscu)
                         with self._lock:
                             audio_data = b''.join(self.recorded_frames)
                             self.recorded_frames = []
 
-                        print("Transcribing recorded audio...")
-                        threading.Thread(
-                            target=self._transcribe_audio, 
-                            args=(audio_data,)
-                        ).start()
+                        # Sprawdzamy czas trwania (dźwięk + 2s ciszy)
+                        if time.time() - self.start_talk_time < 3.0:
+                            print("🗑️ Zignorowano hałas (zbyt krótki)")
+                        else:
+                            print("🔕 End of speech")
+                            print("Transcribing recorded audio...")
+                            threading.Thread(
+                                target=self._transcribe_audio, 
+                                args=(audio_data,)
+                            ).start()
                 else:
                     self.first_timestamp_below_threshold = None
 
@@ -192,8 +201,6 @@ class SoundReceiver:
 
 
     def _transcribe_audio(self, audio_data: bytes) -> str:
-        import io
-
         ram_buffer = io.BytesIO()
         ram_buffer.name = "recorded.wav"
         with wave.open(ram_buffer, "wb") as wf:
@@ -210,8 +217,8 @@ class SoundReceiver:
         )
         if transcription.text:  # If transcription is not ""
             print(f"transcription: {transcription.text}")
-            if self.wakeword.lower() in transcription.text.lower():
-                self.task_queue.put(transcription.text)
+            if not self.wakeword or self.wakeword.lower() in transcription.text.lower():
+                self.speech_queue.put(transcription.text)
 
 
     def start_listening(self):
