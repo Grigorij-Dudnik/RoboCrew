@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import io
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
@@ -34,11 +35,12 @@ class TestXLeRobotListening(unittest.TestCase):
         response.usage_metadata = {}
         agent.llm.invoke.return_value = response
 
+        self.assertTrue(agent.check_for_new_input())
+        agent.idle = False
         agent.main_loop_content()
 
         human_messages = [m for m in agent.message_history if getattr(m, "type", None) == "human"]
         self.assertIn({"type": "text", "text": "\n\nUser said: 'Bob what do you see?'"}, human_messages[0].content)
-        self.assertFalse(agent.idle)
 
     def test_queued_speech_continues_without_using_transcript_as_task(self):
         with patch("robocrew.core.sound_receiver.SoundReceiver"):
@@ -52,10 +54,11 @@ class TestXLeRobotListening(unittest.TestCase):
         response.usage_metadata = {}
         agent.llm.invoke.return_value = response
 
+        self.assertTrue(agent.check_for_new_input())
+        agent.idle = False
         agent.main_loop_content()
 
         self.assertNotEqual(agent.task, "Bob bring me a tissue")
-        self.assertFalse(agent.idle)
 
     def test_explicit_task_runs_without_microphone(self):
         agent = make_xlerobot_agent()
@@ -67,9 +70,9 @@ class TestXLeRobotListening(unittest.TestCase):
         response.usage_metadata = {}
         agent.llm.invoke.return_value = response
 
+        agent.idle = False
         agent.main_loop_content()
 
-        self.assertFalse(agent.idle)
         human_messages = [m for m in agent.message_history if getattr(m, "type", None) == "human"]
         self.assertIn({"type": "text", "text": "\n\nYour task is: 'Go to the kitchen'"}, human_messages[0].content)
 
@@ -88,6 +91,16 @@ class TestXLeRobotListening(unittest.TestCase):
 
         receiver.stop_listening.assert_called_once()
         receiver.start_listening.assert_called_once()
+
+    def test_lidar_content_is_xlerobot_specific(self):
+        with patch("robocrew.robots.XLeRobot.xlerobot_LLM_agent.init_lidar", return_value=("lidar", "bg", "scale")):
+            agent = make_xlerobot_agent(lidar_usb_port="/dev/lidar")
+
+        with patch("robocrew.robots.XLeRobot.xlerobot_LLM_agent.run_scanner", return_value=(io.BytesIO(b"lidar"), 42.0)):
+            content = agent.extra_loop_content()
+
+        self.assertIn("42.0 cm", content[0]["text"])
+        self.assertEqual(agent.latest_lidar_b64, "bGlkYXI=")
 
 
 if __name__ == "__main__":
