@@ -41,6 +41,7 @@ class TestXLeRobotListening(unittest.TestCase):
 
         human_messages = [m for m in agent.message_history if getattr(m, "type", None) == "human"]
         self.assertIn({"type": "text", "text": "\n\nUser said: 'Bob what do you see?'"}, human_messages[0].content)
+        self.assertTrue(agent.idle)
 
     def test_queued_speech_continues_without_using_transcript_as_task(self):
         with patch("robocrew.core.sound_receiver.SoundReceiver"):

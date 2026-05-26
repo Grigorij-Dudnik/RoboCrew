@@ -1,9 +1,8 @@
 """
 Voice conversation with a Planner + Executor XLeRobot setup.
 
-The Planner listens after the wakeword, receives what the robot heard together
-with fresh camera/sensor context, and decides whether to chat or delegate a
-physical subtask to the Executor.
+The Planner listens, receives what the robot heard with fresh camera context,
+and decides whether to chat or delegate a physical subtask to the Executor.
 """
 
 from pathlib import Path
@@ -31,11 +30,9 @@ planner_prompt = (prompt_dir / "planner.prompt").read_text(encoding="utf-8")
 planner_prompt += """
 
 ## VOICE CONVERSATION
-- Treat each heard utterance as the active planner mission until you call `finish_task`.
-- If information is missing, ask a short question with `say`, then wait for the user.
-- If the user is only making casual conversation, answer briefly with `say` and then call `finish_task`.
-- If the user requests physical robot work (like moving or grabbing things), use `execute_subtask` to delegate concrete goals to the executor.
-- After each executor report, decide the next subtask or call `finish_task` when the user request is satisfied.
+- Treat each heard utterance as one turn, then wait for the next sentence.
+- Reply briefly with `say` when no robot action is needed.
+- For clear physical requests, delegate one concrete goal with `execute_subtask`.
 """
 
 
@@ -73,6 +70,7 @@ executor = XLeRobotAgent(
     history_len=8,
     main_camera=main_camera,
     camera_fov=90,
+    lidar_usb_port="/dev/lidar",
     servo_controler=servo_controler,
     system_prompt=controller_prompt,
 )
@@ -90,10 +88,9 @@ planner = XLeRobotAgent(
     servo_controler=servo_controler,
     system_prompt=planner_prompt,
     sounddevice_index_or_alias="mic_main",
-    lidar_usb_port="/dev/lidar",
     #wakeword="Bob",
     tts=True,
 )
 
-print("Listening for conversation after the wakeword...")
+print("Listening for voice conversation...")
 planner.go()

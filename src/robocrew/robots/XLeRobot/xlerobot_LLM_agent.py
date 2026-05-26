@@ -80,6 +80,7 @@ class XLeRobotAgent(LLMAgent):
 		if self.sounddevice_index_or_alias and self.user_text:
 			content.append({"type": "text", "text": f"\n\nUser said: '{self.user_text}'"})
 			self.user_text = None
+			self.idle = True
 		return content
 
 	def check_for_new_input(self):

@@ -144,7 +144,7 @@ class SoundReceiver:
                     print(self.current_ambient_rms)
                     # In real-time, we calculate and update our threshold:
                     # (1.5x higher than background noise, protected from dropping below 300)
-                    self.RMS_THRESHOLD = max(50.0, self.current_ambient_rms * 1.7)
+                    self.RMS_THRESHOLD = max(50.0, self.current_ambient_rms * 1.5)
                 
                 if current_rms > self.RMS_THRESHOLD and volume_jump > 100.0: 
                 
@@ -159,7 +159,7 @@ class SoundReceiver:
                 if time.time() - self.start_talk_time > 15.0: 
                     print("🌪️ It's just noice")
                     self.current_ambient_rms = current_rms
-                    self.RMS_THRESHOLD = max(50.0, current_rms * 1.7)
+                    self.RMS_THRESHOLD = max(50.0, current_rms * 1.5)
                     self._recording = False
                     self.first_timestamp_below_threshold = None
                     with self._lock:
@@ -168,11 +168,13 @@ class SoundReceiver:
                     self.last_rms = current_rms  
                     continue 
 
+                silence_wait_duration = 2.0
                 if self.get_rms() < self.RMS_THRESHOLD:
                     if self.first_timestamp_below_threshold is None:
                         # Zapisujemy tylko czas pierwszej ciszy, NIE CZYŚCIMY jeszcze bufora
                         self.first_timestamp_below_threshold = time.time()
-                    elif time.time() - self.first_timestamp_below_threshold > 2.0:
+                    
+                    elif time.time() - self.first_timestamp_below_threshold > silence_wait_duration:
                         # Minęły 2 sekundy ciszy. Kończymy nagrywanie!
                         self._recording = False
                         self.first_timestamp_below_threshold = None
@@ -183,7 +185,7 @@ class SoundReceiver:
                             self.recorded_frames = []
 
                         # Sprawdzamy czas trwania (dźwięk + 2s ciszy)
-                        if time.time() - self.start_talk_time < 3.0:
+                        if time.time() - self.start_talk_time - silence_wait_duration < 2.5:
                             print("🗑️ Zignorowano hałas (zbyt krótki)")
                         else:
                             print("🔕 End of speech")
