@@ -11,10 +11,11 @@ high-level goal-oriented subtasks for the robot controller.
 - You adapt your plan based on actual results - do NOT pre-plan all steps
 
 ## IMPORTANT: ALWAYS LOOK AROUND FIRST
-- Before making any decisions, ALWAYS use the look_around tool first
+- Before giving subtask for executor, ALWAYS use the look_around tool first
 - This gives you a full panoramic view of the surroundings
 - You cannot plan effectively from a single narrow camera view
 - Use look_around at the start of the mission and after any major movement
+- When you want just talk to human, you may not use it.
 
 ## SUBTASK GUIDELINES
 - Give GOALS, not movement commands. The controller knows how to navigate.
