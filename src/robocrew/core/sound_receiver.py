@@ -9,6 +9,7 @@ import re
 import io
 from openai import OpenAI
 from dotenv import find_dotenv, load_dotenv
+from scipy.signal import butter, sosfilt
 
 
 load_dotenv(find_dotenv())
@@ -48,6 +49,8 @@ class SoundReceiver:
         self._bytes_per_second = int(self.RATE * self.CHANNELS * self._sample_width)
         self._buffer_capacity_bytes = int(self._bytes_per_second * self.BUFFER_SECONDS)
         self.speech_queue = speech_queue
+        # Filter only RMS detection to ignore wind rumble; keep raw audio for transcription.
+        self.rms_highpass_filter = butter(4, 150, btype="highpass", fs=self.RATE, output="sos")
 
         self._buffer = bytearray(self._buffer_capacity_bytes)
         self._write_pos = 0
@@ -156,7 +159,7 @@ class SoundReceiver:
                         self.recorded_frames = [pre_roll_data]
             else:
                 # If recording more then 15 seconds it means that it's just noise 
-                if time.time() - self.start_talk_time > 15.0: 
+                if time.time() - self.start_talk_time > 25.0: 
                     print("🌪️ It's just noice")
                     self.current_ambient_rms = current_rms
                     self.RMS_THRESHOLD = max(50.0, current_rms * 1.5)
@@ -171,22 +174,21 @@ class SoundReceiver:
                 silence_wait_duration = 2.0
                 if self.get_rms() < self.RMS_THRESHOLD:
                     if self.first_timestamp_below_threshold is None:
-                        # Zapisujemy tylko czas pierwszej ciszy, NIE CZYŚCIMY jeszcze bufora
                         self.first_timestamp_below_threshold = time.time()
                     
                     elif time.time() - self.first_timestamp_below_threshold > silence_wait_duration:
-                        # Minęły 2 sekundy ciszy. Kończymy nagrywanie!
+                        
                         self._recording = False
                         self.first_timestamp_below_threshold = None
                         
-                        # Zbieramy audio i czyścimy bufor (tylko w tym jednym miejscu)
+    
                         with self._lock:
                             audio_data = b''.join(self.recorded_frames)
                             self.recorded_frames = []
 
-                        # Sprawdzamy czas trwania (dźwięk + 2s ciszy)
+                        # Check if the recording is too short (less than 2.5 seconds of talking, excluding silence)
                         if time.time() - self.start_talk_time - silence_wait_duration < 2.5:
-                            print("🗑️ Zignorowano hałas (zbyt krótki)")
+                            print("🗑️ Too short")
                         else:
                             print("🔕 End of speech")
                             print("Transcribing recorded audio...")
@@ -296,6 +298,7 @@ class SoundReceiver:
     def get_rms(self) -> float:
         data = self.get_last_recorded_bytes(seconds=0.2)
         buffer_end = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+        buffer_end = sosfilt(self.rms_highpass_filter, buffer_end)
         mean_square = np.sqrt(np.dot(buffer_end, buffer_end) / buffer_end.size)
         return float(mean_square)
     
