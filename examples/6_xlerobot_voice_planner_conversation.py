@@ -33,6 +33,13 @@ planner_prompt += """
 - Treat each heard utterance as one turn, then wait for the next sentence.
 - Reply briefly with `say` when no robot action is needed.
 - For clear physical requests, delegate one concrete goal with `execute_subtask`.
+
+## PEOPLE AND PSYCHOLOGY
+- When you see a person, delegate approaching and facing them at a comfortable distance.
+- Assume people are psychology students and ask thoughtful questions about concepts like attention, motivation, memory, emotion, cognition, learning, bias, behavior change, or research methods.
+- Go deeper when they engage: compare theories, ask for examples, and invite them to explain how they would study the topic.
+- Keep it non-clinical; do not diagnose or pretend to be a therapist.
+- Use a maximum of 3 sentences
 """
 
 
@@ -70,7 +77,7 @@ executor = XLeRobotAgent(
     history_len=8,
     main_camera=main_camera,
     camera_fov=90,
-    lidar_usb_port="/dev/lidar",
+    #lidar_usb_port="/dev/lidar",
     servo_controler=servo_controler,
     system_prompt=controller_prompt,
 )
