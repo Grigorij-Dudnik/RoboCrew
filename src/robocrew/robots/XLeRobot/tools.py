@@ -327,207 +327,144 @@ def _shutdown_robot_client(client: "RobotClient") -> None:
     client.stop()
 
 
-
-def _groot_recursive_add_extra_dim(obs: dict) -> dict:
-    """Add one (batch or time) dimension to every leaf in the obs dict recursively."""
-    for key, val in obs.items():
-        if isinstance(val, np.ndarray):
-            obs[key] = val[np.newaxis, ...]
-        elif isinstance(val, dict):
-            obs[key] = _groot_recursive_add_extra_dim(val)
-        else:
-            obs[key] = [val]  # scalar / string -> list
-    return obs
-
-
-def _groot_build_observation(frame1_rgb, frame2_rgb, state_rad, task_prompt: str) -> dict:
-    """Convert raw sensor data into the nested dict GR00T policy server expects.
-
-    Camera keys must match those in modality.json (camera1, camera2).
-    State is split into single_arm (5 joints) and gripper (1 joint).
-    All arrays get (B=1, T=1) dims via two recursive calls.
-    """
-    obs = {
-        "video": {
-            "camera1": frame1_rgb,                       # (H, W, 3)  uint8
-            "camera2": frame2_rgb,                       # (H, W, 3)  uint8
-        },
-        "state": {
-            "single_arm": state_rad[:5].astype(np.float32),  # (5,)
-            "gripper":    state_rad[5:6].astype(np.float32), # (1,)
-        },
-        "language": {
-            "annotation.human.task_description": task_prompt,
-        },
-    }
-    obs = _groot_recursive_add_extra_dim(obs)  # -> (1, ...)
-    obs = _groot_recursive_add_extra_dim(obs)  # -> (1, 1, ...)
-    return obs
+# ── MolmoAct2 ────────────────────────────────────────────────────────────────
+# Fixed runtime knobs for the MolmoAct2 SO-101 policy (server owns dtype/num_steps).
+# The standard LeRobot v3.0 → v2.1 SO-100/101 joint conversion:
+_MOLMOACT_JOINT_OFFSETS = "0,90,90,0,0,0"
+_MOLMOACT_JOINT_SIGNS = "1,-1,1,1,1,1"
+_MOLMOACT_WRIST_FLIP = "180"
+_MOLMOACT_FPS = 30.0
+_MOLMOACT_ENSEMBLE_M = 0.5
+_MOLMOACT_SMOOTH_ALPHA = 1.0
+_MOLMOACT_MAX_STEP_DEG = 15.0
+_MOLMOACT_SCENE_ONLY = False
 
 
-def _groot_decode_action_chunk(chunk: dict, t: int, motor_ids: list) -> dict:
-    """Extract timestep t from action chunk dict and map to {motor_id: degrees}.
-
-    chunk["single_arm"]: (B, T, 5)  radians
-    chunk["gripper"]:    (B, T, 1)  radians
-    Returns: {motor_id: float_degrees}
-    """
-    single_arm = chunk["single_arm"][0][t]  # (5,)
-    gripper    = chunk["gripper"][0][t]      # (1,)
-    full_rad   = np.concatenate([single_arm, gripper], axis=0)  # (6,)
-    return {
-        mid: math.degrees(float(full_rad[i]))
-        for i, mid in enumerate(motor_ids)
-    }
-
-def create_groot_single_arm_manipulation(
+def create_molmoact2_single_arm_manipulation(
         tool_name: str,
         tool_description: str,
-        task_prompt: str,
-        server_host: str,
-        server_port: int,
+        server_address: str,
         arm_port: str,
-        motor_ids: list,
-        camera1_index_or_path,
-        camera2_index_or_path,
-        camera_width: int,
-        camera_height: int,
+        servo_controler,
+        camera_config: dict[str, dict],
         main_camera_object,
-        servo_controller,
         execution_time: int = 30,
-        fps: int = 30,
-        timeout_ms: int = 15000,
-        calibration_path: str = "/home/pi/.cache/robocrew/calibrations/right_arm.json",
     ):
-    """Creates a LangChain tool that runs a GR00T policy for single-arm manipulation.
+    """Creates a tool that runs MolmoAct2 on the SO-101 arm via a remote server.
+
+    Unlike the single-policy VLA tool, MolmoAct2 is prompt-driven: the LLM passes
+    a fresh natural-language `instruction` on every call, so one tool can perform
+    any manipulation the model understands — no per-task policy needed.
+
+    Mirrors create_vla_single_arm_manipulation's lifecycle, but the GPU model
+    runs out-of-process in molmoact/serve.py and the arm is driven by the
+    MolmoAct2 async producer/consumer (temporal ensembling). Start the server
+    first on the GPU box: `python -m robocrew.robots.XLeRobot.molmoact.serve`.
 
     Args:
-        tool_name (str): The name of the tool the AI agent will see.
-        tool_description (str): The description of the tool the AI agent will see.
-        task_prompt (str): Natural-language task instruction sent to the GR00T policy.
-        server_host (str): Hostname of the running GR00T policy server.
-        server_port (int): Port of the GR00T policy server (default 5555).
-        arm_port (str): USB device path for the arm's FeetechMotorsBus (e.g. "/dev/arm_right").
-        motor_ids (list): Ordered list of motor IDs on the arm (e.g. [1,2,3,4,5,6]).
-        camera1_index_or_path: OpenCV index or device path for the primary arm camera.
-        camera2_index_or_path: OpenCV index or device path for the secondary/overview camera.
-        camera_width (int): Camera capture width in pixels.
-        camera_height (int): Camera capture height in pixels.
-        main_camera_object: The agent's main camera — released before and restored after execution.
-        servo_controller: Robot servo controller used to position the head for manipulation.
-        execution_time (int): How long in seconds to run the policy.
-        fps (int): Control loop frequency.
-        timeout_ms (int): PolicyClient request timeout in milliseconds.
-        calibration_path (str): Path to a lerobot calibration JSON file. Required for
-            normalized (degree-mode) motor reads. Typically found at
-            ~/.cache/huggingface/lerobot/calibration/robots/<robot>/<id>.json
+        tool_name (str): Name the AI agent sees.
+        tool_description (str): Description the AI agent sees. Should tell the LLM
+            what kinds of instructions the arm can carry out.
+        server_address (str): "host:port" of the MolmoAct2 server, e.g. "greg-pc:5005".
+        arm_port (str): USB port of the SO-101 follower arm.
+        servo_controler: Robot servo controller (positions arm/head).
+        camera_config (dict): {"main": {"index_or_path": ...}, "wrist": {"index_or_path": ...}}.
+            "main" is the scene/side view; "wrist" is the in-hand camera.
+        main_camera_object: Agent's main camera — released before and restored after.
+        execution_time (int): Seconds to run the policy.
     """
+    # Lazy imports so tools.py keeps importing even if molmoact deps (e.g. Pillow)
+    # aren't installed on a given machine.
+    from robocrew.robots.XLeRobot.molmoact.client import RemotePolicyClient
+    from robocrew.robots.XLeRobot.molmoact.hardware import (
+        FollowerArm, OpenCVCapture, WristCamera, warmup_cameras,
+    )
+    from robocrew.robots.XLeRobot.molmoact.runtime import AsyncPolicyRunner, RuntimeConfig
+    from robocrew.robots.XLeRobot.molmoact.frame_transforms import (
+        parse_joint_offsets, parse_joint_signs, parse_joint_limits,
+    )
+
+    right_port = getattr(servo_controler, "right_arm_wheel_usb", None)
+    left_port = getattr(servo_controler, "left_arm_head_usb", None)
+    arm_side = (
+        "right" if arm_port == right_port else
+        "left" if arm_port == left_port else
+        "right" if "right" in str(arm_port).lower() else
+        "left" if "left" in str(arm_port).lower() else
+        None
+    )
+
+    host, _, port = server_address.partition(":")
+    scene_cam = camera_config["main"]["index_or_path"]
+    wrist_cam = camera_config["wrist"]["index_or_path"]
+
+    signs = parse_joint_signs(_MOLMOACT_JOINT_SIGNS)
+    offsets = parse_joint_offsets(_MOLMOACT_JOINT_OFFSETS)
+    joint_min = parse_joint_limits(None, -np.inf)
+    joint_max = parse_joint_limits(None, np.inf)
 
     @tool
-    def tool_name_to_override() -> str:
-        """Tool description to override."""
-        print(f"GR00T manipulation tool activated: {tool_name}")
+    def tool_name_to_override(instruction: str) -> str:
+        """Tool description to override.
 
-        servo_controller.turn_head_to_vla_position()
+        Args:
+            instruction: A concrete natural-language command describing what the
+                arm should do this run, e.g. "pick up the lemon".
+        """
+        print(f"MolmoAct2 manipulation tool activated: {tool_name} | instruction={instruction!r}")
+
+        servo_controler.set_saved_position("cobra", arm_side=arm_side)
+        servo_controler.turn_head_to_vla_position()
         main_camera_object.release()
         time.sleep(1)
 
-        cap1 = cv2.VideoCapture(camera1_index_or_path)
-        cap1.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
-        cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
-
-        cap2 = cv2.VideoCapture(camera2_index_or_path)
-        cap2.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
-        cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
-
-        # Load calibration from lerobot JSON if provided
-        calibration = None
-        if calibration_path:
-            import json
-            from lerobot.motors import MotorCalibration
-            with open(calibration_path) as f:
-                raw = json.load(f)
-            calibration = {
-                entry["id"]: MotorCalibration(
-                    id=entry["id"],
-                    drive_mode=entry["drive_mode"],
-                    homing_offset=entry["homing_offset"],
-                    range_min=entry["range_min"],
-                    range_max=entry["range_max"],
-                )
-                for entry in raw.values()
-            }
-
-        arm_bus = FeetechMotorsBus(
-            port=arm_port,
-            motors={mid: Motor(mid, "sts3215", MotorNormMode.DEGREES) for mid in motor_ids},
-            calibration=calibration,
-        )
-        arm_bus.connect()
-
-        policy = PolicyClient(host=server_host, port=server_port, timeout_ms=timeout_ms)
-        if not policy.ping():
-            arm_bus.disconnect()
-            cap1.release()
-            cap2.release()
-            time.sleep(1)
-            main_camera_object.reopen()
-            servo_controller.turn_head_to_vla_position(50)
-            return "Failed to connect to GR00T policy server."
-
-        policy.reset()
-
-        dt = 1.0 / fps
-        start_time = time.time()
-
+        policy = scene = wrist = follower = None
         try:
-            while time.time() - start_time < execution_time:
-                ret1, frame1 = cap1.read()
-                ret2, frame2 = cap2.read()
-                if not ret1 or not ret2:
-                    break
+            policy = RemotePolicyClient(host, int(port))
+            scene = OpenCVCapture(scene_cam)
+            wrist = WristCamera(wrist_cam, flip=_MOLMOACT_WRIST_FLIP)
+            warmup_cameras(wrist, scene)
 
-                frame1_rgb = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
-                frame2_rgb = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
+            follower = FollowerArm(port=arm_port)
+            follower.set_target(follower.get_state())  # latch pose before torque-on
 
-                positions_deg = [arm_bus.read("Present_Position", mid) for mid in motor_ids]
-                state_rad = np.array(
-                    [math.radians(deg) for deg in positions_deg], dtype=np.float32
-                )  # (6,)
+            config = RuntimeConfig(
+                prompt=instruction,
+                exec_hz=_MOLMOACT_FPS,
+                max_step_deg=_MOLMOACT_MAX_STEP_DEG,
+                smooth_alpha=_MOLMOACT_SMOOTH_ALPHA,
+                ensemble_m=_MOLMOACT_ENSEMBLE_M,
+                scene_only=_MOLMOACT_SCENE_ONLY,
+            )
 
-                obs = _groot_build_observation(frame1_rgb, frame2_rgb, state_rad, task_prompt)
-
-                action_chunk, _ = policy.get_action(obs)
-                # action_chunk = {"single_arm": (1, T, 5), "gripper": (1, T, 1)}
-
-                horizon = action_chunk["single_arm"].shape[1]
-                for t in range(horizon):
-                    if time.time() - start_time >= execution_time:
-                        break
-                    action_deg = _groot_decode_action_chunk(action_chunk, t, motor_ids)
-                    arm_bus.sync_write("Goal_Position", action_deg)
-                    time.sleep(dt)
+            with AsyncPolicyRunner(
+                policy=policy, follower=follower, wrist=wrist, scene=scene,
+                signs=signs, offsets=offsets,
+                joint_min=joint_min, joint_max=joint_max,
+                config=config,
+            ):
+                time.sleep(execution_time)
 
         finally:
-            arm_bus.disconnect()
-            cap1.release()
-            cap2.release()
+            for fn in (
+                lambda: follower.disconnect() if follower else None,
+                lambda: policy.close() if policy else None,
+                lambda: scene.release() if scene else None,
+                lambda: wrist.close() if wrist else None,
+            ):
+                try:
+                    fn()
+                except Exception:
+                    pass
             time.sleep(1)
             main_camera_object.reopen()
-            servo_controller.turn_head_to_vla_position(50)
+            time.sleep(0.3)
+            servo_controler.turn_head_to_vla_position(50)
+            servo_controler.set_saved_position("default", arm_side="both")
 
-        return "GR00T arm manipulation done."
+        return "MolmoAct2 arm manipulation done."
 
     tool_name_to_override.name = tool_name
     tool_name_to_override.description = tool_description
 
     return tool_name_to_override
-
-
-def _shutdown_robot_client(client: "RobotClient") -> None:
-    """Gracefully stop the control loop before disconnecting the robot.
-
-    Signals the running control loop to exit on its next iteration before
-    hardware disconnection, preventing race conditions.
-    """
-    client.stop()
