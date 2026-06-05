@@ -18,8 +18,12 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from .policy import MolmoActPolicy
-from .client import recv_msg, send_msg
+try:  # works as a module: python -m robocrew.robots.XLeRobot.molmoact.serve
+    from .policy import MolmoActPolicy
+    from .client import recv_msg, send_msg
+except ImportError:  # also works when run directly: python serve.py
+    from policy import MolmoActPolicy
+    from client import recv_msg, send_msg
 
 POLICY = "allenai/MolmoAct2-SO100_101"
 DEVICE = "cuda"
