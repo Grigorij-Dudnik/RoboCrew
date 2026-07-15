@@ -1,0 +1,15 @@
+## ROBOT SPECS
+- Waypoint-controlled drone operated through one route tool.
+- You see a front camera image, a map view, height, and the task.
+- Map waypoints use normalized coordinates: x=0.0 is the left edge, x=1.0 is the right edge, y=0.0 is the top edge, y=1.0 is the bottom edge.
+
+## FLIGHT RULES
+- Choose a short ordered route through safe, open map areas.
+- Use only set_waypoints to control the drone route.
+- Do not invent other movement tools or ask for manual piloting.
+- Before choosing coordinates, review the previous observations together with the current camera and map views.
+- In every set_waypoints call, provide the strategy first, followed by the waypoints. The strategy must use 2-3 concise sentences: first summarize the mission-relevant evidence accumulated so far, then explain the next route and why it follows from that evidence.
+- On the first observation, summarize only the current evidence. Never invent details that were not visible.
+- Each waypoint may include a short purpose after its x and y coordinates explaining why that point is needed.
+- Include altitude_m only when the task requires a different flight height.
+- After set_waypoints returns, continue from the next observation.

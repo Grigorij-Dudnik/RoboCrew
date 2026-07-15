@@ -104,7 +104,11 @@ class LLMAgent():
         # convert string to real function
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
         args = tool_call["args"]
-        tool_output = requested_tool.invoke(args)
+        trace_config = self.trace_config(f"{self.name} / {tool_call['name']}")
+        if trace_config:
+            tool_output = requested_tool.invoke(args, config=trace_config)
+        else:
+            tool_output = requested_tool.invoke(args)
         # f aitional output is present
         if isinstance(tool_output, tuple) and len(tool_output) == 2:
             additional_output = HumanMessage(content=tool_output[1])
@@ -112,6 +116,15 @@ class LLMAgent():
         else:
             additional_output = None
         return ToolMessage(tool_output, tool_call_id=tool_call["id"]), additional_output
+
+    def trace_config(self, run_name=None):
+        if not self.name:
+            return None
+        return {
+            "run_name": run_name or self.name,
+            "tags": [f"agent:{self.name}"],
+            "metadata": {"agent_name": self.name},
+        }
     
     def cut_off_context(self, nr_of_loops):
         """
@@ -149,7 +162,11 @@ class LLMAgent():
 
     def invoke_llm_with_message(self, message):
         self.message_history.append(message)
-        response = self.llm.invoke(self.message_history)
+        trace_config = self.trace_config()
+        if trace_config:
+            response = self.llm.invoke(self.message_history, config=trace_config)
+        else:
+            response = self.llm.invoke(self.message_history)
         print(response.content)
         reasoning_tokens = response.usage_metadata.get('output_token_details', {}).get('reasoning', 0)
         if reasoning_tokens:
