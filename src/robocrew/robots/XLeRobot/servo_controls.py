@@ -27,6 +27,13 @@ ACTION_MAP = {
     "turn_right": {7: -1.0, 8: -1.0, 9: -1.0},
 }
 
+TWO_WHEEL_ACTION_MAP = {
+    "forward": {9: 1.0, 10: 1.0},
+    "backward": {9: -1.0, 10: -1.0},
+    "turn_left": {9: -1.0, 10: 1.0},
+    "turn_right": {9: 1.0, 10: -1.0},
+}
+
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
 
 
@@ -159,11 +166,14 @@ class ServoControler:
         *,
         speed: int = DEFAULT_SPEED,
         action_map: Optional[Mapping[str, Mapping[int, float]]] = None,
+        wheel_layout: Literal["three_wheel", "two_wheel"] = "three_wheel",
     ) -> None:
         self.right_arm_wheel_usb = right_arm_wheel_usb
         self.left_arm_head_usb = left_arm_head_usb
         self.speed = speed
-        self.action_map = ACTION_MAP if action_map is None else action_map
+        self.wheel_layout = wheel_layout
+        default_action_map = TWO_WHEEL_ACTION_MAP if wheel_layout == "two_wheel" else ACTION_MAP
+        self.action_map = default_action_map if action_map is None else action_map
         self._wheel_ids = tuple(list(self.action_map.values())[0].keys())
         self._head_ids = tuple(HEAD_SERVO_MAP.values())
         self._right_arm_ids = tuple(ARM_SERVO_MAPS["right"].values())
@@ -174,19 +184,21 @@ class ServoControler:
         right_arm_calibration = _load_arm_calibration("right_arm.json", self._right_arm_ids, right_arm_wheel_usb)
         left_arm_calibration = _load_arm_calibration("left_arm.json", self._left_arm_ids, left_arm_head_usb)
 
-        # Initialize FeetechMotorsBus with the three wheel motors
+        # Initialize FeetechMotorsBus with the wheel motors on the right-arm/base bus.
         if right_arm_wheel_usb:
             arm_motors = {
                 aid: Motor(aid, "sts3215", POSITION_NORM_MODE)
                 for aid in self._right_arm_ids
             }
+            wheel_motors = {
+                wid: Motor(wid, "sts3215", MotorNormMode.RANGE_M100_100)
+                for wid in self._wheel_ids
+            }
             self.wheel_bus = FeetechMotorsBus(
                 port=right_arm_wheel_usb,
                 motors={
                     **arm_motors,
-                    7: Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-                    8: Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
-                    9: Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+                    **wheel_motors,
                 },
                 calibration=right_arm_calibration,
             )
@@ -242,6 +254,8 @@ class ServoControler:
         self.wheel_bus.sync_write("Goal_Velocity", payload)
 
     def _wheels_run(self, action: str, duration: float) -> None:
+        if action not in self.action_map:
+            raise NotImplementedError(f"'{action}' is not supported by the {self.wheel_layout} XLeRobot base.")
         if duration > 0:
             multipliers = self.action_map[action]
             payload = {wid: int(self.speed * factor) for wid, factor in multipliers.items()}
