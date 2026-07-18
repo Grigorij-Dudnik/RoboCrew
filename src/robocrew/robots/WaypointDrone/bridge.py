@@ -44,6 +44,8 @@ class DroneRosBridge:
     def __init__(self):
         self.latest_observation = DroneObservation()
         self._has_observation = False
+        self.navigation_mode = "normal"
+        self._reuse_latest_observation = False
         self.current_route_id = None
         self.route_active = False
         self._observation_sequence = 0
@@ -91,6 +93,9 @@ class DroneRosBridge:
     def get_observation(self) -> DroneObservation:
         if hasattr(self, "_observation_changed"):
             with self._observation_changed:
+                if self._reuse_latest_observation:
+                    self._reuse_latest_observation = False
+                    return self.latest_observation
                 self._observation_changed.wait_for(
                     lambda: self._observation_sequence > self._last_consumed_observation_sequence
                 )
@@ -126,6 +131,7 @@ class DroneRosBridge:
         altitude_m: float | None = None,
         strategy: str | None = None,
     ) -> dict[str, Any]:
+        self._reuse_latest_observation = False
         self.current_route_id = uuid.uuid4().hex
         self.route_active = True
         command_message = self._string_msg()
@@ -142,6 +148,46 @@ class DroneRosBridge:
             "route_id": self.current_route_id,
             "current_gps": self.latest_observation.gps,
         }
+
+    def move_forward(self, distance_meters: float) -> dict[str, Any]:
+        return self._submit_relative_motion(
+            "move_forward",
+            distance_meters=float(distance_meters),
+        )
+
+    def turn_left(self, angle_degrees: float) -> dict[str, Any]:
+        return self._submit_relative_motion(
+            "turn_left",
+            angle_degrees=float(angle_degrees),
+        )
+
+    def turn_right(self, angle_degrees: float) -> dict[str, Any]:
+        return self._submit_relative_motion(
+            "turn_right",
+            angle_degrees=float(angle_degrees),
+        )
+
+    def _submit_relative_motion(self, motion: str, **motion_arguments) -> dict[str, Any]:
+        self._reuse_latest_observation = False
+        self.current_route_id = uuid.uuid4().hex
+        self.route_active = True
+        command_message = self._string_msg()
+        command_message.data = json.dumps({
+            "command": "relative_motion",
+            "route_id": self.current_route_id,
+            "motion": motion,
+            **motion_arguments,
+        })
+        self._command_pub.publish(command_message)
+        return {
+            "status": "submitted",
+            "route_id": self.current_route_id,
+            "current_gps": self.latest_observation.gps,
+        }
+
+    def set_navigation_mode(self, navigation_mode: str) -> None:
+        self.navigation_mode = navigation_mode
+        self._reuse_latest_observation = True
 
     def stop_route(self, reason: str) -> None:
         command_message = self._string_msg()

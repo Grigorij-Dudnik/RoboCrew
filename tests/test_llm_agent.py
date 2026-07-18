@@ -85,6 +85,25 @@ class TestMainLoopContent(unittest.TestCase):
         human_messages = [m for m in agent.message_history if getattr(m, "type", None) == "human"]
         self.assertIn({"type": "text", "text": "\n\nYour task is: 'Go to the kitchen'"}, human_messages[0].content)
 
+    def test_silent_tool_hides_call_arguments(self):
+        agent = make_agent()
+        quiet_tool = MagicMock()
+        quiet_tool.name = "quiet_tool"
+        quiet_tool.extras = {"silent": True}
+        agent.tool_name_to_tool = {"quiet_tool": quiet_tool}
+        agent.execute_tool_calls = MagicMock()
+        response = self._response()
+        response.tool_calls = [
+            {"name": "quiet_tool", "args": {"secret": "long value"}, "id": "quiet-call"}
+        ]
+        agent.llm.invoke.return_value = response
+
+        with patch("builtins.print") as mock_print:
+            agent.invoke_llm_with_message(HumanMessage(content="Run quietly"))
+
+        printed = [call.args[0] for call in mock_print.call_args_list]
+        self.assertNotIn("Calling quiet_tool with {'secret': 'long value'} args", printed)
+
 
 class TestInvokeTool(unittest.TestCase):
 

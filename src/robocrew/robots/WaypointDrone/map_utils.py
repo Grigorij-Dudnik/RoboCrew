@@ -48,6 +48,28 @@ def draw_heading_marker_on_map(map_image, yaw_rad):
     cv2.fillPoly(map_image, [marker_points], (0, 255, 255))
 
 
+def draw_normalized_grid_on_map(map_image_b64):
+    map_image = cv2.imdecode(
+        np.frombuffer(base64.b64decode(map_image_b64), np.uint8),
+        cv2.IMREAD_COLOR,
+    )
+    height, width = map_image.shape[:2]
+    overlay = map_image.copy()
+    for index in range(1, 10):
+        x = round(index * (width - 1) / 10)
+        y = round(index * (height - 1) / 10)
+        cv2.line(overlay, (x, 0), (x, height - 1), (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.line(overlay, (0, y), (width - 1, y), (255, 255, 255), 1, cv2.LINE_AA)
+    map_image = cv2.addWeighted(overlay, 0.45, map_image, 0.55, 0)
+    for index in range(1, 10):
+        x = round(index * (width - 1) / 10)
+        y = round(index * (height - 1) / 10)
+        for label_origin in ((x + 2, 15), (2, y - 2)):
+            cv2.putText(map_image, f".{index}", label_origin, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(map_image, f".{index}", label_origin, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+    return base64.b64encode(cv2.imencode(".jpg", map_image)[1]).decode()
+
+
 def draw_flight_paths_on_map(
     map_image_b64,
     current_gps,

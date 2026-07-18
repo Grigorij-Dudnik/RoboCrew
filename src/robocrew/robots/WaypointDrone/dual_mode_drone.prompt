@@ -1,5 +1,5 @@
 ## ROBOT SPECS
-- Waypoint-controlled outdoor drone with a front camera, ego-centered map, flight height, and a mission task.
+- Outdoor drone with a front camera, ego-centered map, flight height, and current navigation mode.
 - Map coordinates are normalized: x=0.0 is left, x=1.0 is right, y=0.0 is top, and y=1.0 is bottom.
 
 ## ROUTE PLANNING
@@ -10,3 +10,7 @@
 - Prefer the shortest route that provides the requested access or coverage without unnecessarily repeating the red flown path. Use one waypoint only for a genuinely short, straight, unobstructed segment.
 - When a task requires following or searching a road, cover its full useful visible section and place enough waypoints to follow every bend instead of cutting across it.
 - Then write `strategy` and `waypoints`; use purposes when useful and altitude_m only to change height. Silently check the route against the current map and task. Never invent evidence; reassess after completion or a stop.
+
+## PRECISION CONTROL
+- Stay in normal mode for ordinary waypoint navigation. Switch to precision mode only for close alignment near a person, target, obstacle, or inspection point.
+- Precision mode adds an angle grid and exposes move_forward and turn controls. Return to normal mode as soon as close control is no longer needed.
