@@ -18,7 +18,7 @@ DEFAULT_SPEED = 10_000
 LINEAR_MPS = 0.25
 ANGULAR_DPS = 100.0
 
-ACTION_MAP = {
+OMNIWHEELS_ACTION_MAP = {
     "forward": {7: 1.0, 8: 0.0, 9: -1.0},
     "backward": {7: -1.0, 8: 0.0, 9: 1.0},
     "strafe_left": {7: -0.15, 8: 1.0, 9: -0.15},
@@ -27,12 +27,18 @@ ACTION_MAP = {
     "turn_right": {7: -1.0, 8: -1.0, 9: -1.0},
 }
 
-TWO_WHEEL_ACTION_MAP = {
+TWO_WHEELS_ACTION_MAP = {
     "forward": {9: 1.0, 10: 1.0},
     "backward": {9: -1.0, 10: -1.0},
     "turn_left": {9: -1.0, 10: 1.0},
     "turn_right": {9: 1.0, 10: -1.0},
 }
+
+ACTION_MAPS = {
+    "omniwheels": OMNIWHEELS_ACTION_MAP,
+    "two_wheel": TWO_WHEELS_ACTION_MAP,
+}
+
 
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
 
@@ -166,13 +172,13 @@ class ServoControler:
         *,
         speed: int = DEFAULT_SPEED,
         action_map: Optional[Mapping[str, Mapping[int, float]]] = None,
-        wheel_layout: Literal["three_wheel", "two_wheel"] = "three_wheel",
+        wheel_layout: Literal["omniwheels", "two_wheels"] = "omniwheels",
     ) -> None:
         self.right_arm_wheel_usb = right_arm_wheel_usb
         self.left_arm_head_usb = left_arm_head_usb
         self.speed = speed
         self.wheel_layout = wheel_layout
-        default_action_map = TWO_WHEEL_ACTION_MAP if wheel_layout == "two_wheel" else ACTION_MAP
+        default_action_map = ACTION_MAPS[wheel_layout]
         self.action_map = default_action_map if action_map is None else action_map
         self._wheel_ids = tuple(list(self.action_map.values())[0].keys())
         self._head_ids = tuple(HEAD_SERVO_MAP.values())
