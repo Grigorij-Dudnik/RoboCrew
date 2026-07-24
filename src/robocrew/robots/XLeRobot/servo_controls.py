@@ -16,7 +16,6 @@ from lerobot.motors.feetech import FeetechMotorsBus, OperatingMode
 
 DEFAULT_SPEED = 10_000
 LINEAR_MPS = 0.25
-ANGULAR_DPS = 100.0
 
 OMNIWHEELS_ACTION_MAP = {
     "forward": {7: 1.0, 8: 0.0, 9: -1.0},
@@ -37,6 +36,11 @@ TWO_WHEELS_ACTION_MAP = {
 ACTION_MAPS = {
     "omniwheels": OMNIWHEELS_ACTION_MAP,
     "two_wheel": TWO_WHEELS_ACTION_MAP,
+}
+
+ANGULAR_DPS_BY_LAYOUT = {
+    "omniwheels": 100.0,
+    "two_wheel": 50.0,
 }
 
 
@@ -179,6 +183,7 @@ class ServoControler:
         self.speed = speed
         self.wheel_layout = wheel_layout
         default_action_map = ACTION_MAPS[wheel_layout]
+        self.angular_dps = ANGULAR_DPS_BY_LAYOUT[wheel_layout]
         self.action_map = default_action_map if action_map is None else action_map
         self._wheel_ids = tuple(list(self.action_map.values())[0].keys())
         self._head_ids = tuple(HEAD_SERVO_MAP.values())
@@ -277,10 +282,10 @@ class ServoControler:
         self._wheels_run("backward", float(meters) / LINEAR_MPS)
 
     def turn_left(self, degrees: float) -> None:
-        self._wheels_run("turn_left", float(degrees) / ANGULAR_DPS)
+        self._wheels_run("turn_left", float(degrees) / self.angular_dps)
 
     def turn_right(self, degrees: float) -> None:
-        self._wheels_run("turn_right", float(degrees) / ANGULAR_DPS)
+        self._wheels_run("turn_right", float(degrees) / self.angular_dps)
     
     def strafe_left(self, meters: float) -> None:
         self._wheels_run("strafe_left", float(meters) / LINEAR_MPS)
@@ -302,12 +307,12 @@ class ServoControler:
         for wid in self._wheel_ids:
             self.wheel_bus.write("Operating_Mode", wid, OperatingMode.VELOCITY.value)
 
-        self.wheel_bus.enable_torque()
+        self.wheel_bus.enable_torque(list(self._wheel_ids))
 
     def _set_position_mode(self, bus: FeetechMotorsBus, ids: tuple[int, ...]) -> None:
         for sid in ids:
             bus.write("Operating_Mode", sid, OperatingMode.POSITION.value)
-        bus.enable_torque()
+        bus.enable_torque(list(ids))
 
     def apply_arm_modes(self) -> None:
         if hasattr(self, "wheel_bus"):
@@ -321,7 +326,7 @@ class ServoControler:
     def _set_bus_torque(self, bus: FeetechMotorsBus, ids: tuple[int, ...], enabled: bool) -> None:
         fn = getattr(bus, "enable_torque" if enabled else "disable_torque", None)
         if fn:
-            fn()
+            fn(list(ids))
             return
         for sid in ids:
             bus.write("Torque_Enable", sid, int(enabled))
