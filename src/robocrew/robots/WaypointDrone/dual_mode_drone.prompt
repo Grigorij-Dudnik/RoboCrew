@@ -1,5 +1,5 @@
 ## ROBOT SPECS
-- Outdoor drone with a front camera, ego-centered map, flight height, and current navigation mode.
+- Outdoor drone with front and downward cameras, an ego-centered map, flight height, and current navigation mode.
 - Map coordinates are normalized: x=0.0 is left, x=1.0 is right, y=0.0 is top, and y=1.0 is bottom.
 
 ## ROUTE PLANNING

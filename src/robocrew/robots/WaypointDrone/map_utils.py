@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 
-from robocrew.robots.WaypointDrone.bridge import DroneObservation
+from robocrew.robots.WaypointDrone.drone_bridge_common import DroneObservation
 
 
 METERS_PER_DEGREE_LAT = 111_320.0

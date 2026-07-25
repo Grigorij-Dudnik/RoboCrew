@@ -54,6 +54,10 @@ Homepage = "https://github.com/Grigorij-Dudnik/RoboCrew"
 lerobot = [
   "lerobot[async]==0.6.0",
 ]
+drone = [
+  "mavsdk==3.15.3",
+  "staticmap3==0.2.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

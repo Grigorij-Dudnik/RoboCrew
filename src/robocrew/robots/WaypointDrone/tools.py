@@ -39,13 +39,11 @@ def create_stop_route(monitor_state):
 
 
 def create_set_waypoints(
-    ros_bridge,
-    monitor_supervisor=None,
+    drone_bridge,
+    monitor_agent=None,
     flight_map_state=None,
-    silent=False,
-    mode=None,
 ):
-    @tool(extras={"silent": silent, "mode": mode})
+    @tool(extras={"silent": True, "mode": "normal"})
     def set_waypoints(
         situation_reassessment: Annotated[
             str,
@@ -67,12 +65,8 @@ def create_set_waypoints(
         altitude_m: float | None = None,
     ) -> str:
         """Reassess the situation, then plan a normalized-map route."""
-        if ros_bridge.navigation_mode != "normal":
-            return "Waypoint navigation is available only in normal mode. Call go_to_normal_mode first."
         if not waypoints:
             raise ValueError("waypoints must contain at least one waypoint")
-        if ros_bridge.route_active:
-            return "A route is already active."
 
         print(f"Situation reassessment: {situation_reassessment}")
         print(f"Strategy: {strategy}")
@@ -88,10 +82,11 @@ def create_set_waypoints(
             if flight_map_state
             else list(waypoints)
         )
-        ros_bridge.set_waypoints(submitted_waypoints, altitude_m, strategy)
-        if not monitor_supervisor:
-            return "Route submitted."
-        route_state, stop_reason = monitor_supervisor.monitor_active_route()
+        drone_bridge.set_waypoints(submitted_waypoints, altitude_m, strategy)
+        if not monitor_agent:
+            observation = drone_bridge.wait_for_route_end()
+            return f"Route {observation.route_state}."
+        route_state, stop_reason = monitor_agent.monitor_active_route()
         if route_state == "stopped":
             return f"Route stopped by safety checker: {stop_reason}"
         return f"Route {route_state}."
@@ -99,70 +94,65 @@ def create_set_waypoints(
     return set_waypoints
 
 
-def create_move_forward(ros_bridge, mode=None):
-    @tool(extras={"mode": mode})
+def create_finish_task(drone_bridge):
+    @tool("finish_task")
+    def finish_task(report: str = "Task finished") -> str:
+        """Land at the current position, end the drone task, and report the result."""
+        drone_bridge.land()
+        drone_bridge.wait_for_route_end()
+        return report
+
+    return finish_task
+
+
+def create_move_forward(drone_bridge):
+    @tool(extras={"mode": "precision"})
     def move_forward(distance_meters: float) -> str:
         """In precision mode, fly forward by a visually safe distance in meters."""
-        if ros_bridge.navigation_mode != "precision":
-            return "Relative movement is available only in precision mode. Call go_to_precision_mode first."
-        if ros_bridge.route_active:
-            return "A flight command is already active."
-        submission = ros_bridge.move_forward(float(distance_meters))
-        observation = ros_bridge.wait_for_route_end(submission["route_id"])
+        drone_bridge.move_forward(float(distance_meters))
+        observation = drone_bridge.wait_for_route_end()
         return f"Moved forward {float(distance_meters)} meters. Motion {observation.route_state}."
 
     return move_forward
 
 
-def create_turn_left(ros_bridge, mode=None):
-    @tool(extras={"mode": mode})
+def create_turn_left(drone_bridge):
+    @tool(extras={"mode": "precision"})
     def turn_left(angle_degrees: float) -> str:
         """In precision mode, turn left by a visually chosen angle in degrees."""
-        if ros_bridge.navigation_mode != "precision":
-            return "Relative movement is available only in precision mode. Call go_to_precision_mode first."
-        if ros_bridge.route_active:
-            return "A flight command is already active."
-        submission = ros_bridge.turn_left(float(angle_degrees))
-        observation = ros_bridge.wait_for_route_end(submission["route_id"])
+        drone_bridge.turn_left(float(angle_degrees))
+        observation = drone_bridge.wait_for_route_end()
         return f"Turned left {float(angle_degrees)} degrees. Motion {observation.route_state}."
 
     return turn_left
 
 
-def create_turn_right(ros_bridge, mode=None):
-    @tool(extras={"mode": mode})
+def create_turn_right(drone_bridge):
+    @tool(extras={"mode": "precision"})
     def turn_right(angle_degrees: float) -> str:
         """In precision mode, turn right by a visually chosen angle in degrees."""
-        if ros_bridge.navigation_mode != "precision":
-            return "Relative movement is available only in precision mode. Call go_to_precision_mode first."
-        if ros_bridge.route_active:
-            return "A flight command is already active."
-        submission = ros_bridge.turn_right(float(angle_degrees))
-        observation = ros_bridge.wait_for_route_end(submission["route_id"])
+        drone_bridge.turn_right(float(angle_degrees))
+        observation = drone_bridge.wait_for_route_end()
         return f"Turned right {float(angle_degrees)} degrees. Motion {observation.route_state}."
 
     return turn_right
 
 
-def create_go_to_precision_mode(ros_bridge, mode=None):
-    @tool(extras={"mode": mode})
+def create_go_to_precision_mode(drone_bridge):
+    @tool(extras={"mode": "normal"})
     def go_to_precision_mode() -> str:
         """Switch to precision mode for close-distance forward movement and turns."""
-        if ros_bridge.route_active:
-            return "Cannot switch navigation mode while a flight command is active."
-        ros_bridge.set_navigation_mode("precision")
+        drone_bridge.set_navigation_mode("precision")
         return "Drone set to precision mode."
 
     return go_to_precision_mode
 
 
-def create_go_to_normal_mode(ros_bridge, mode=None):
-    @tool(extras={"mode": mode})
+def create_go_to_normal_mode(drone_bridge):
+    @tool(extras={"mode": "precision"})
     def go_to_normal_mode() -> str:
         """Switch to normal mode for long-distance waypoint navigation."""
-        if ros_bridge.route_active:
-            return "Cannot switch navigation mode while a flight command is active."
-        ros_bridge.set_navigation_mode("normal")
+        drone_bridge.set_navigation_mode("normal")
         return "Drone set to normal mode."
 
     return go_to_normal_mode

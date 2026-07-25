@@ -18,13 +18,17 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 setattr(langchain.chat_models, "init_chat_model", MagicMock())
 
 from robocrew.core.tools import finish_task
-from robocrew.robots.WaypointDrone.bridge import DroneObservation, DroneRosBridge
+from robocrew.robots.WaypointDrone.drone_bridge_common import DroneObservation
+from robocrew.robots.WaypointDrone.drone_bridge_isaac_ros import IsaacRosBridge
 from robocrew.robots.WaypointDrone.map_utils import (
     draw_flight_paths_on_map,
     draw_normalized_grid_on_map,
     normalized_waypoints_to_gps,
 )
-from robocrew.robots.WaypointDrone.monitoring import InFlightMonitorState, InFlightMonitorSupervisor
+from robocrew.robots.WaypointDrone.in_flight_monitor_agent import (
+    InFlightMonitorAgent,
+    InFlightMonitorState,
+)
 from robocrew.robots.WaypointDrone.tools import (
     create_go_to_normal_mode,
     create_go_to_precision_mode,
@@ -55,18 +59,15 @@ class FakeRosBridge:
 
     def move_forward(self, distance_meters):
         self.relative_motion_calls.append(("move_forward", distance_meters))
-        return {"route_id": "motion-1"}
 
     def turn_left(self, angle_degrees):
         self.relative_motion_calls.append(("turn_left", angle_degrees))
-        return {"route_id": "motion-1"}
 
     def turn_right(self, angle_degrees):
         self.relative_motion_calls.append(("turn_right", angle_degrees))
-        return {"route_id": "motion-1"}
 
-    def wait_for_route_end(self, route_id):
-        return DroneObservation(route_id=route_id, route_state="completed")
+    def wait_for_route_end(self):
+        return DroneObservation(route_state="completed")
 
 
 class TestWaypointDroneTools(unittest.TestCase):
@@ -125,8 +126,8 @@ class TestWaypointDroneTools(unittest.TestCase):
                 }
             )
 
-    def test_set_waypoints_silent_mode_only_suppresses_generic_call_log(self):
-        tool = create_set_waypoints(FakeRosBridge(), silent=True)
+    def test_set_waypoints_suppresses_only_the_generic_call_log(self):
+        tool = create_set_waypoints(FakeRosBridge())
 
         with patch("builtins.print") as mock_print:
             tool.invoke(
@@ -233,38 +234,37 @@ class TestWaypointDroneTools(unittest.TestCase):
         self.assertEqual(ros_bridge.navigation_mode, "normal")
 
 
-class TestInFlightMonitorSupervisor(unittest.TestCase):
+class TestInFlightMonitorAgent(unittest.TestCase):
     def test_stops_route_and_waits_for_final_observation(self):
-        executing_observation = DroneObservation(route_id="route-1", route_state="executing")
-        stopped_observation = DroneObservation(route_id="route-1", route_state="stopped")
+        executing_observation = DroneObservation(route_state="executing")
+        stopped_observation = DroneObservation(route_state="stopped")
         monitor_state = InFlightMonitorState()
 
         ros_bridge = MagicMock()
-        ros_bridge.current_route_id = "route-1"
         ros_bridge.route_active = True
-        ros_bridge.observation_sequence = 0
+        ros_bridge.observation_number = 0
         ros_bridge.latest_observation = executing_observation
         ros_bridge.wait_for_observation.return_value = (executing_observation, 1)
         ros_bridge.wait_for_route_end.return_value = stopped_observation
 
-        monitor_agent = MagicMock()
+        monitor_agent = InFlightMonitorAgent.__new__(InFlightMonitorAgent)
+        monitor_agent.drone_bridge = ros_bridge
+        monitor_agent.monitor_state = monitor_state
+        monitor_agent.process_observation = MagicMock()
         monitor_agent.process_observation.side_effect = lambda _observation: (
             setattr(monitor_state, "decision", "stop"),
             setattr(monitor_state, "stop_reason", "Tree ahead"),
         )
         flight_map_state = MagicMock()
-
-        supervisor = InFlightMonitorSupervisor(
-            ros_bridge,
-            monitor_agent,
-            flight_map_state,
-            monitor_state,
+        monitor_agent.flight_map_state = flight_map_state
+        ros_bridge.wait_for_route_end.side_effect = lambda: setattr(
+            ros_bridge, "latest_observation", stopped_observation
         )
 
-        self.assertEqual(supervisor.monitor_active_route(), ("stopped", "Tree ahead"))
+        self.assertEqual(monitor_agent.monitor_active_route(), ("stopped", "Tree ahead"))
         monitor_agent.process_observation.assert_called_once_with(executing_observation)
-        ros_bridge.stop_route.assert_called_once_with("Tree ahead")
-        ros_bridge.wait_for_route_end.assert_called_once_with("route-1")
+        ros_bridge.stop_route.assert_called_once_with()
+        ros_bridge.wait_for_route_end.assert_called_once_with()
         flight_map_state.record_observation.assert_called_once_with(stopped_observation)
 
 
@@ -321,7 +321,7 @@ class TestWaypointDroneMapUtils(unittest.TestCase):
 
 class TestWaypointDroneBridge(unittest.TestCase):
     def test_mode_switch_reuses_latest_observation_once(self):
-        bridge = DroneRosBridge.__new__(DroneRosBridge)
+        bridge = IsaacRosBridge.__new__(IsaacRosBridge)
         bridge.latest_observation = DroneObservation(gps={"lat": 52.0, "lon": 21.0})
         bridge._observation_changed = MagicMock()
         bridge._observation_changed.__enter__.return_value = bridge._observation_changed
@@ -334,7 +334,7 @@ class TestWaypointDroneBridge(unittest.TestCase):
         self.assertFalse(bridge._reuse_latest_observation)
 
     def test_get_observation_waits_for_first_message(self):
-        bridge = DroneRosBridge.__new__(DroneRosBridge)
+        bridge = IsaacRosBridge.__new__(IsaacRosBridge)
         bridge.latest_observation = DroneObservation()
         bridge._has_observation = False
         bridge._reuse_latest_observation = False
@@ -380,17 +380,16 @@ class TestWaypointDroneBridge(unittest.TestCase):
         std_msgs_msg.String = String
 
         with patch.dict(sys.modules, {"rclpy": rclpy, "std_msgs": std_msgs, "std_msgs.msg": std_msgs_msg}):
-            bridge = DroneRosBridge()
+            bridge = IsaacRosBridge()
 
         waypoints = [{"x": 0.25, "y": 0.75}]
 
-        submission_result = bridge.set_waypoints(
+        bridge.set_waypoints(
             waypoints,
             altitude_m=18.0,
             strategy="Survey the nearest roof.",
         )
 
-        self.assertEqual(submission_result["status"], "submitted")
         self.assertEqual(len(published), 1)
         command_payload = json.loads(published[0].data)
         self.assertEqual(command_payload["waypoints"], waypoints)
@@ -404,20 +403,19 @@ class TestWaypointDroneBridge(unittest.TestCase):
             def __init__(self):
                 self.data = ""
 
-        bridge = DroneRosBridge.__new__(DroneRosBridge)
+        bridge = IsaacRosBridge.__new__(IsaacRosBridge)
         bridge._string_msg = String
         bridge._command_pub = MagicMock()
         bridge._command_pub.publish.side_effect = published.append
         bridge.latest_observation = DroneObservation(gps={"lat": 52.0, "lon": 21.0})
         bridge._reuse_latest_observation = True
 
-        submission = bridge.turn_right(25.0)
+        bridge.turn_right(25.0)
 
         command_payload = json.loads(published[0].data)
         self.assertEqual(command_payload["command"], "relative_motion")
         self.assertEqual(command_payload["motion"], "turn_right")
         self.assertEqual(command_payload["angle_degrees"], 25.0)
-        self.assertEqual(command_payload["route_id"], submission["route_id"])
         self.assertFalse(bridge._reuse_latest_observation)
 
 
@@ -450,7 +448,7 @@ class TestWaypointDroneAgent(unittest.TestCase):
                 model="fake-model",
                 tools=[],
                 name="Mission Agent",
-                ros_bridge=ros_bridge,
+                drone_bridge=ros_bridge,
             )
             mission_agent.task = "Inspect the open road."
 
@@ -599,7 +597,7 @@ class TestWaypointDroneAgent(unittest.TestCase):
             mission_agent = WaypointDroneAgent(
                 model="fake-model",
                 tools=[],
-                ros_bridge=ros_bridge,
+                drone_bridge=ros_bridge,
             )
             mission_agent.navigation_mode = "precision"
 
@@ -637,15 +635,15 @@ class TestWaypointDroneAgent(unittest.TestCase):
             mission_agent = WaypointDroneAgent(
                 model="fake-model",
                 tools=[
-                    create_set_waypoints(ros_bridge, mode="normal"),
-                    create_move_forward(ros_bridge, mode="precision"),
-                    create_turn_left(ros_bridge, mode="precision"),
-                    create_turn_right(ros_bridge, mode="precision"),
-                    create_go_to_precision_mode(ros_bridge, mode="normal"),
-                    create_go_to_normal_mode(ros_bridge, mode="precision"),
+                    create_set_waypoints(ros_bridge),
+                    create_move_forward(ros_bridge),
+                    create_turn_left(ros_bridge),
+                    create_turn_right(ros_bridge),
+                    create_go_to_precision_mode(ros_bridge),
+                    create_go_to_normal_mode(ros_bridge),
                     finish_task,
                 ],
-                ros_bridge=ros_bridge,
+                drone_bridge=ros_bridge,
             )
 
             self.assertEqual(
