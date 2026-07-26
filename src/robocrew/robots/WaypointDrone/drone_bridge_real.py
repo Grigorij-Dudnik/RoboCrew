@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import glob
+import importlib.util
 import io
 import math
+import platform
 import threading
 
-import cv2
 from mavsdk import System
 from mavsdk.mission import MissionItem, MissionPlan
 from mavsdk.offboard import VelocityBodyYawspeed
@@ -17,6 +19,13 @@ from staticmap3 import StaticMap
 
 from robocrew.robots.WaypointDrone.drone_bridge_common import DroneBridge, DroneObservation
 
+
+if platform.machine() == "aarch64" and (cv2_path := next(glob.iglob("/usr/lib/python3/dist-packages/cv2*.so"), None)):
+    cv2_spec = importlib.util.spec_from_file_location("cv2", cv2_path)
+    cv2 = importlib.util.module_from_spec(cv2_spec)
+    cv2_spec.loader.exec_module(cv2)
+else:
+    import cv2
 
 SERIAL_ADDRESS = "serial:///dev/ttyTHS1:921600"
 FRONT_SENSOR_ID = 0
@@ -56,10 +65,8 @@ def _map_image(static_map, latitude: float, longitude: float) -> str:
 def _mission_item(waypoint, altitude_m: float, fly_through: bool):
     nan = float("nan")
     return MissionItem(
-        float(waypoint["lat"]),
-        float(waypoint["lon"]),
-        float(altitude_m),
-        MISSION_SPEED_M_S,
+        float(waypoint["lat"]), float(waypoint["lon"]),
+        float(altitude_m), MISSION_SPEED_M_S,
         fly_through,
         nan, nan,
         MissionItem.CameraAction.NONE,
@@ -86,9 +93,8 @@ class MavsdkDroneBridge(DroneBridge):
         async for state in self.drone.core.connection_state():
             if state.is_connected:
                 break
-        async for health in self.drone.telemetry.health():
-            if health.is_global_position_ok and health.is_home_position_ok:
-                break
+        await self.drone.telemetry.set_rate_position(1.0)
+        await self.drone.telemetry.set_rate_attitude_euler(1.0)
         self.front_camera = cv2.VideoCapture(_camera_pipeline(FRONT_SENSOR_ID), cv2.CAP_GSTREAMER)
         self.down_camera = cv2.VideoCapture(_camera_pipeline(DOWN_SENSOR_ID), cv2.CAP_GSTREAMER)
         self.static_map = StaticMap(MAP_SIZE_PX, MAP_SIZE_PX)
@@ -127,11 +133,10 @@ class MavsdkDroneBridge(DroneBridge):
 
     async def _capture_observation(self, route_state="idle") -> None:
         position, attitude = await asyncio.gather(
-            anext(self.drone.telemetry.position()),
-            anext(self.drone.telemetry.attitude_euler()),
+            anext(self.drone.telemetry.position()), anext(self.drone.telemetry.attitude_euler()),
         )
         latitude = position.latitude_deg
-        observation = DroneObservation(
+        self._store_observation(DroneObservation(
             front_image_b64=_camera_jpeg(self.front_camera),
             down_image_b64=_camera_jpeg(self.down_camera),
             map_image_b64=_map_image(self.static_map, latitude, position.longitude_deg),
@@ -140,16 +145,12 @@ class MavsdkDroneBridge(DroneBridge):
             height_m=position.relative_altitude_m,
             yaw_rad=math.radians(90.0 - attitude.yaw_deg),
             route_state=route_state,
-        )
-        self._store_observation(observation)
+        ))
 
     async def _fly_route(self, waypoints, altitude_m) -> None:
         if altitude_m is None:
             altitude_m = self.latest_observation.height_m
-        items = [
-            _mission_item(point, altitude_m, index < len(waypoints) - 1)
-            for index, point in enumerate(waypoints)
-        ]
+        items = [_mission_item(point, altitude_m, index < len(waypoints) - 1) for index, point in enumerate(waypoints)]
         await self.drone.mission.set_return_to_launch_after_mission(False)
         await self.drone.mission.upload_mission(MissionPlan(items))
         await self.drone.mission.start_mission()
@@ -183,9 +184,7 @@ class MavsdkDroneBridge(DroneBridge):
         await self._capture_observation("stopped")
 
     async def _move_body(self, duration, forward, yaw_speed) -> None:
-        await self.drone.offboard.set_velocity_body(
-            VelocityBodyYawspeed(forward, 0.0, 0.0, yaw_speed)
-        )
+        await self.drone.offboard.set_velocity_body(VelocityBodyYawspeed(forward, 0.0, 0.0, yaw_speed))
         await asyncio.sleep(duration)
         await self.drone.offboard.set_velocity_body(STOP_SETPOINT)
         await self._capture_observation("completed")
