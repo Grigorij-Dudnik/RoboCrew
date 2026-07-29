@@ -30,11 +30,11 @@ def normalized_waypoints_to_gps(normalized_waypoints, center_gps, map_span_m):
 
 def draw_heading_marker_on_map(map_image, yaw_rad):
     center_x, center_y = map_image.shape[1] // 2, map_image.shape[0] // 2
-    arrow_size = max(3, min(map_image.shape[:2]) // 80)
+    arrow_size = max(3, min(map_image.shape[:2]) // 70)
     marker_points = np.array([
         (
-            center_x + arrow_size * 2.0 * math.cos(yaw_rad),
-            center_y - arrow_size * 2.0 * math.sin(yaw_rad),
+            center_x + arrow_size * 4.0 * math.cos(yaw_rad),
+            center_y - arrow_size * 4.0 * math.sin(yaw_rad),
         ),
         (
             center_x + arrow_size * math.cos(yaw_rad + 2.4),
