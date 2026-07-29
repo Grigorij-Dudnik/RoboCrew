@@ -45,8 +45,8 @@ def draw_heading_marker_on_map(map_image, yaw_rad):
             center_y - arrow_size * math.sin(yaw_rad - 2.4),
         ),
     ], dtype=np.int32)
+    cv2.polylines(map_image, [marker_points], True, (0, 0, 0), 3, cv2.LINE_AA)
     cv2.fillPoly(map_image, [marker_points], (0, 255, 255))
-    cv2.polylines(map_image, [marker_points], True, (0, 0, 255), 3, cv2.LINE_AA)
 
 
 def draw_normalized_grid_on_map(map_image_b64):
