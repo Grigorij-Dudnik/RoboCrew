@@ -78,8 +78,6 @@ def draw_flight_paths_on_map(
     planned_route_gps,
     yaw_rad=0.0,
 ):
-    if len(flown_path_gps) < 2 and not planned_route_gps:
-        return map_image_b64
     map_image = cv2.imdecode(np.frombuffer(base64.b64decode(map_image_b64), np.uint8), cv2.IMREAD_COLOR)
     meters_per_degree_lon = METERS_PER_DEGREE_LAT * math.cos(math.radians(current_gps["lat"]))
 
