@@ -16,9 +16,8 @@ from lerobot.motors.feetech import FeetechMotorsBus, OperatingMode
 
 DEFAULT_SPEED = 10_000
 LINEAR_MPS = 0.25
-ANGULAR_DPS = 100.0
 
-ACTION_MAP = {
+OMNIWHEELS_ACTION_MAP = {
     "forward": {7: 1.0, 8: 0.0, 9: -1.0},
     "backward": {7: -1.0, 8: 0.0, 9: 1.0},
     "strafe_left": {7: -0.15, 8: 1.0, 9: -0.15},
@@ -26,6 +25,24 @@ ACTION_MAP = {
     "turn_left": {7: 1.0, 8: 1.0, 9: 1.0},
     "turn_right": {7: -1.0, 8: -1.0, 9: -1.0},
 }
+
+TWO_WHEELS_ACTION_MAP = {
+    "forward": {9: 1.0, 10: 1.0},
+    "backward": {9: -1.0, 10: -1.0},
+    "turn_left": {9: -1.0, 10: 1.0},
+    "turn_right": {9: 1.0, 10: -1.0},
+}
+
+ACTION_MAPS = {
+    "omniwheels": OMNIWHEELS_ACTION_MAP,
+    "two_wheel": TWO_WHEELS_ACTION_MAP,
+}
+
+ANGULAR_DPS_BY_LAYOUT = {
+    "omniwheels": 100.0,
+    "two_wheel": 50.0,
+}
+
 
 HEAD_SERVO_MAP = {"yaw": 7, "pitch": 8}
 
@@ -159,11 +176,15 @@ class ServoControler:
         *,
         speed: int = DEFAULT_SPEED,
         action_map: Optional[Mapping[str, Mapping[int, float]]] = None,
+        wheel_layout: Literal["omniwheels", "two_wheels"] = "omniwheels",
     ) -> None:
         self.right_arm_wheel_usb = right_arm_wheel_usb
         self.left_arm_head_usb = left_arm_head_usb
         self.speed = speed
-        self.action_map = ACTION_MAP if action_map is None else action_map
+        self.wheel_layout = wheel_layout
+        default_action_map = ACTION_MAPS[wheel_layout]
+        self.angular_dps = ANGULAR_DPS_BY_LAYOUT[wheel_layout]
+        self.action_map = default_action_map if action_map is None else action_map
         self._wheel_ids = tuple(list(self.action_map.values())[0].keys())
         self._head_ids = tuple(HEAD_SERVO_MAP.values())
         self._right_arm_ids = tuple(ARM_SERVO_MAPS["right"].values())
@@ -174,19 +195,21 @@ class ServoControler:
         right_arm_calibration = _load_arm_calibration("right_arm.json", self._right_arm_ids, right_arm_wheel_usb)
         left_arm_calibration = _load_arm_calibration("left_arm.json", self._left_arm_ids, left_arm_head_usb)
 
-        # Initialize FeetechMotorsBus with the three wheel motors
+        # Initialize FeetechMotorsBus with the wheel motors on the right-arm/base bus.
         if right_arm_wheel_usb:
             arm_motors = {
                 aid: Motor(aid, "sts3215", POSITION_NORM_MODE)
                 for aid in self._right_arm_ids
             }
+            wheel_motors = {
+                wid: Motor(wid, "sts3215", MotorNormMode.RANGE_M100_100)
+                for wid in self._wheel_ids
+            }
             self.wheel_bus = FeetechMotorsBus(
                 port=right_arm_wheel_usb,
                 motors={
                     **arm_motors,
-                    7: Motor(7, "sts3215", MotorNormMode.RANGE_M100_100),
-                    8: Motor(8, "sts3215", MotorNormMode.RANGE_M100_100),
-                    9: Motor(9, "sts3215", MotorNormMode.RANGE_M100_100),
+                    **wheel_motors,
                 },
                 calibration=right_arm_calibration,
             )
@@ -242,6 +265,8 @@ class ServoControler:
         self.wheel_bus.sync_write("Goal_Velocity", payload)
 
     def _wheels_run(self, action: str, duration: float) -> None:
+        if action not in self.action_map:
+            raise NotImplementedError(f"'{action}' is not supported by the {self.wheel_layout} XLeRobot base.")
         if duration > 0:
             multipliers = self.action_map[action]
             payload = {wid: int(self.speed * factor) for wid, factor in multipliers.items()}
@@ -257,10 +282,10 @@ class ServoControler:
         self._wheels_run("backward", float(meters) / LINEAR_MPS)
 
     def turn_left(self, degrees: float) -> None:
-        self._wheels_run("turn_left", float(degrees) / ANGULAR_DPS)
+        self._wheels_run("turn_left", float(degrees) / self.angular_dps)
 
     def turn_right(self, degrees: float) -> None:
-        self._wheels_run("turn_right", float(degrees) / ANGULAR_DPS)
+        self._wheels_run("turn_right", float(degrees) / self.angular_dps)
     
     def strafe_left(self, meters: float) -> None:
         self._wheels_run("strafe_left", float(meters) / LINEAR_MPS)
@@ -282,12 +307,12 @@ class ServoControler:
         for wid in self._wheel_ids:
             self.wheel_bus.write("Operating_Mode", wid, OperatingMode.VELOCITY.value)
 
-        self.wheel_bus.enable_torque()
+        self.wheel_bus.enable_torque(list(self._wheel_ids))
 
     def _set_position_mode(self, bus: FeetechMotorsBus, ids: tuple[int, ...]) -> None:
         for sid in ids:
             bus.write("Operating_Mode", sid, OperatingMode.POSITION.value)
-        bus.enable_torque()
+        bus.enable_torque(list(ids))
 
     def apply_arm_modes(self) -> None:
         if hasattr(self, "wheel_bus"):
@@ -301,7 +326,7 @@ class ServoControler:
     def _set_bus_torque(self, bus: FeetechMotorsBus, ids: tuple[int, ...], enabled: bool) -> None:
         fn = getattr(bus, "enable_torque" if enabled else "disable_torque", None)
         if fn:
-            fn()
+            fn(list(ids))
             return
         for sid in ids:
             bus.write("Torque_Enable", sid, int(enabled))
