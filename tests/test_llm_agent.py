@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
 from langchain_core.messages import HumanMessage, ToolMessage
 
 
-def make_agent():
+def make_agent(name=None):
     with patch("robocrew.core.LLMAgent.init_chat_model") as mock_llm_factory:
         mock_llm_factory.return_value.bind_tools.return_value = MagicMock()
         from robocrew.core.LLMAgent import LLMAgent
@@ -17,6 +17,7 @@ def make_agent():
             model="fake-model",
             tools=[],
             main_camera=MagicMock(),
+            name=name,
             servo_controler=None,
         )
 
@@ -84,6 +85,25 @@ class TestMainLoopContent(unittest.TestCase):
         human_messages = [m for m in agent.message_history if getattr(m, "type", None) == "human"]
         self.assertIn({"type": "text", "text": "\n\nYour task is: 'Go to the kitchen'"}, human_messages[0].content)
 
+    def test_silent_tool_hides_call_arguments(self):
+        agent = make_agent()
+        quiet_tool = MagicMock()
+        quiet_tool.name = "quiet_tool"
+        quiet_tool.extras = {"silent": True}
+        agent.tool_name_to_tool = {"quiet_tool": quiet_tool}
+        agent.execute_tool_calls = MagicMock()
+        response = self._response()
+        response.tool_calls = [
+            {"name": "quiet_tool", "args": {"secret": "long value"}, "id": "quiet-call"}
+        ]
+        agent.llm.invoke.return_value = response
+
+        with patch("builtins.print") as mock_print:
+            agent.invoke_llm_with_message(HumanMessage(content="Run quietly"))
+
+        printed = [call.args[0] for call in mock_print.call_args_list]
+        self.assertNotIn("Calling quiet_tool with {'secret': 'long value'} args", printed)
+
 
 class TestInvokeTool(unittest.TestCase):
 
@@ -115,6 +135,18 @@ class TestInvokeTool(unittest.TestCase):
         _, additional = agent.invoke_tool({"name": "look_around", "args": {}, "id": "c2"})
         self.assertIsNotNone(additional)
         self.assertIsInstance(additional, HumanMessage)
+
+    def test_named_agent_labels_tool_trace(self):
+        agent = make_agent(name="Mission Agent")
+        mock_tool = self._make_mock_tool("move_tool", "moved")
+        agent.tool_name_to_tool = {"move_tool": mock_tool}
+
+        agent.invoke_tool({"name": "move_tool", "args": {"distance_meters": 1.5}, "id": "call_4"})
+
+        trace_config = mock_tool.invoke.call_args.kwargs["config"]
+        self.assertEqual(trace_config["run_name"], "Mission Agent / move_tool")
+        self.assertEqual(trace_config["tags"], ["agent:Mission Agent"])
+        self.assertEqual(trace_config["metadata"]["agent_name"], "Mission Agent")
 
 
 if __name__ == "__main__":

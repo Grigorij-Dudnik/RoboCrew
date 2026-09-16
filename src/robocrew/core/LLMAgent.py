@@ -84,9 +84,8 @@ class LLMAgent():
 
         llm = init_chat_model(model, model_kwargs=model_kwargs or {})
         #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
-        self.llm = llm.bind_tools(tools)#, parallel_tool_calls=False)
-        self.tools = tools
-        self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
+        self._llm_without_tools = llm
+        self.bind_tools(tools)
         self.system_message = SystemMessage(content=system_prompt)
         self.message_history = [self.system_message]
         self.history_len = history_len
@@ -99,12 +98,22 @@ class LLMAgent():
             self.servo_controler.reset_head_position()
             self.servo_controler.set_saved_position("default", "both")  # optionally if you have saved positions (example 5_xlerobot_test_save_recall_positions), set a default position for both arms before starting the agent.
 
+    def bind_tools(self, tools, tool_choice=None):
+        self.tools = list(tools)
+        self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
+        kwargs = {"tool_choice": tool_choice} if tool_choice else {}
+        self.llm = self._llm_without_tools.bind_tools(self.tools, **kwargs)
+
 
     def invoke_tool(self, tool_call):
         # convert string to real function
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
         args = tool_call["args"]
-        tool_output = requested_tool.invoke(args)
+        trace_config = self.trace_config(f"{self.name} / {tool_call['name']}")
+        if trace_config:
+            tool_output = requested_tool.invoke(args, config=trace_config)
+        else:
+            tool_output = requested_tool.invoke(args)
         # f aitional output is present
         if isinstance(tool_output, tuple) and len(tool_output) == 2:
             additional_output = HumanMessage(content=tool_output[1])
@@ -112,6 +121,15 @@ class LLMAgent():
         else:
             additional_output = None
         return ToolMessage(tool_output, tool_call_id=tool_call["id"]), additional_output
+
+    def trace_config(self, run_name=None):
+        if not self.name:
+            return None
+        return {
+            "run_name": run_name or self.name,
+            "tags": [f"agent:{self.name}"],
+            "metadata": {"agent_name": self.name},
+        }
     
     def cut_off_context(self, nr_of_loops):
         """
@@ -128,6 +146,9 @@ class LLMAgent():
 
     def extra_loop_content(self):
         return []
+
+    def messages_for_model(self):
+        return self.message_history
 
     def main_loop_content(self):
         camera_images = self.fetch_camera_images_base64()
@@ -149,13 +170,19 @@ class LLMAgent():
 
     def invoke_llm_with_message(self, message):
         self.message_history.append(message)
-        response = self.llm.invoke(self.message_history)
+        trace_config = self.trace_config()
+        if trace_config:
+            response = self.llm.invoke(self.messages_for_model(), config=trace_config)
+        else:
+            response = self.llm.invoke(self.messages_for_model())
         print(response.content)
         reasoning_tokens = response.usage_metadata.get('output_token_details', {}).get('reasoning', 0)
         if reasoning_tokens:
             print(f"[thinking: {reasoning_tokens} tokens]")
         for tool_call in response.tool_calls:
-            print(f"Calling {tool_call['name']} with {tool_call['args']} args")
+            requested_tool = self.tool_name_to_tool[tool_call["name"]]
+            if not (requested_tool.extras or {}).get("silent", False):
+                print(f"Calling {tool_call['name']} with {tool_call['args']} args")
         
         
         self.message_history.append(response)
