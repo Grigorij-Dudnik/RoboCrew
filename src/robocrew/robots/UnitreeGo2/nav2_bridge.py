@@ -122,7 +122,7 @@ class UnitreeGo2NavBridge:
             OccupancyGrid, "/map", self._on_map, map_qos
         )
         self.node.create_subscription(
-            PoseWithCovarianceStamped, "/amcl_pose", self._on_pose, 10
+            PoseWithCovarianceStamped, "/pose", self._on_pose, 10
         )
         self.node.create_subscription(Path, "/plan", self._on_plan, 10)
         self._waypoint_client = ActionClient(
