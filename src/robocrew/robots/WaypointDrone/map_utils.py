@@ -49,7 +49,7 @@ def draw_heading_marker_on_map(map_image, yaw_rad):
     cv2.fillPoly(map_image, [marker_points], (0, 255, 255))
 
 
-def draw_normalized_grid_on_map(map_image_b64):
+def draw_normalized_grid_on_map(map_image_b64, grid_color=(255, 255, 255)):
     map_image = cv2.imdecode(
         np.frombuffer(base64.b64decode(map_image_b64), np.uint8),
         cv2.IMREAD_COLOR,
@@ -59,8 +59,8 @@ def draw_normalized_grid_on_map(map_image_b64):
     for index in range(1, 10):
         x = round(index * (width - 1) / 10)
         y = round(index * (height - 1) / 10)
-        cv2.line(overlay, (x, 0), (x, height - 1), (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.line(overlay, (0, y), (width - 1, y), (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.line(overlay, (x, 0), (x, height - 1), grid_color, 1, cv2.LINE_AA)
+        cv2.line(overlay, (0, y), (width - 1, y), grid_color, 1, cv2.LINE_AA)
     map_image = cv2.addWeighted(overlay, 0.45, map_image, 0.55, 0)
     for index in range(1, 10):
         x = round(index * (width - 1) / 10)
