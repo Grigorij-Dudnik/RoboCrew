@@ -27,9 +27,6 @@ from rclpy.qos import (
 )
 from sensor_msgs.msg import CompressedImage
 
-from robocrew.robots.WaypointDrone.map_utils import draw_normalized_grid_on_map
-
-
 @dataclass(frozen=True)
 class MapMetadata:
     width: int
@@ -434,6 +431,7 @@ class UnitreeGo2NavBridge:
         image = np.flipud(image)
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
+        self._draw_normalized_grid(image)
         self._draw_path(image, self._state.travelled_path, metadata, (0, 0, 255))
         planned_path = (
             self._state.global_plan
@@ -449,8 +447,40 @@ class UnitreeGo2NavBridge:
         encoded, jpeg = cv2.imencode(".jpg", image)
         if not encoded:
             raise RuntimeError("failed to encode Nav2 map as JPEG")
-        map_image_b64 = base64.b64encode(jpeg).decode("ascii")
-        return draw_normalized_grid_on_map(map_image_b64)
+        return base64.b64encode(jpeg).decode("ascii")
+
+    @staticmethod
+    def _draw_normalized_grid(image: np.ndarray) -> None:
+        height, width = image.shape[:2]
+        for index in range(1, 10):
+            x = round(index * (width - 1) / 10)
+            y = round(index * (height - 1) / 10)
+            cv2.line(image, (x, 0), (x, height - 1), (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.line(image, (x, 0), (x, height - 1), (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.line(image, (0, y), (width - 1, y), (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.line(image, (0, y), (width - 1, y), (255, 255, 255), 1, cv2.LINE_AA)
+            for label_origin in ((x + 3, 16), (3, y - 3)):
+                label = f".{index}"
+                cv2.putText(
+                    image,
+                    label,
+                    label_origin,
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.45,
+                    (0, 0, 0),
+                    4,
+                    cv2.LINE_AA,
+                )
+                cv2.putText(
+                    image,
+                    label,
+                    label_origin,
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.45,
+                    (255, 255, 255),
+                    1,
+                    cv2.LINE_AA,
+                )
 
     def _draw_path(
         self,
@@ -465,7 +495,8 @@ class UnitreeGo2NavBridge:
             [self._world_to_image(pose.x, pose.y, metadata) for pose in path],
             dtype=np.int32,
         )
-        cv2.polylines(image, [points], False, color, 3, cv2.LINE_AA)
+        cv2.polylines(image, [points], False, (0, 0, 0), 7, cv2.LINE_AA)
+        cv2.polylines(image, [points], False, color, 4, cv2.LINE_AA)
 
     def _draw_waypoints(
         self, image: np.ndarray, metadata: MapMetadata
@@ -477,7 +508,18 @@ class UnitreeGo2NavBridge:
             remaining, start=self._state.current_waypoint + 1
         ):
             point = self._world_to_image(waypoint.x, waypoint.y, metadata)
-            cv2.circle(image, point, 6, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.circle(image, point, 8, (0, 0, 0), 4, cv2.LINE_AA)
+            cv2.circle(image, point, 8, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(
+                image,
+                str(index),
+                (point[0] + 7, point[1] - 7),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.45,
+                (0, 0, 0),
+                4,
+                cv2.LINE_AA,
+            )
             cv2.putText(
                 image,
                 str(index),
@@ -485,7 +527,7 @@ class UnitreeGo2NavBridge:
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.45,
                 (255, 0, 0),
-                2,
+                1,
                 cv2.LINE_AA,
             )
 
@@ -497,15 +539,26 @@ class UnitreeGo2NavBridge:
             return
         center = self._world_to_image(pose.x, pose.y, metadata)
         image_angle = metadata.origin_yaw - pose.yaw
-        length = max(10, min(image.shape[:2]) // 40)
-        tip = (
-            int(round(center[0] + length * math.cos(image_angle))),
-            int(round(center[1] + length * math.sin(image_angle))),
+        marker_size = max(8, min(image.shape[:2]) // 55)
+        points = np.asarray(
+            [
+                (
+                    center[0] + marker_size * 3.0 * math.cos(image_angle),
+                    center[1] + marker_size * 3.0 * math.sin(image_angle),
+                ),
+                (
+                    center[0] + marker_size * math.cos(image_angle + 2.4),
+                    center[1] + marker_size * math.sin(image_angle + 2.4),
+                ),
+                (
+                    center[0] + marker_size * math.cos(image_angle - 2.4),
+                    center[1] + marker_size * math.sin(image_angle - 2.4),
+                ),
+            ],
+            dtype=np.int32,
         )
-        cv2.circle(image, center, 5, (0, 255, 255), -1, cv2.LINE_AA)
-        cv2.arrowedLine(
-            image, center, tip, (0, 255, 255), 3, cv2.LINE_AA, tipLength=0.35
-        )
+        cv2.fillConvexPoly(image, points, (0, 255, 255), cv2.LINE_AA)
+        cv2.polylines(image, [points], True, (0, 0, 0), 4, cv2.LINE_AA)
 
     @staticmethod
     def _image_to_world(
