@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated, TypedDict
+from typing import Annotated
 
 from langchain_core.tools import tool
+from typing_extensions import TypedDict
 
 from robocrew.robots.UnitreeGo2.nav2_bridge import MapPose
 
