@@ -87,7 +87,7 @@ class TestXLeRobotListening(unittest.TestCase):
             )
 
         say_tool = agent.tool_name_to_tool["say"]
-        with patch("robocrew.core.tools.speak_and_play"):
+        with patch("robocrew.core.voice_synth.speak_and_play"):
             say_tool.invoke({"query": "Hello"})
 
         receiver.stop_listening.assert_called_once()

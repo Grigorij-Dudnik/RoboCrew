@@ -15,7 +15,6 @@ class XLeRobotAgent(LLMAgent):
 		thinking_level: str | None = None,
 		camera_fov: int = 90,
 		history_len: int | None = None,
-		use_memory: bool = False,
 		main_camera=None,
 		sounddevice_index_or_alias=None,
 		servo_controler=None,
@@ -57,8 +56,7 @@ class XLeRobotAgent(LLMAgent):
 			thinking_level=thinking_level,
 			camera_fov=camera_fov,
 			servo_controler=servo_controler,
-			history_len=history_len,
-			use_memory=use_memory
+			history_len=history_len
 		)
 
 	def check_for_new_speech(self):

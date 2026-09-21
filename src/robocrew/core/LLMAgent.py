@@ -1,4 +1,3 @@
-from robocrew.core.tools import remember_thing, recall_thing
 from robocrew.core.skills import load_skills
 from dotenv import find_dotenv, load_dotenv
 import time
@@ -35,7 +34,6 @@ class LLMAgent():
             camera_fov: float = 90,
             servo_controler=None,
             history_len: int | None = None,
-            use_memory: bool = False,
             skills: list | None = None,
             skills_dir=None,
             skill_context=None,
@@ -50,7 +48,6 @@ class LLMAgent():
             Gemini 3.1 Pro supports 'low' and 'high' only. Gemini 3 Flash supports all four levels.
         camera_fov: field of view (degrees) of the main camera.
         history_len: number of newest request-response pairs to keep in context.
-        use_memory: set to True to enable long-term memory (requires sqlite3).
         skills: optional SKILL.md folder names or paths.
         skills_dir: base directory for skill names.
         skill_context: object passed to optional skill tool factories.
@@ -58,17 +55,6 @@ class LLMAgent():
         system_prompt = system_prompt or base_system_prompt
         self.name = name
         
-        if use_memory:
-            
-            tools.append(remember_thing)
-            tools.append(recall_thing)
-            memory_prompt = (
-                " You have a memory. When you find important things (like a specific room, object, or person) "
-                "or complete a navigation step, use the `remember_thing` tool to save it for later. "
-                "Do not wait for the user to tell you to remember. Be proactive."
-            )
-            system_prompt += memory_prompt
-
         self.task = None
         self.idle = True
         self.navigation_mode = "normal"  # or "precision"

@@ -13,7 +13,6 @@ pypi-robocrew/
 artifacts/
 uv.lock
 physical_path.sh
-robot_memory.db
 logs/
 requirements.txt
 constraints.txt
