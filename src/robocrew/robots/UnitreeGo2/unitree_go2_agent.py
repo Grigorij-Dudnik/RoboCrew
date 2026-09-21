@@ -22,6 +22,7 @@ from robocrew.robots.UnitreeGo2.telegram_gateway import (
 )
 from robocrew.robots.UnitreeGo2.tools import (
     create_cancel_navigation,
+    create_queue_task,
     create_set_waypoints,
 )
 
@@ -46,6 +47,7 @@ class UnitreeGo2Agent(LLMAgent):
     ):
         if tools is None:
             tools = [
+                create_queue_task(bridge, mission_state),
                 create_set_waypoints(bridge, mission_state),
                 create_cancel_navigation(bridge, mission_state),
                 finish_task,
@@ -89,9 +91,12 @@ class UnitreeGo2Agent(LLMAgent):
 
                 self._update_mission_state(trigger)
                 self._current_event = trigger
+                history_start = len(self.message_history)
                 report = self.main_loop_content()
                 if report is not None:
                     self._handle_task_report(report)
+                elif isinstance(trigger, TelegramEvent):
+                    self._reply_to_telegram(history_start)
         except KeyboardInterrupt:
             print("Interrupted by user, shutting down.")
         finally:
@@ -198,11 +203,6 @@ class UnitreeGo2Agent(LLMAgent):
     def _update_mission_state(self, event: Any) -> None:
         if isinstance(event, NavigationEvent):
             self.mission_state.record_navigation_result(event)
-            return
-        if not isinstance(event, TelegramEvent):
-            return
-        self.mission_state.add_task(event.text)
-        self.telegram_gateway.send_message("Task received.")
 
     def _handle_task_report(self, report: str) -> None:
         """Mirror RoboCrew's completed task into mission state and Telegram."""
@@ -216,6 +216,32 @@ class UnitreeGo2Agent(LLMAgent):
                     "text": next_task.text,
                 }
             )
+
+    def _reply_to_telegram(self, history_start: int) -> None:
+        messages = self.message_history[history_start:]
+        response = next(
+            (
+                message
+                for message in messages
+                if isinstance(message, AIMessage)
+            ),
+            None,
+        )
+        if response is None:
+            return
+        text = self._text_content(response.content).strip()
+        if not text:
+            result = next(
+                (
+                    message.content
+                    for message in reversed(messages)
+                    if isinstance(message, ToolMessage)
+                ),
+                "",
+            )
+            text = str(result)
+        if text:
+            self.telegram_gateway.send_message(text)
 
     def _event_to_text(self, event: Any) -> str:
         if isinstance(event, TelegramEvent):

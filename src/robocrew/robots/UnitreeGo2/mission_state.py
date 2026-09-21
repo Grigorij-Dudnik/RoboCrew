@@ -21,19 +21,37 @@ class MissionState:
 
     def __init__(self):
         self.active_task: MissionTask | None = None
-        self.pending_tasks: deque[str] = deque()
+        self.queued_tasks: deque[str] = deque()
         self.paused_tasks: deque[MissionTask] = deque()
         self._events: deque[str] = deque(maxlen=8)
+        self._switch_after_cancel = False
 
-    def add_task(self, text: str) -> MissionTask | None:
-        """Queue new work without implicitly interrupting the active task."""
+    def queue_task(
+        self, text: str, *, run_next: bool = False
+    ) -> MissionTask | None:
         self._add_event(f"Received task: {text}")
         if self.active_task is None:
             self.active_task = MissionTask(text=text)
             self._add_event(f"Activated task: {text}")
             return self.active_task
-        self.pending_tasks.append(text)
+        if run_next:
+            self.queued_tasks.appendleft(text)
+        else:
+            self.queued_tasks.append(text)
         return None
+
+    def switch_to_next_task(self) -> MissionTask:
+        if not self.queued_tasks:
+            raise RuntimeError("there is no queued task")
+        if self.active_task is not None:
+            self.paused_tasks.append(self.active_task)
+        text = self.queued_tasks.popleft()
+        self.active_task = MissionTask(text=text)
+        self._add_event(f"Activated queued task: {text}")
+        return self.active_task
+
+    def request_task_switch_after_cancel(self) -> None:
+        self._switch_after_cancel = True
 
     def save_task_route(
         self,
@@ -77,15 +95,11 @@ class MissionState:
                 f"/{event.waypoint_count or '?'}"
             )
         self._add_event(f"Navigation {event.kind}{progress}{detail}")
-        if (
-            event.kind == "cancelled"
-            and self.active_task is not None
-            and self.pending_tasks
-        ):
-            self.paused_tasks.append(self.active_task)
-            text = self.pending_tasks.pop()
-            self.active_task = MissionTask(text=text)
-            self._add_event(f"Activated task: {text}")
+        if event.kind == "cancelled" and self._switch_after_cancel:
+            self._switch_after_cancel = False
+            self.switch_to_next_task()
+        elif event.kind == "failed":
+            self._switch_after_cancel = False
 
     def finish_active_task(self, report: str) -> MissionTask | None:
         if self.active_task is not None:
@@ -95,22 +109,22 @@ class MissionState:
 
     def to_prompt_text(self) -> str:
         active = self._task_to_prompt_data(self.active_task)
-        pending = list(self.pending_tasks)
+        queued = list(self.queued_tasks)
         paused = [
             self._task_to_prompt_data(task) for task in self.paused_tasks
         ]
         return (
             f"active_task: {active}\n"
-            f"pending_tasks: {pending}\n"
+            f"queued_tasks: {queued}\n"
             f"paused_tasks: {paused}\n"
             f"recent_events: {list(self._events)}"
         )
 
     def _activate_next_task(self) -> MissionTask | None:
-        if self.pending_tasks:
-            text = self.pending_tasks.popleft()
+        if self.queued_tasks:
+            text = self.queued_tasks.popleft()
             self.active_task = MissionTask(text=text)
-            self._add_event(f"Activated pending task: {text}")
+            self._add_event(f"Activated queued task: {text}")
             return self.active_task
         if self.paused_tasks:
             task = self.paused_tasks.popleft()

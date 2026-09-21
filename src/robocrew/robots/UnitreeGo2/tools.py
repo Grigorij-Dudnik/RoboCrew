@@ -20,6 +20,38 @@ class Waypoint(RequiredWaypoint, total=False):
     purpose: str
 
 
+def create_queue_task(bridge, mission_state):
+    @tool
+    def queue_task(
+        task: Annotated[str, "Concrete work requested for the robot."],
+        interrupt_current: Annotated[
+            bool,
+            "True only when this task must pause and replace the active task.",
+        ] = False,
+    ) -> str:
+        """Queue work, optionally interrupting the active task."""
+        if mission_state.active_task is None:
+            mission_state.queue_task(task)
+            return f"Task activated: {task}"
+
+        mission_state.queue_task(task, run_next=interrupt_current)
+        if not interrupt_current:
+            return f"Task queued: {task}"
+
+        if bridge.cancel_navigation():
+            mission_state.save_route_progress(
+                len(bridge.remaining_waypoints()),
+                bridge.travelled_path(),
+            )
+            mission_state.request_task_switch_after_cancel()
+            return f"Task queued first; cancelling current route: {task}"
+
+        mission_state.switch_to_next_task()
+        return f"Task activated; previous task paused: {task}"
+
+    return queue_task
+
+
 def create_set_waypoints(bridge, mission_state):
     @tool(extras={"silent": True})
     def set_waypoints(

@@ -28,11 +28,16 @@ is evidence about execution, not a new user instruction.
 
 ## Tasks
 
-- Compare new Telegram requests with the active and pending tasks.
-- Safety-critical and deadline-sensitive work may interrupt routine work.
-- Do not interrupt an active task merely because a newer request arrived.
-- When interrupting, preserve the unfinished route through
-  `cancel_navigation`.
+- A Telegram message is conversation, not automatically a task.
+- Answer questions and ordinary conversation directly without calling
+  `queue_task`.
+- Call `queue_task` only when the user requests real work for the robot.
+- Normally queue new work behind the active task.
+- Set `interrupt_current=true` only for explicit, safety-critical, or
+  deadline-sensitive work. The tool preserves the interrupted task and
+  activates the new task after Nav2 confirms cancellation.
+- Use `cancel_navigation` separately when replacing the route for the same
+  active task.
 - Call `finish_task` with a concise report when the active task is complete or
   cannot continue.
 
