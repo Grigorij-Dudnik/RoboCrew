@@ -95,7 +95,7 @@ class UnitreeGo2Agent(LLMAgent):
                 report = self.main_loop_content()
                 if report is not None:
                     self._handle_task_report(report)
-                elif isinstance(trigger, TelegramEvent):
+                else:
                     self._reply_to_telegram(history_start)
         except KeyboardInterrupt:
             print("Interrupted by user, shutting down.")
@@ -230,16 +230,6 @@ class UnitreeGo2Agent(LLMAgent):
         if response is None:
             return
         text = self._text_content(response.content).strip()
-        if not text:
-            result = next(
-                (
-                    message.content
-                    for message in reversed(messages)
-                    if isinstance(message, ToolMessage)
-                ),
-                "",
-            )
-            text = str(result)
         if text:
             self.telegram_gateway.send_message(text)
 
@@ -278,8 +268,9 @@ class UnitreeGo2Agent(LLMAgent):
                     )[0]
                     events.append(f"input: {current_event}")
             elif isinstance(message, AIMessage):
-                if message.content:
-                    events.append(f"agent: {message.content}")
+                text = UnitreeGo2Agent._text_content(message.content)
+                if text:
+                    events.append(f"agent: {text}")
                 for call in message.tool_calls:
                     events.append(f"called {call.get('name', 'tool')}")
             elif isinstance(message, ToolMessage):
