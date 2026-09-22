@@ -144,7 +144,5 @@ class MissionState:
         return {
             "text": task.text,
             "strategy": task.strategy,
-            "waypoints": task.waypoints,
             "current_waypoint": task.current_waypoint,
-            "travelled_path": task.travelled_path,
         }
