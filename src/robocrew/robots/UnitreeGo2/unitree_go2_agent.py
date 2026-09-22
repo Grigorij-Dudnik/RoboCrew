@@ -236,6 +236,14 @@ class UnitreeGo2Agent(LLMAgent):
     def _event_to_text(self, event: Any) -> str:
         if isinstance(event, TelegramEvent):
             return f"kind: telegram_request\ntext: {event.text}"
+        if isinstance(event, NavigationEvent) and event.kind == "failed":
+            reason = event.detail or "Nav2 did not provide a failure reason"
+            return (
+                "kind: navigation_failed\n"
+                f"current_waypoint: {event.current_waypoint}\n"
+                f"waypoint_count: {event.waypoint_count}\n"
+                f"reason: {reason}"
+            )
         if is_dataclass(event):
             payload = asdict(event)
         else:
@@ -299,6 +307,17 @@ class UnitreeGo2Agent(LLMAgent):
                 continue
             if text.startswith("Map legend:"):
                 continue
+            if part.get("type") == "text":
+                part = {
+                    **part,
+                    "text": "\n".join(
+                        line
+                        for line in str(part.get("text", "")).splitlines()
+                        if not line.startswith(
+                            ("queued_tasks:", "paused_tasks:", "recent_events:")
+                        )
+                    ),
+                }
             content.append(part)
         return HumanMessage(content=content)
 
