@@ -28,6 +28,7 @@ from rclpy.qos import (
 from sensor_msgs.msg import CompressedImage
 
 from robocrew.robots.WaypointDrone.map_utils import draw_normalized_grid_on_map
+from robocrew.robots.UnitreeGo2.semantic_map import SemanticMapOverlay
 
 
 @dataclass(frozen=True)
@@ -90,11 +91,22 @@ def _yaw_from_quaternion(quaternion) -> float:
 class UnitreeGo2NavBridge:
     """Own the ROS node, current observation, and active FollowWaypoints goal."""
 
-    def __init__(self, event_queue: Queue):
+    def __init__(
+        self,
+        event_queue: Queue,
+        *,
+        maps_dir: str | None = None,
+        current_map_file: str | None = None,
+    ):
         self.event_queue = event_queue
         self._state = _BridgeState()
         self._state_lock = threading.RLock()
         self._goal_handle = None
+        self._semantic_overlay = (
+            SemanticMapOverlay(maps_dir, current_map_file)
+            if maps_dir and current_map_file
+            else None
+        )
 
         if not rclpy.ok():
             rclpy.init(args=None)
@@ -434,6 +446,8 @@ class UnitreeGo2NavBridge:
         image = np.flipud(image)
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
+        if self._semantic_overlay:
+            self._semantic_overlay.apply(image, metadata)
         self._draw_path(image, self._state.travelled_path, metadata, (0, 0, 255))
         planned_path = (
             self._state.global_plan

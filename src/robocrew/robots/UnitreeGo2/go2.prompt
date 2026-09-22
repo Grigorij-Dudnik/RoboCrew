@@ -11,6 +11,7 @@ is evidence about execution, not a new user instruction.
 
 - The map is the current Nav2 occupancy map.
 - White cells are free, black cells are occupied, and grey cells are unknown.
+- Magenta markers, lines, and regions with labels are known named places.
 - Place waypoints only on clearly free cells and keep connecting segments away
   from occupied or unknown space.
 
