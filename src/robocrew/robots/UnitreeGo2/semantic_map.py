@@ -237,12 +237,12 @@ class SemanticMapOverlay:
         occupied: list[tuple[int, int, int, int]],
         color: tuple[int, int, int],
     ) -> None:
-        label = _ascii_label(name)
+        label = _ascii_label(name).upper()
         height, width = overlay.shape[:2]
         margin = 5
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.65
-        thickness = 2
+        font = cv2.FONT_HERSHEY_DUPLEX
+        font_scale = 0.6
+        thickness = 1
         (text_width, text_height), baseline = cv2.getTextSize(
             label, font, font_scale, thickness
         )
@@ -292,7 +292,7 @@ class SemanticMapOverlay:
             font,
             font_scale,
             (0, 0, 0, 255),
-            thickness + 3,
+            thickness + 1,
             cv2.LINE_AA,
         )
         cv2.putText(
