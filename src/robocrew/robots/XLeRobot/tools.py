@@ -114,7 +114,7 @@ def create_go_to_normal_mode(servo_controller):
 
 
 def create_look_around(servo_controller, main_camera):
-    @tool
+    @tool(response_format="content_and_artifact")
     def look_around() -> list:
         """Look around yourself to find a thing you looking for or to understand an envinronment."""
         movement_delay = 0.9  # seconds

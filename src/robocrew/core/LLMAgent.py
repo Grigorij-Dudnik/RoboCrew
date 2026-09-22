@@ -2,7 +2,7 @@ from robocrew.core.skills import load_skills
 from dotenv import find_dotenv, load_dotenv
 import time
 import base64
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
 
 
@@ -86,27 +86,19 @@ class LLMAgent():
 
     def bind_tools(self, tools, tool_choice=None):
         self.tools = list(tools)
+        for bound_tool in self.tools:
+            bound_tool.handle_validation_error = (
+                lambda error: f"Invalid tool arguments: {error}"
+            )
         self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
         kwargs = {"tool_choice": tool_choice} if tool_choice else {}
         self.llm = self._llm_without_tools.bind_tools(self.tools, **kwargs)
 
 
     def invoke_tool(self, tool_call):
-        # convert string to real function
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
-        args = tool_call["args"]
         trace_config = self.trace_config(f"{self.name} / {tool_call['name']}")
-        if trace_config:
-            tool_output = requested_tool.invoke(args, config=trace_config)
-        else:
-            tool_output = requested_tool.invoke(args)
-        # f aitional output is present
-        if isinstance(tool_output, tuple) and len(tool_output) == 2:
-            additional_output = HumanMessage(content=tool_output[1])
-            tool_output = tool_output[0]
-        else:
-            additional_output = None
-        return ToolMessage(tool_output, tool_call_id=tool_call["id"]), additional_output
+        return requested_tool.invoke(tool_call, config=trace_config)
 
     def trace_config(self, run_name=None):
         if not self.name:
@@ -179,10 +171,13 @@ class LLMAgent():
     def execute_tool_calls(self, tool_calls):
         result = None
         for tool_call in tool_calls:
-            tool_response, additional_response = self.invoke_tool(tool_call)
+            tool_response = self.invoke_tool(tool_call)
             self.message_history.append(tool_response)
-            if additional_response:
-                self.message_history.append(additional_response)
+            # Artifacts carry non-text tool output, such as images.
+            if tool_response.artifact:
+                self.message_history.append(
+                    HumanMessage(content=tool_response.artifact)
+                )
             if tool_call["name"] == "go_to_precision_mode":
                 self.navigation_mode = "precision"
             elif tool_call["name"] == "go_to_normal_mode":
