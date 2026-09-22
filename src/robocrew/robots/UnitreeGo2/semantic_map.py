@@ -241,7 +241,7 @@ class SemanticMapOverlay:
         height, width = overlay.shape[:2]
         margin = 5
         font = cv2.FONT_HERSHEY_DUPLEX
-        font_scale = 0.6
+        font_scale = 0.55
         thickness = 1
         (text_width, text_height), baseline = cv2.getTextSize(
             label, font, font_scale, thickness
