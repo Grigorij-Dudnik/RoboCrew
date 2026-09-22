@@ -2,19 +2,12 @@
 
 from __future__ import annotations
 
-import threading
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from queue import Empty, Queue
 from typing import Any
 
-from langchain.chat_models import init_chat_model
-from langchain_core.messages import (
-    AIMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.core.tools import finish_task
@@ -35,13 +28,6 @@ from robocrew.robots.UnitreeGo2.tools import (
 
 RECENT_MESSAGE_LIMIT = 8
 OBSERVATION_INTERVAL = 10.0
-SUMMARY_INTERVAL = 10
-SUMMARY_PROMPT = """Rewrite the previous summary and new conversation into a
-single concise rolling summary of at most eight bullets. Preserve user goals
-and preferences, completed or cancelled task outcomes, unresolved work, and
-important failures or safety facts. Remove routine observations, image
-descriptions, waypoint details, repeated progress, and tool plumbing. Replace
-the previous summary instead of appending to it. Return only the summary."""
 
 
 class UnitreeGo2Agent(LLMAgent):
@@ -79,17 +65,11 @@ class UnitreeGo2Agent(LLMAgent):
         self.event_queue = event_queue
         self.telegram_gateway = telegram_gateway
         self._current_event: Any = None
-        self._summary_llm = init_chat_model(model)
-        self._conversation_summary = ""
-        self._steps_since_summary = 0
-        self._summary_in_flight = False
-        self._summary_results = Queue()
 
     def go(self):
         try:
             self.telegram_gateway.start()
             while True:
-                self._apply_summary_result()
                 timeout = (
                     OBSERVATION_INTERVAL
                     if self.mission_state.active_task
@@ -117,8 +97,6 @@ class UnitreeGo2Agent(LLMAgent):
                     self._handle_task_report(report)
                 else:
                     self._reply_to_telegram(history_start)
-                self._steps_since_summary += 1
-                self._start_summary_if_due()
         except KeyboardInterrupt:
             print("Interrupted by user, shutting down.")
         finally:
@@ -192,24 +170,28 @@ class UnitreeGo2Agent(LLMAgent):
         return self.invoke_llm_with_message(HumanMessage(message_content))
 
     def messages_for_model(self):
-        """Project live history without stale observations or image payloads."""
-        self._apply_summary_result()
+        """Keep recent message roles intact while dropping stale image payloads."""
         history = list(self.message_history[1:])
         if not history:
             return [self.system_message]
 
+        start = max(0, len(history) - RECENT_MESSAGE_LIMIT)
+        start = self._include_matching_tool_call(history, start)
+        older = history[:start]
+        recent = history[start:]
+
         messages = [self.system_message]
-        if self._conversation_summary:
+        if older:
             messages.append(
                 HumanMessage(
                     "Earlier conversation summary:\n"
-                    f"{self._conversation_summary}"
+                    f"{self._summarize_messages(older)}"
                 )
             )
-        for index, message in enumerate(history):
-            is_newest = index == len(history) - 1
+        for index, message in enumerate(recent):
+            is_newest = index == len(recent) - 1
             messages.append(
-                message if is_newest else self._project_previous_message(message)
+                message if is_newest else self._without_old_images(message)
             )
         return messages
 
@@ -274,98 +256,46 @@ class UnitreeGo2Agent(LLMAgent):
                 break
         return start
 
-    def _start_summary_if_due(self) -> None:
-        if (
-            self._summary_in_flight
-            or self._steps_since_summary < SUMMARY_INTERVAL
-        ):
-            return
-        history = list(self.message_history[1:])
-        start = max(0, len(history) - RECENT_MESSAGE_LIMIT)
-        start = self._include_matching_tool_call(history, start)
-        if start == 0:
-            return
-
-        messages = history[:start]
-        summary_input = self._messages_to_summary_text(messages)
-        previous_summary = self._conversation_summary
-        self._summary_in_flight = True
-        self._steps_since_summary = 0
-        threading.Thread(
-            target=self._run_summary,
-            args=(len(messages), previous_summary, summary_input),
-            name="go2-context-summary",
-            daemon=True,
-        ).start()
-
-    def _run_summary(
-        self,
-        message_count: int,
-        previous_summary: str,
-        summary_input: str,
-    ) -> None:
-        try:
-            response = self._summary_llm.invoke(
-                [
-                    SystemMessage(SUMMARY_PROMPT),
-                    HumanMessage(
-                        "PREVIOUS SUMMARY\n"
-                        f"{previous_summary or 'None'}\n\n"
-                        "NEW CONVERSATION\n"
-                        f"{summary_input}"
-                    ),
-                ],
-                config=self.trace_config(f"{self.name} / summarize_context"),
-            )
-            summary = self._text_content(response.content).strip()
-            if not summary:
-                raise RuntimeError("context summarizer returned no text")
-            self._summary_results.put((message_count, summary, None))
-        except Exception as exc:
-            self._summary_results.put((message_count, None, str(exc)))
-
-    def _apply_summary_result(self) -> None:
-        try:
-            message_count, summary, error = self._summary_results.get_nowait()
-        except Empty:
-            return
-        self._summary_in_flight = False
-        if error:
-            print(f"Context summarization failed: {error}")
-            return
-        self._conversation_summary = summary
-        del self.message_history[1 : 1 + message_count]
-
-    @classmethod
-    def _messages_to_summary_text(cls, messages: list) -> str:
-        entries = []
+    @staticmethod
+    def _summarize_messages(messages: list) -> str:
+        events = []
         for message in messages:
-            message = cls._project_previous_message(message)
             if isinstance(message, HumanMessage):
-                text = cls._text_content(message.content).strip()
+                text = UnitreeGo2Agent._text_content(message.content)
                 if text:
-                    entries.append(f"human: {text}")
+                    current_event = text.split(
+                        "\n\nCURRENT MISSION STATE", 1
+                    )[0]
+                    events.append(f"input: {current_event}")
             elif isinstance(message, AIMessage):
-                text = cls._text_content(message.content).strip()
+                text = UnitreeGo2Agent._text_content(message.content)
                 if text:
-                    entries.append(f"agent: {text}")
+                    events.append(f"agent: {text}")
                 for call in message.tool_calls:
-                    entries.append(f"called: {call.get('name', 'tool')}")
+                    events.append(f"called {call.get('name', 'tool')}")
             elif isinstance(message, ToolMessage):
-                entries.append(f"tool result: {message.content}")
+                events.append(f"tool result: {message.content}")
         return (
-            "\n".join(f"- {entry}" for entry in entries)
-            if entries
-            else "No new conversation details."
+            "\n".join(f"- {event}" for event in events)
+            if events
+            else "No earlier conversation details."
         )
 
-    @classmethod
-    def _project_previous_message(cls, message):
-        if not isinstance(message, HumanMessage):
+    @staticmethod
+    def _without_old_images(message):
+        if not isinstance(message, HumanMessage) or not isinstance(
+            message.content, list
+        ):
             return message
-        text = cls._text_content(message.content)
-        event = text.split("\n\nCURRENT MISSION STATE", 1)[0].strip()
-        return HumanMessage(content=event)
+        content = []
+        for part in message.content:
+            if isinstance(part, dict) and part.get("type") == "image_url":
+                content.append(
+                    {"type": "text", "text": "[previous image omitted]"}
+                )
+            else:
+                content.append(part)
+        return HumanMessage(content=content)
 
     @staticmethod
     def _text_content(content) -> str:
