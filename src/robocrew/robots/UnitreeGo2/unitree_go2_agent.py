@@ -170,7 +170,7 @@ class UnitreeGo2Agent(LLMAgent):
         return self.invoke_llm_with_message(HumanMessage(message_content))
 
     def messages_for_model(self):
-        """Keep recent message roles intact while dropping stale image payloads."""
+        """Keep the newest observation complete and clean earlier ones."""
         history = list(self.message_history[1:])
         if not history:
             return [self.system_message]
@@ -191,7 +191,7 @@ class UnitreeGo2Agent(LLMAgent):
         for index, message in enumerate(recent):
             is_newest = index == len(recent) - 1
             messages.append(
-                message if is_newest else self._without_old_images(message)
+                message if is_newest else self._project_previous_message(message)
             )
         return messages
 
@@ -281,21 +281,13 @@ class UnitreeGo2Agent(LLMAgent):
             else "No earlier conversation details."
         )
 
-    @staticmethod
-    def _without_old_images(message):
-        if not isinstance(message, HumanMessage) or not isinstance(
-            message.content, list
-        ):
+    @classmethod
+    def _project_previous_message(cls, message):
+        if not isinstance(message, HumanMessage):
             return message
-        content = []
-        for part in message.content:
-            if isinstance(part, dict) and part.get("type") == "image_url":
-                content.append(
-                    {"type": "text", "text": "[previous image omitted]"}
-                )
-            else:
-                content.append(part)
-        return HumanMessage(content=content)
+        text = cls._text_content(message.content)
+        event = text.split("\n\nCURRENT MISSION STATE", 1)[0].strip()
+        return HumanMessage(content=event)
 
     @staticmethod
     def _text_content(content) -> str:
