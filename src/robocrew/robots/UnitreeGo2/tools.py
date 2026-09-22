@@ -79,6 +79,8 @@ def create_set_waypoints(bridge, mission_state):
         task = mission_state.active_task
         if task is None:
             return "no_active_task"
+        if bridge.navigation_active:
+            return "navigation_already_active"
         map_waypoints = bridge.normalized_waypoints_to_map(waypoints)
         travelled_path = [MapPose(**pose) for pose in task.travelled_path]
         bridge.submit_waypoints(
