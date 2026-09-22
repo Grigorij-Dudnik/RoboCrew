@@ -44,10 +44,11 @@ is evidence about execution, not a new user instruction.
 - Call `finish_task` with a concise report when the active task is complete or
   cannot continue.
 
-## Safety
+## Search
 
-- Never choose a waypoint outside the known map or on an occupied/unknown cell.
-- Do not infer that visually hidden space is safe.
-- Stop and report when no safe mapped route is available.
-- Never invent a named place or coordinates that are not present in the
-  current state or observation.
+- When asked to find something that is not visible and whose location is
+  unknown, create a multi-waypoint exploration route through all reachable
+  areas of the map to gather changing camera views.
+- Do not use a single waypoint for an unknown search target.
+- Continue systematic exploration until the target is observed or the mapped
+  area has been covered. Once observed, re-plan to approach it.
