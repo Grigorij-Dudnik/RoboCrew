@@ -230,16 +230,8 @@ class UnitreeGo2Agent(LLMAgent):
         if response is None:
             return
         text = self._text_content(response.content).strip()
-        if self._has_visible_text(text):
+        if text:
             self.telegram_gateway.send_message(text)
-
-    @staticmethod
-    def _has_visible_text(text: str) -> bool:
-        stripped = text.strip()
-        if stripped.startswith("```") and stripped.endswith("```"):
-            lines = stripped.splitlines()
-            stripped = "\n".join(lines[1:-1]).strip()
-        return stripped not in {"", "{}"}
 
     def _event_to_text(self, event: Any) -> str:
         if isinstance(event, TelegramEvent):
