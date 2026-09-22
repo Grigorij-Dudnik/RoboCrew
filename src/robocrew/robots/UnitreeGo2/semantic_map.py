@@ -319,11 +319,13 @@ class SemanticMapOverlay:
         margin = 5
         max_left = max(margin, image_width - margin - box_width)
         max_top = max(margin, image_height - margin - box_height)
-        candidates = []
-        seen = set()
+        step = max(20, min(box_width, box_height))
+        best = None
 
-        for distance in (12, 32, 52, 72, 92):
-            raw_positions = (
+        for distance in range(
+            12, max(image_width, image_height) + step, step
+        ):
+            for raw_left, raw_top in (
                 (anchor[0] + distance, anchor[1] - box_height // 2),
                 (
                     anchor[0] - distance - box_width,
@@ -344,70 +346,41 @@ class SemanticMapOverlay:
                     anchor[0] - distance - box_width,
                     anchor[1] + distance,
                 ),
-            )
-            for raw_left, raw_top in raw_positions:
+            ):
                 left = min(max(raw_left, margin), max_left)
                 top = min(max(raw_top, margin), max_top)
-                if (left, top) in seen:
-                    continue
-                seen.add((left, top))
                 rectangle = (
                     left,
                     top,
                     left + box_width,
                     top + box_height,
                 )
-                candidates.append(rectangle)
-                if not any(
-                    cls._rectangles_overlap(rectangle, other)
+                overlap = sum(
+                    cls._overlap_area(rectangle, other)
                     for other in occupied
-                ):
+                )
+                if overlap == 0:
                     return rectangle
+                anchor_distance = (
+                    left + box_width / 2 - anchor[0]
+                ) ** 2 + (
+                    top + box_height / 2 - anchor[1]
+                ) ** 2
+                score = (overlap, anchor_distance)
+                if best is None or score < best[0]:
+                    best = (score, rectangle)
 
-        free = []
-        fallback = list(candidates)
-        for top in range(margin, max_top + 1, 4):
-            for left in range(margin, max_left + 1, 4):
-                rectangle = (
-                    left,
-                    top,
-                    left + box_width,
-                    top + box_height,
-                )
-                fallback.append(rectangle)
-                if not any(
-                    cls._rectangles_overlap(rectangle, other)
-                    for other in occupied
-                ):
-                    distance = (
-                        left + box_width / 2 - anchor[0]
-                    ) ** 2 + (
-                        top + box_height / 2 - anchor[1]
-                    ) ** 2
-                    free.append((distance, rectangle))
-        if free:
-            return min(free, key=lambda item: item[0])[1]
-        return min(
-            fallback,
-            key=lambda rectangle: sum(
-                cls._overlap_area(rectangle, other) for other in occupied
-            ),
-        )
-
-    @staticmethod
-    def _rectangles_overlap(first, second) -> bool:
-        return not (
-            first[2] <= second[0]
-            or first[0] >= second[2]
-            or first[3] <= second[1]
-            or first[1] >= second[3]
-        )
+        return best[1]
 
     @staticmethod
     def _overlap_area(first, second) -> int:
-        width = max(0, min(first[2], second[2]) - max(first[0], second[0]))
+        width = max(
+            0,
+            min(first[2], second[2]) - max(first[0], second[0]),
+        )
         height = max(
-            0, min(first[3], second[3]) - max(first[1], second[1])
+            0,
+            min(first[3], second[3]) - max(first[1], second[1]),
         )
         return width * height
 
