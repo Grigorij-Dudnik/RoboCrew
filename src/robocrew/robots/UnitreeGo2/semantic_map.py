@@ -150,9 +150,12 @@ class SemanticMapOverlay:
             self._draw_shape(overlay, place.kind, points)
             rendered.append((place, points))
 
+        occupied_labels = []
         for place, points in rendered:
             anchor = self._label_anchor(place.kind, points)
-            self._draw_label(overlay, place.name, anchor)
+            self._draw_label(
+                overlay, place.name, anchor, occupied_labels
+            )
         return overlay
 
     @staticmethod
@@ -212,9 +215,13 @@ class SemanticMapOverlay:
             distance += length
         return tuple(points[-1])
 
-    @staticmethod
+    @classmethod
     def _draw_label(
-        overlay: np.ndarray, name: str, anchor: tuple[int, int]
+        cls,
+        overlay: np.ndarray,
+        name: str,
+        anchor: tuple[int, int],
+        occupied: list[tuple[int, int, int, int]],
     ) -> None:
         label = _ascii_label(name)
         height, width = overlay.shape[:2]
@@ -232,18 +239,25 @@ class SemanticMapOverlay:
                 label, font, font_scale, thickness
             )
 
-        default_x = anchor[0] + 10
-        default_y = anchor[1] - 10
-        x = min(max(default_x, margin + 4), width - text_width - margin - 4)
-        y = min(
-            max(default_y, text_height + margin + 4),
-            height - baseline - margin - 4,
+        box_width = text_width + 8
+        box_height = text_height + baseline + 8
+        left, top, right, bottom = cls._place_label_box(
+            anchor,
+            (box_width, box_height),
+            (width, height),
+            occupied,
         )
-        if (x, y) != (default_x, default_y):
+        occupied.append((left - 3, top - 3, right + 3, bottom + 3))
+
+        target = (
+            min(max(anchor[0], left), right),
+            min(max(anchor[1], top), bottom),
+        )
+        if target != anchor:
             cv2.line(
                 overlay,
                 anchor,
-                (x, y - text_height // 2),
+                target,
                 (0, 0, 0, 230),
                 4,
                 cv2.LINE_AA,
@@ -251,30 +265,133 @@ class SemanticMapOverlay:
             cv2.line(
                 overlay,
                 anchor,
-                (x, y - text_height // 2),
+                target,
                 (255, 0, 255, 230),
                 2,
                 cv2.LINE_AA,
             )
 
-        top_left = (x - 4, y - text_height - 4)
-        bottom_right = (x + text_width + 4, y + baseline + 4)
         cv2.rectangle(
-            overlay, top_left, bottom_right, (0, 0, 0, 225), -1
+            overlay, (left, top), (right, bottom), (0, 0, 0, 225), -1
         )
         cv2.rectangle(
-            overlay, top_left, bottom_right, (255, 0, 255, 255), 2
+            overlay, (left, top), (right, bottom), (255, 0, 255, 255), 2
         )
         cv2.putText(
             overlay,
             label,
-            (x, y),
+            (left + 4, top + 4 + text_height),
             font,
             font_scale,
             (255, 255, 255, 255),
             thickness,
             cv2.LINE_AA,
         )
+
+    @classmethod
+    def _place_label_box(
+        cls,
+        anchor: tuple[int, int],
+        box_size: tuple[int, int],
+        image_size: tuple[int, int],
+        occupied: list[tuple[int, int, int, int]],
+    ) -> tuple[int, int, int, int]:
+        box_width, box_height = box_size
+        image_width, image_height = image_size
+        margin = 5
+        max_left = max(margin, image_width - margin - box_width)
+        max_top = max(margin, image_height - margin - box_height)
+        candidates = []
+        seen = set()
+
+        for distance in (12, 32, 52, 72, 92):
+            raw_positions = (
+                (anchor[0] + distance, anchor[1] - box_height // 2),
+                (
+                    anchor[0] - distance - box_width,
+                    anchor[1] - box_height // 2,
+                ),
+                (
+                    anchor[0] - box_width // 2,
+                    anchor[1] - distance - box_height,
+                ),
+                (anchor[0] - box_width // 2, anchor[1] + distance),
+                (anchor[0] + distance, anchor[1] - distance - box_height),
+                (anchor[0] + distance, anchor[1] + distance),
+                (
+                    anchor[0] - distance - box_width,
+                    anchor[1] - distance - box_height,
+                ),
+                (
+                    anchor[0] - distance - box_width,
+                    anchor[1] + distance,
+                ),
+            )
+            for raw_left, raw_top in raw_positions:
+                left = min(max(raw_left, margin), max_left)
+                top = min(max(raw_top, margin), max_top)
+                if (left, top) in seen:
+                    continue
+                seen.add((left, top))
+                rectangle = (
+                    left,
+                    top,
+                    left + box_width,
+                    top + box_height,
+                )
+                candidates.append(rectangle)
+                if not any(
+                    cls._rectangles_overlap(rectangle, other)
+                    for other in occupied
+                ):
+                    return rectangle
+
+        free = []
+        fallback = list(candidates)
+        for top in range(margin, max_top + 1, 4):
+            for left in range(margin, max_left + 1, 4):
+                rectangle = (
+                    left,
+                    top,
+                    left + box_width,
+                    top + box_height,
+                )
+                fallback.append(rectangle)
+                if not any(
+                    cls._rectangles_overlap(rectangle, other)
+                    for other in occupied
+                ):
+                    distance = (
+                        left + box_width / 2 - anchor[0]
+                    ) ** 2 + (
+                        top + box_height / 2 - anchor[1]
+                    ) ** 2
+                    free.append((distance, rectangle))
+        if free:
+            return min(free, key=lambda item: item[0])[1]
+        return min(
+            fallback,
+            key=lambda rectangle: sum(
+                cls._overlap_area(rectangle, other) for other in occupied
+            ),
+        )
+
+    @staticmethod
+    def _rectangles_overlap(first, second) -> bool:
+        return not (
+            first[2] <= second[0]
+            or first[0] >= second[2]
+            or first[3] <= second[1]
+            or first[1] >= second[3]
+        )
+
+    @staticmethod
+    def _overlap_area(first, second) -> int:
+        width = max(0, min(first[2], second[2]) - max(first[0], second[0]))
+        height = max(
+            0, min(first[3], second[3]) - max(first[1], second[1])
+        )
+        return width * height
 
     @staticmethod
     def _world_to_image(
