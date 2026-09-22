@@ -12,6 +12,15 @@ import cv2
 import numpy as np
 
 
+PLACE_COLORS = (
+    (255, 0, 255),
+    (255, 180, 0),
+    (0, 190, 0),
+    (0, 140, 255),
+    (200, 80, 120),
+)
+
+
 @dataclass(frozen=True)
 class SemanticPlace:
     name: str
@@ -139,7 +148,7 @@ class SemanticMapOverlay:
             (metadata.height, metadata.width, 4), dtype=np.uint8
         )
         rendered = []
-        for place in places:
+        for index, place in enumerate(places):
             points = np.asarray(
                 [
                     self._world_to_image(world_x, world_y, metadata)
@@ -147,41 +156,45 @@ class SemanticMapOverlay:
                 ],
                 dtype=np.int32,
             )
-            self._draw_shape(overlay, place.kind, points)
-            rendered.append((place, points))
+            color = PLACE_COLORS[index % len(PLACE_COLORS)]
+            self._draw_shape(overlay, place.kind, points, color)
+            rendered.append((place, points, color))
 
         occupied_labels = []
-        for place, points in rendered:
+        for place, points, color in rendered:
             anchor = self._label_anchor(place.kind, points)
             self._draw_label(
-                overlay, place.name, anchor, occupied_labels
+                overlay, place.name, anchor, occupied_labels, color
             )
         return overlay
 
     @staticmethod
     def _draw_shape(
-        overlay: np.ndarray, kind: str, points: np.ndarray
+        overlay: np.ndarray,
+        kind: str,
+        points: np.ndarray,
+        color: tuple[int, int, int],
     ) -> None:
         black = (0, 0, 0, 230)
-        magenta = (255, 0, 255, 220)
+        semantic = (*color, 230)
         if kind == "point":
             point = tuple(points[0])
             cv2.circle(overlay, point, 10, black, -1, cv2.LINE_AA)
-            cv2.circle(overlay, point, 7, magenta, -1, cv2.LINE_AA)
+            cv2.circle(overlay, point, 7, semantic, -1, cv2.LINE_AA)
         elif kind == "line":
             cv2.polylines(
                 overlay, [points], False, black, 9, cv2.LINE_AA
             )
             cv2.polylines(
-                overlay, [points], False, magenta, 5, cv2.LINE_AA
+                overlay, [points], False, semantic, 5, cv2.LINE_AA
             )
         else:
-            cv2.fillPoly(overlay, [points], (255, 0, 255, 55), cv2.LINE_AA)
+            cv2.fillPoly(overlay, [points], (*color, 55), cv2.LINE_AA)
             cv2.polylines(
                 overlay, [points], True, black, 7, cv2.LINE_AA
             )
             cv2.polylines(
-                overlay, [points], True, magenta, 4, cv2.LINE_AA
+                overlay, [points], True, semantic, 4, cv2.LINE_AA
             )
 
     @classmethod
@@ -222,6 +235,7 @@ class SemanticMapOverlay:
         name: str,
         anchor: tuple[int, int],
         occupied: list[tuple[int, int, int, int]],
+        color: tuple[int, int, int],
     ) -> None:
         label = _ascii_label(name)
         height, width = overlay.shape[:2]
@@ -266,16 +280,20 @@ class SemanticMapOverlay:
                 overlay,
                 anchor,
                 target,
-                (255, 0, 255, 230),
+                (*color, 230),
                 2,
                 cv2.LINE_AA,
             )
 
-        cv2.rectangle(
-            overlay, (left, top), (right, bottom), (0, 0, 0, 225), -1
-        )
-        cv2.rectangle(
-            overlay, (left, top), (right, bottom), (255, 0, 255, 255), 2
+        cv2.putText(
+            overlay,
+            label,
+            (left + 4, top + 4 + text_height),
+            font,
+            font_scale,
+            (0, 0, 0, 255),
+            thickness + 3,
+            cv2.LINE_AA,
         )
         cv2.putText(
             overlay,
@@ -283,7 +301,7 @@ class SemanticMapOverlay:
             (left + 4, top + 4 + text_height),
             font,
             font_scale,
-            (255, 255, 255, 255),
+            (*color, 255),
             thickness,
             cv2.LINE_AA,
         )
