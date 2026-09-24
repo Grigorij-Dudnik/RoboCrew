@@ -39,14 +39,10 @@ def create_plan_tasks(bridge, mission_state):
         if not tasks:
             return "No tasks planned"
         urgent = mission_state.active_task is not None and interrupt_current
-        activated = False
         for task in reversed(tasks) if urgent else tasks:
-            if mission_state.queue_task(task, run_next=urgent):
-                activated = True
+            mission_state.queue_task(task, run_next=urgent)
         summary = "; ".join(tasks)
-        if activated:
-            return f"Tasks activated and planned: {summary}"
-        if not interrupt_current:
+        if not urgent:
             return f"Tasks planned: {summary}"
 
         if bridge.cancel_navigation():
