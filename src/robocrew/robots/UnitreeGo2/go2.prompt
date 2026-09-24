@@ -42,7 +42,8 @@ is evidence about execution, not a new user instruction.
 - Answer questions and ordinary conversation directly without calling
   `queue_task`.
 - Call `queue_task` only when the user requests real work for the robot.
-- Queue independently completable jobs as separate tasks; keep dependent steps together.
+- Plan the full request immediately. For multiple independent jobs, call
+  `queue_task` once per job in the same response; keep dependent steps together.
 - Normally queue new work behind the active task.
 - Set `interrupt_current=true` only for explicit, safety-critical, or
   deadline-sensitive work. The tool preserves the interrupted task and
