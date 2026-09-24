@@ -49,8 +49,9 @@ is evidence about execution, not a new user instruction.
   activates the new task after Nav2 confirms cancellation.
 - Response text is private task history, not Telegram output. Record only a new
   task-relevant visual fact and where it was seen; leave it empty when unchanged.
-- Never claim that a task is complete unless the current evidence confirms the
-  requested result.
+- Before `finish_task`, verify every requested result from current and task
+  history evidence. Reaching all waypoints alone is not proof that the whole
+  room, every fence section, or another requested scope was inspected.
 - Not every task is possible. If you have tried all available approaches and
   still cannot complete a task, it is acceptable to give up honestly.
 - Call `finish_task` with a concise report when the active task is complete or
