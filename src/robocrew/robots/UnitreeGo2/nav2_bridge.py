@@ -25,7 +25,7 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
 
 from robocrew.robots.WaypointDrone.map_utils import draw_normalized_grid_on_map
 from robocrew.robots.UnitreeGo2.semantic_map import SemanticMapOverlay
@@ -69,7 +69,7 @@ class Go2Observation:
 class _BridgeState:
     map_cells: np.ndarray | None = None
     map_metadata: MapMetadata | None = None
-    camera_image_b64: str = ""
+    camera_image: np.ndarray | None = None
     robot_pose: MapPose | None = None
     travelled_path: list[MapPose] = field(default_factory=list)
     global_plan: list[MapPose] = field(default_factory=list)
@@ -125,8 +125,8 @@ class UnitreeGo2NavBridge:
             reliability=ReliabilityPolicy.BEST_EFFORT,
         )
         self.node.create_subscription(
-            CompressedImage,
-            "/camera/rgb_compressed",
+            Image,
+            "/camera/rgb",
             self._on_camera,
             camera_qos,
         )
@@ -258,8 +258,13 @@ class UnitreeGo2NavBridge:
     def get_observation(self) -> Go2Observation:
         with self._state_lock:
             map_image_b64 = self._render_map_locked()
+            camera_image_b64 = ""
+            if self._state.camera_image is not None:
+                encoded, jpeg = cv2.imencode(".jpg", self._state.camera_image)
+                if encoded:
+                    camera_image_b64 = base64.b64encode(jpeg).decode("ascii")
             return Go2Observation(
-                camera_image_b64=self._state.camera_image_b64,
+                camera_image_b64=camera_image_b64,
                 map_image_b64=map_image_b64,
                 navigation_state=self._state.navigation_state,
                 current_waypoint=self._state.current_waypoint,
@@ -284,11 +289,12 @@ class UnitreeGo2NavBridge:
         if rclpy.ok():
             rclpy.shutdown()
 
-    def _on_camera(self, message: CompressedImage) -> None:
+    def _on_camera(self, message: Image) -> None:
+        image = np.frombuffer(message.data, np.uint8).reshape(
+            message.height, message.step
+        )[:, : message.width * 3].reshape(message.height, message.width, 3)
         with self._state_lock:
-            self._state.camera_image_b64 = base64.b64encode(
-                bytes(message.data)
-            ).decode("ascii")
+            self._state.camera_image = image
 
     def _on_map(self, message: OccupancyGrid) -> None:
         width = int(message.info.width)
@@ -489,6 +495,14 @@ class UnitreeGo2NavBridge:
         ):
             point = self._world_to_image(waypoint.x, waypoint.y, metadata)
             cv2.circle(image, point, 6, (255, 0, 0), 2, cv2.LINE_AA)
+            image_angle = metadata.origin_yaw - waypoint.yaw
+            tip = (
+                int(round(point[0] + 20 * math.cos(image_angle))),
+                int(round(point[1] + 20 * math.sin(image_angle))),
+            )
+            cv2.arrowedLine(
+                image, point, tip, (255, 0, 0), 3, cv2.LINE_AA, tipLength=0.35
+            )
             cv2.putText(
                 image,
                 str(index),
