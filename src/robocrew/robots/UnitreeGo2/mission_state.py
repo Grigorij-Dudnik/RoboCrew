@@ -144,5 +144,4 @@ class MissionState:
         return {
             "text": task.text,
             "strategy": task.strategy,
-            "current_waypoint": task.current_waypoint,
         }

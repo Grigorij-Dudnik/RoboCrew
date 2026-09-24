@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import base64
 import json
 from collections import deque
@@ -245,40 +246,38 @@ class UnitreeGo2Agent(LLMAgent):
     @staticmethod
     def _summarize_messages(messages: list) -> str:
         events = []
-        scheduled_observation = False
+        current_task = None
         for message in messages:
             if isinstance(message, HumanMessage):
                 text = UnitreeGo2Agent._text_content(message.content)
                 if text:
-                    current_event = text.split(
-                        "\n\nCURRENT MISSION STATE", 1
-                    )[0]
-                    scheduled_observation = (
-                        "kind: scheduled_observation" in current_event
-                    )
+                    current_event = text.split("\n\nCURRENT MISSION STATE", 1)[0]
+                    scheduled_observation = "kind: scheduled_observation" in current_event
+                    task = ast.literal_eval(next(
+                        line[13:] for line in text.splitlines() if line.startswith("active_task: ")
+                    ))
+                    task = task and task["text"]
+                    if task and task != current_task:
+                        events.append(f"TASK: {task}")
+                    current_task = task
                     if not scheduled_observation:
                         events.append(f"input: {current_event}")
             elif isinstance(message, AIMessage):
                 text = UnitreeGo2Agent._text_content(message.content)
                 if text:
-                    label = (
-                        "observation" if scheduled_observation else "agent"
-                    )
-                    events.append(f"{label}: {text}")
+                    events.append(f"{'observation' if scheduled_observation else 'agent'}: {text}")
                 for call in message.tool_calls:
                     name = call.get("name", "tool")
                     args = call.get("args", {})
-                    if name == "continue_navigation":
+                    if name in {"continue_navigation", "queue_task"}:
                         continue
-                    if name == "queue_task":
-                        events.append(f"task: {args.get('task', '')}")
-                    elif name == "set_waypoints":
+                    if name == "set_waypoints":
                         events.append(
                             f"route: {len(args.get('waypoints', []))} waypoints; "
                             f"{args.get('strategy', '')}"
                         )
                     elif name == "finish_task":
-                        events.append(f"completed: {args.get('report', '')}")
+                        events.append(f"final report: {args.get('report', '')}")
                     elif name == "cancel_navigation":
                         events.append(f"cancelled: {args.get('reason', '')}")
                     else:
@@ -286,11 +285,10 @@ class UnitreeGo2Agent(LLMAgent):
             elif isinstance(message, ToolMessage):
                 if message.status == "error":
                     events.append(f"tool error: {message.content}")
-        return (
-            "\n".join(f"- {event}" for event in events)
-            if events
-            else "No earlier conversation details."
-        )
+        return "\n".join(
+            f"\n{event}" if event.startswith("TASK:") else f"- {event}"
+            for event in events
+        ).strip() or "No earlier conversation details."
 
     @staticmethod
     def _without_old_images(message):
@@ -321,7 +319,7 @@ class UnitreeGo2Agent(LLMAgent):
                         line
                         for line in str(part.get("text", "")).splitlines()
                         if not line.startswith(
-                            ("queued_tasks:", "paused_tasks:", "recent_events:", "battery:")
+                            ("queued_tasks:", "paused_tasks:", "recent_events:", "battery:", "state:")
                         )
                     ),
                 }
