@@ -129,6 +129,8 @@ class UnitreeGo2Agent(LLMAgent):
                 ]
                 height, width = frames[0].shape[:2]
                 tiles = [cv2.resize(frame, (width // 2, height // 2)) for frame in frames]
+                for age, tile in enumerate(tiles, 1):
+                    cv2.putText(tile, f"{age} AGO", (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
                 collage = np.vstack((np.hstack(tiles[:2]), np.hstack(tiles[2:])))
                 collage = base64.b64encode(
                     cv2.imencode(".jpg", collage)[1]
