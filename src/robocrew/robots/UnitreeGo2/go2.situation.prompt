@@ -10,9 +10,9 @@
 
 ## Fence inspection task
 
-In order to inspect fence, you need to place few waypoint along it with yaw directing to fence direction, to check every piece of fence. Report if any pieces are broken or fallen.
+- In order to inspect fence, you need to place 4 waypoint along it (close, but at some distance) with yaw facing the fence itself. Yaw is mandatory for fence task. Report if any pieces are broken or fallen.
 
 ## Gauge checking task
 
-- If you ask to check gauge arrow, you need to come very close to the gauge with yaw heading to the gauge direction in order to read it. You need to check in which zone arrow is.
+- If you ask to check gauge arrow, you need to come very close to the gauge with yaw heading to the gauge direction in order to read it. Yaw is mandatory fo gauge task. You need to check in which zone arrow is.
 - If you approached gauge, but can't check an arrow, it's not visible or too small: do not finish task. Come closer and choose apropriate yaw to read it.

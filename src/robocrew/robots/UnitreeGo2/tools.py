@@ -23,20 +23,31 @@ def continue_navigation() -> str:
     return "navigation_continues"
 
 
-def create_queue_task(bridge, mission_state):
+def create_plan_tasks(bridge, mission_state):
     @tool
-    def queue_task(
-        task: Annotated[str, "Concrete work requested for the robot."],
+    def plan_tasks(
+        tasks: Annotated[
+            list[str],
+            "All independently completable jobs requested by the user, in order.",
+        ],
         interrupt_current: Annotated[
             bool,
-            "True only when this task must pause and replace the active task.",
+            "True only when these tasks must pause and replace the active task.",
         ] = False,
     ) -> str:
-        """Queue work, optionally interrupting the active task."""
-        if mission_state.queue_task(task, run_next=interrupt_current):
-            return f"Task activated: {task}"
+        """Plan the complete workload, optionally interrupting the active task."""
+        if not tasks:
+            return "No tasks planned"
+        urgent = mission_state.active_task is not None and interrupt_current
+        activated = False
+        for task in reversed(tasks) if urgent else tasks:
+            if mission_state.queue_task(task, run_next=urgent):
+                activated = True
+        summary = "; ".join(tasks)
+        if activated:
+            return f"Tasks activated and planned: {summary}"
         if not interrupt_current:
-            return f"Task queued: {task}"
+            return f"Tasks planned: {summary}"
 
         if bridge.cancel_navigation():
             mission_state.save_route_progress(
@@ -44,12 +55,12 @@ def create_queue_task(bridge, mission_state):
                 bridge.travelled_path(),
             )
             mission_state.request_task_switch_after_cancel()
-            return f"Task queued first; cancelling current route: {task}"
+            return f"Tasks planned; cancelling current route: {summary}"
 
         mission_state.switch_to_next_task()
-        return f"Task activated; previous task paused: {task}"
+        return f"Tasks activated; previous task paused: {summary}"
 
-    return queue_task
+    return plan_tasks
 
 
 def create_set_waypoints(bridge, mission_state):

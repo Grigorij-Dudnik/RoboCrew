@@ -40,10 +40,10 @@ is evidence about execution, not a new user instruction.
 
 - A Telegram message is conversation, not automatically a task.
 - Answer questions and ordinary conversation directly without calling
-  `queue_task`.
-- Call `queue_task` only when the user requests real work for the robot.
-- Plan the full request immediately. For multiple independent jobs, call
-  `queue_task` once per job in the same response; keep dependent steps together.
+  `plan_tasks`.
+- Call `plan_tasks` only when the user requests real work for the robot.
+- Plan the full request immediately. Put all independently completable jobs in
+  one `plan_tasks` call; keep dependent steps together as one task.
 - Normally queue new work behind the active task.
 - Set `interrupt_current=true` only for explicit, safety-critical, or
   deadline-sensitive work. The tool preserves the interrupted task and

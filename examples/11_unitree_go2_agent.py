@@ -7,7 +7,7 @@ from robocrew.robots.UnitreeGo2.nav2_bridge import UnitreeGo2NavBridge
 from robocrew.robots.UnitreeGo2.telegram_gateway import TelegramGateway
 from robocrew.robots.UnitreeGo2.tools import (
     create_cancel_navigation,
-    create_queue_task,
+    create_plan_tasks,
     create_set_waypoints,
     continue_navigation,
 )
@@ -23,7 +23,7 @@ telegram = TelegramGateway(
     event_queue=event_queue,
 )
 tools = [
-    create_queue_task(bridge, mission_state),
+    create_plan_tasks(bridge, mission_state),
     create_set_waypoints(bridge, mission_state),
     finish_task,
 ]

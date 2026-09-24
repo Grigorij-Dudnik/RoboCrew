@@ -74,7 +74,7 @@ class UnitreeGo2Agent(LLMAgent):
                 message.content
                 for message in self.message_history[history_start:]
                 if isinstance(message, ToolMessage)
-                and message.name == "queue_task"
+                and message.name == "plan_tasks"
             ),
             None,
         )
@@ -269,7 +269,7 @@ class UnitreeGo2Agent(LLMAgent):
                 for call in message.tool_calls:
                     name = call.get("name", "tool")
                     args = call.get("args", {})
-                    if name in {"continue_navigation", "queue_task"}:
+                    if name in {"continue_navigation", "plan_tasks"}:
                         continue
                     if name == "set_waypoints":
                         events.append(
