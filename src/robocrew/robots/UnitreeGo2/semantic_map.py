@@ -54,16 +54,7 @@ class SemanticMapOverlay:
             if places_path and places_path.is_file()
             else None
         )
-        key = (
-            str(places_path) if places_path else None,
-            modified_ns,
-            metadata.width,
-            metadata.height,
-            metadata.resolution,
-            metadata.origin_x,
-            metadata.origin_y,
-            metadata.origin_yaw,
-        )
+        key = (places_path, modified_ns, metadata)
         if key == self._cache_key:
             return
 

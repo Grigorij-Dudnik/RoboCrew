@@ -5,19 +5,22 @@ from __future__ import annotations
 from typing import Annotated
 
 from langchain_core.tools import tool
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 from robocrew.robots.UnitreeGo2.nav2_bridge import MapPose
 
 
-class RequiredWaypoint(TypedDict):
+class Waypoint(TypedDict):
     x: float
     y: float
-
-
-class Waypoint(RequiredWaypoint, total=False):
-    yaw: float
     purpose: str
+    yaw: NotRequired[float]
+
+
+@tool
+def continue_navigation() -> str:
+    """Keep the active Nav2 route running."""
+    return "navigation_continues"
 
 
 def create_queue_task(bridge, mission_state):
@@ -30,11 +33,8 @@ def create_queue_task(bridge, mission_state):
         ] = False,
     ) -> str:
         """Queue work, optionally interrupting the active task."""
-        if mission_state.active_task is None:
-            mission_state.queue_task(task)
+        if mission_state.queue_task(task, run_next=interrupt_current):
             return f"Task activated: {task}"
-
-        mission_state.queue_task(task, run_next=interrupt_current)
         if not interrupt_current:
             return f"Task queued: {task}"
 
@@ -67,15 +67,11 @@ def create_set_waypoints(bridge, mission_state):
         *,
         waypoints: Annotated[
             list[Waypoint],
-            "Trace the route on the CURRENT annotated map. Add a waypoint at "
-            "meaningful bends so every segment remains on visible free space. "
+            "Trace the route on the CURRENT annotated map. "
             "x and y are normalized from 0 to 1.",
         ],
     ) -> str:
         """Reassess the situation, then start a non-blocking Nav2 route."""
-        print(f"Situation reassessment: {situation_reassessment}")
-        print(f"Strategy: {strategy}")
-
         task = mission_state.active_task
         if task is None:
             return "no_active_task"
@@ -99,9 +95,10 @@ def create_cancel_navigation(bridge, mission_state):
         if not bridge.cancel_navigation():
             return "navigation_not_active"
         remaining_count = len(bridge.remaining_waypoints())
-        mission_state.save_route_progress(
-            remaining_count, bridge.travelled_path()
-        )
+        if mission_state.active_task is not None:
+            mission_state.save_route_progress(
+                remaining_count, bridge.travelled_path()
+            )
         return (
             f"navigation_cancellation_requested: reason={reason}, "
             f"remaining_waypoints={remaining_count}"

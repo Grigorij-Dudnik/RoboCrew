@@ -127,7 +127,7 @@ class TelegramGateway:
             return
         text = (message.text or "").strip()
         if text:
-            self._enqueue_event(text)
+            self.event_queue.put(TelegramEvent(text=text))
 
     async def _on_voice(self, update: Update, _context) -> None:
         message = update.effective_message
@@ -147,10 +147,7 @@ class TelegramGateway:
             await message.reply_text(f"Voice transcription failed: {exc}")
             return
         if text:
-            self._enqueue_event(text)
-
-    def _enqueue_event(self, text: str) -> None:
-        self.event_queue.put(TelegramEvent(text=text))
+            self.event_queue.put(TelegramEvent(text=text))
 
     def _transcribe_voice(self, audio_bytes: bytes) -> str:
         audio = io.BytesIO(audio_bytes)

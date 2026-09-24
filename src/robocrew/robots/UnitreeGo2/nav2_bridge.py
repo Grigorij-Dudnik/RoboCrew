@@ -163,7 +163,7 @@ class UnitreeGo2NavBridge:
             raise RuntimeError("Nav2 map is not available")
 
         poses = []
-        for index, waypoint in enumerate(waypoints):
+        for waypoint in waypoints:
             normalized_x = float(waypoint["x"])
             normalized_y = float(waypoint["y"])
             if not 0.0 <= normalized_x <= 1.0 or not 0.0 <= normalized_y <= 1.0:
@@ -384,7 +384,7 @@ class UnitreeGo2NavBridge:
             if not response.goals_canceling:
                 with self._state_lock:
                     self._state.navigation_state = "active"
-                self._emit_navigation_event(
+                self.event_queue.put(
                     NavigationEvent(
                         "failed",
                         detail="Nav2 rejected cancellation",
@@ -393,7 +393,7 @@ class UnitreeGo2NavBridge:
         except Exception as exc:
             with self._state_lock:
                 self._state.navigation_state = "active"
-            self._emit_navigation_event(
+            self.event_queue.put(
                 NavigationEvent(
                     "failed",
                     detail=f"cancellation failed: {exc}",
@@ -414,7 +414,7 @@ class UnitreeGo2NavBridge:
                 self._state.travelled_path.append(self._state.robot_pose)
             if state == "completed":
                 self._state.global_plan.clear()
-        self._emit_navigation_event(
+        self.event_queue.put(
             NavigationEvent(
                 state,
                 current_waypoint=current_waypoint,
@@ -422,9 +422,6 @@ class UnitreeGo2NavBridge:
                 detail=detail,
             )
         )
-
-    def _emit_navigation_event(self, event: NavigationEvent) -> None:
-        self.event_queue.put(event)
 
     def _should_record_pose(self, pose: MapPose) -> bool:
         if not self._state.travelled_path:
