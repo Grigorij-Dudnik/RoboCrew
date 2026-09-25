@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from queue import Queue
 from typing import Any
 
-import cv2
 import numpy as np
 import rclpy
 from action_msgs.msg import GoalStatus
@@ -27,8 +26,7 @@ from rclpy.qos import (
 )
 from sensor_msgs.msg import CompressedImage
 
-from robocrew.robots.WaypointDrone.map_utils import draw_normalized_grid_on_map
-from robocrew.robots.UnitreeGo2.semantic_map import SemanticMapOverlay
+from robocrew.robots.UnitreeGo2.map_renderer import Go2MapRenderer
 
 
 @dataclass(frozen=True)
@@ -102,11 +100,7 @@ class UnitreeGo2NavBridge:
         self._state = _BridgeState()
         self._state_lock = threading.RLock()
         self._goal_handle = None
-        self._semantic_overlay = (
-            SemanticMapOverlay(maps_dir, current_map_file)
-            if maps_dir and current_map_file
-            else None
-        )
+        self._map_renderer = Go2MapRenderer(maps_dir, current_map_file)
 
         if not rclpy.ok():
             rclpy.init(args=None)
@@ -170,7 +164,7 @@ class UnitreeGo2NavBridge:
                 raise ValueError("waypoint x and y must be between 0 and 1")
             pixel_x = normalized_x * (metadata.width - 1)
             pixel_y = normalized_y * (metadata.height - 1)
-            world_x, world_y = self._image_to_world(
+            world_x, world_y = self._map_renderer.image_to_world(
                 pixel_x, pixel_y, metadata
             )
             yaw = waypoint.get("yaw")
@@ -257,7 +251,15 @@ class UnitreeGo2NavBridge:
 
     def get_observation(self) -> Go2Observation:
         with self._state_lock:
-            map_image_b64 = self._render_map_locked()
+            map_image_b64 = self._map_renderer.render(
+                self._state.map_cells,
+                self._state.map_metadata,
+                self._state.travelled_path,
+                self._state.global_plan,
+                self._state.submitted_waypoints,
+                self._state.current_waypoint,
+                self._state.robot_pose,
+            )
             return Go2Observation(
                 camera_image_b64=self._state.camera_image_b64,
                 map_image_b64=map_image_b64,
@@ -428,130 +430,3 @@ class UnitreeGo2NavBridge:
             return True
         previous = self._state.travelled_path[-1]
         return math.hypot(pose.x - previous.x, pose.y - previous.y) >= 0.05
-
-    def _render_map_locked(self) -> str:
-        cells = self._state.map_cells
-        metadata = self._state.map_metadata
-        if cells is None or metadata is None:
-            return ""
-
-        image = np.full(cells.shape, 205, dtype=np.uint8)
-        image[cells == 0] = 254
-        image[cells >= 65] = 0
-        uncertain = (cells > 0) & (cells < 65)
-        image[uncertain] = 254 - (cells[uncertain].astype(np.int16) * 254 // 100)
-        image = np.flipud(image)
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-
-        if self._semantic_overlay:
-            self._semantic_overlay.apply(image, metadata)
-        self._draw_path(image, self._state.travelled_path, metadata, (0, 0, 255))
-        planned_path = (
-            self._state.global_plan
-            if self._state.global_plan
-            else self._state.submitted_waypoints[self._state.current_waypoint :]
-        )
-        if planned_path and self._state.robot_pose:
-            planned_path = [self._state.robot_pose, *planned_path]
-        self._draw_path(image, planned_path, metadata, (255, 0, 0))
-        self._draw_waypoints(image, metadata)
-        self._draw_robot(image, metadata)
-
-        encoded, jpeg = cv2.imencode(".jpg", image)
-        if not encoded:
-            raise RuntimeError("failed to encode Nav2 map as JPEG")
-        map_image_b64 = base64.b64encode(jpeg).decode("ascii")
-        return draw_normalized_grid_on_map(map_image_b64, grid_color=(96, 96, 96))
-
-    def _draw_path(
-        self,
-        image: np.ndarray,
-        path: list[MapPose],
-        metadata: MapMetadata,
-        color: tuple[int, int, int],
-    ) -> None:
-        if len(path) < 2:
-            return
-        points = np.asarray(
-            [self._world_to_image(pose.x, pose.y, metadata) for pose in path],
-            dtype=np.int32,
-        )
-        cv2.polylines(image, [points], False, color, 3, cv2.LINE_AA)
-
-    def _draw_waypoints(
-        self, image: np.ndarray, metadata: MapMetadata
-    ) -> None:
-        remaining = self._state.submitted_waypoints[
-            self._state.current_waypoint :
-        ]
-        for index, waypoint in enumerate(
-            remaining, start=self._state.current_waypoint + 1
-        ):
-            point = self._world_to_image(waypoint.x, waypoint.y, metadata)
-            cv2.circle(image, point, 6, (255, 0, 0), 2, cv2.LINE_AA)
-            image_angle = metadata.origin_yaw - waypoint.yaw
-            tip = (
-                int(round(point[0] + 20 * math.cos(image_angle))),
-                int(round(point[1] + 20 * math.sin(image_angle))),
-            )
-            cv2.arrowedLine(
-                image, point, tip, (255, 0, 0), 3, cv2.LINE_AA, tipLength=0.35
-            )
-            cv2.putText(
-                image,
-                str(index),
-                (point[0] + 7, point[1] - 7),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.45,
-                (255, 0, 0),
-                2,
-                cv2.LINE_AA,
-            )
-
-    def _draw_robot(
-        self, image: np.ndarray, metadata: MapMetadata
-    ) -> None:
-        pose = self._state.robot_pose
-        if pose is None:
-            return
-        center = self._world_to_image(pose.x, pose.y, metadata)
-        image_angle = metadata.origin_yaw - pose.yaw
-        length = max(20, min(image.shape[:2]) // 25)
-        tip = (
-            int(round(center[0] + length * math.cos(image_angle))),
-            int(round(center[1] + length * math.sin(image_angle))),
-        )
-        cv2.circle(image, center, 9, (0, 0, 0), -1, cv2.LINE_AA)
-        cv2.circle(image, center, 7, (0, 255, 255), -1, cv2.LINE_AA)
-        cv2.arrowedLine(image, center, tip, (0, 0, 0), 7, cv2.LINE_AA, tipLength=0.35)
-        cv2.arrowedLine(
-            image, center, tip, (0, 255, 255), 4, cv2.LINE_AA, tipLength=0.35
-        )
-
-    @staticmethod
-    def _image_to_world(
-        pixel_x: float, pixel_y: float, metadata: MapMetadata
-    ) -> tuple[float, float]:
-        local_x = pixel_x * metadata.resolution
-        local_y = (metadata.height - 1 - pixel_y) * metadata.resolution
-        cos_origin = math.cos(metadata.origin_yaw)
-        sin_origin = math.sin(metadata.origin_yaw)
-        return (
-            metadata.origin_x + local_x * cos_origin - local_y * sin_origin,
-            metadata.origin_y + local_x * sin_origin + local_y * cos_origin,
-        )
-
-    @staticmethod
-    def _world_to_image(
-        world_x: float, world_y: float, metadata: MapMetadata
-    ) -> tuple[int, int]:
-        delta_x = world_x - metadata.origin_x
-        delta_y = world_y - metadata.origin_y
-        cos_origin = math.cos(metadata.origin_yaw)
-        sin_origin = math.sin(metadata.origin_yaw)
-        local_x = delta_x * cos_origin + delta_y * sin_origin
-        local_y = -delta_x * sin_origin + delta_y * cos_origin
-        return (
-            int(round(local_x / metadata.resolution)),
-            int(round(metadata.height - 1 - local_y / metadata.resolution)),
-        )

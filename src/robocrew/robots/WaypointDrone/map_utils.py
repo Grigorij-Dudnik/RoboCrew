@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-import base64
 import math
 from dataclasses import dataclass, field
 
-import cv2
 import numpy as np
 
+from robocrew.core.map_rendering import (
+    decode_map,
+    draw_heading_marker,
+    draw_path,
+    draw_waypoints,
+    encode_map,
+)
 from robocrew.robots.WaypointDrone.drone_bridge_common import DroneObservation
 
 
@@ -16,7 +21,9 @@ METERS_PER_DEGREE_LAT = 111_320.0
 
 
 def normalized_waypoints_to_gps(normalized_waypoints, center_gps, map_span_m):
-    meters_per_degree_lon = METERS_PER_DEGREE_LAT * math.cos(math.radians(center_gps["lat"]))
+    meters_per_degree_lon = METERS_PER_DEGREE_LAT * math.cos(
+        math.radians(center_gps["lat"])
+    )
     return [
         {
             "lat": center_gps["lat"]
@@ -28,49 +35,6 @@ def normalized_waypoints_to_gps(normalized_waypoints, center_gps, map_span_m):
     ]
 
 
-def draw_heading_marker_on_map(map_image, yaw_rad):
-    center_x, center_y = map_image.shape[1] // 2, map_image.shape[0] // 2
-    arrow_size = max(3, min(map_image.shape[:2]) // 70)
-    marker_points = np.array([
-        (
-            center_x + arrow_size * 4.0 * math.cos(yaw_rad),
-            center_y - arrow_size * 4.0 * math.sin(yaw_rad),
-        ),
-        (
-            center_x + arrow_size * math.cos(yaw_rad + 2.4),
-            center_y - arrow_size * math.sin(yaw_rad + 2.4),
-        ),
-        (
-            center_x + arrow_size * math.cos(yaw_rad - 2.4),
-            center_y - arrow_size * math.sin(yaw_rad - 2.4),
-        ),
-    ], dtype=np.int32)
-    cv2.polylines(map_image, [marker_points], True, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.fillPoly(map_image, [marker_points], (0, 255, 255))
-
-
-def draw_normalized_grid_on_map(map_image_b64, grid_color=(255, 255, 255)):
-    map_image = cv2.imdecode(
-        np.frombuffer(base64.b64decode(map_image_b64), np.uint8),
-        cv2.IMREAD_COLOR,
-    )
-    height, width = map_image.shape[:2]
-    overlay = map_image.copy()
-    for index in range(1, 10):
-        x = round(index * (width - 1) / 10)
-        y = round(index * (height - 1) / 10)
-        cv2.line(overlay, (x, 0), (x, height - 1), grid_color, 1, cv2.LINE_AA)
-        cv2.line(overlay, (0, y), (width - 1, y), grid_color, 1, cv2.LINE_AA)
-    map_image = cv2.addWeighted(overlay, 0.45, map_image, 0.55, 0)
-    for index in range(1, 10):
-        x = round(index * (width - 1) / 10)
-        y = round(index * (height - 1) / 10)
-        for label_origin in ((x + 2, 15), (2, y - 2)):
-            cv2.putText(map_image, f".{index}", label_origin, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 3, cv2.LINE_AA)
-            cv2.putText(map_image, f".{index}", label_origin, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-    return base64.b64encode(cv2.imencode(".jpg", map_image)[1]).decode()
-
-
 def draw_flight_paths_on_map(
     map_image_b64,
     current_gps,
@@ -79,8 +43,10 @@ def draw_flight_paths_on_map(
     planned_route_gps,
     yaw_rad=0.0,
 ):
-    map_image = cv2.imdecode(np.frombuffer(base64.b64decode(map_image_b64), np.uint8), cv2.IMREAD_COLOR)
-    meters_per_degree_lon = METERS_PER_DEGREE_LAT * math.cos(math.radians(current_gps["lat"]))
+    map_image = decode_map(map_image_b64)
+    meters_per_degree_lon = METERS_PER_DEGREE_LAT * math.cos(
+        math.radians(current_gps["lat"])
+    )
 
     def gps_path_to_pixels(gps_path):
         return np.array([
@@ -103,12 +69,28 @@ def draw_flight_paths_on_map(
             for gps_point in gps_path
         ])
 
-    if len(flown_path_gps) > 1:
-        cv2.polylines(map_image, [gps_path_to_pixels(flown_path_gps)], False, (40, 80, 255), 5)
+    draw_path(
+        map_image,
+        gps_path_to_pixels(flown_path_gps),
+        (40, 80, 255),
+        5,
+    )
     if planned_route_gps:
-        cv2.polylines(map_image, [gps_path_to_pixels([current_gps, *planned_route_gps])], False, (255, 120, 40), 5)
-    draw_heading_marker_on_map(map_image, yaw_rad)
-    return base64.b64encode(cv2.imencode(".jpg", map_image)[1]).decode()
+        planned_pixels = gps_path_to_pixels(planned_route_gps)
+        draw_path(
+            map_image,
+            gps_path_to_pixels([current_gps, *planned_route_gps]),
+            (255, 120, 40),
+            5,
+        )
+        draw_waypoints(
+            map_image,
+            [(tuple(point), None) for point in planned_pixels],
+            color=(255, 120, 40),
+        )
+    marker_length = max(3, min(map_image.shape[:2]) // 70) * 4
+    draw_heading_marker(map_image, -yaw_rad, length=marker_length)
+    return encode_map(map_image)
 
 
 @dataclass
@@ -125,7 +107,11 @@ class FlightMapState:
         }
         if not self.flown_path_gps or current_gps != self.flown_path_gps[-1]:
             self.flown_path_gps.append(current_gps)
-        while self.planned_route_gps and self._distance_m(current_gps, self.planned_route_gps[0]) < 5.0:
+        while (
+            self.planned_route_gps
+            and self._distance_m(current_gps, self.planned_route_gps[0])
+            < 5.0
+        ):
             self.planned_route_gps.pop(0)
         if flight_observation.route_state in {"completed", "stopped"}:
             self.planned_route_gps.clear()

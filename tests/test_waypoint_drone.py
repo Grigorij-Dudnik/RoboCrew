@@ -17,12 +17,12 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 setattr(langchain.chat_models, "init_chat_model", MagicMock())
 
+from robocrew.core.map_rendering import draw_normalized_grid_on_map
 from robocrew.core.tools import finish_task
 from robocrew.robots.WaypointDrone.drone_bridge_common import DroneObservation
 from robocrew.robots.WaypointDrone.drone_bridge_isaac_ros import IsaacRosBridge
 from robocrew.robots.WaypointDrone.map_utils import (
     draw_flight_paths_on_map,
-    draw_normalized_grid_on_map,
     normalized_waypoints_to_gps,
 )
 from robocrew.robots.WaypointDrone.in_flight_monitor_agent import (
@@ -299,11 +299,11 @@ class TestWaypointDroneMapUtils(unittest.TestCase):
 
         with (
             patch(
-                "robocrew.robots.WaypointDrone.map_utils.cv2.polylines",
+                "robocrew.core.map_rendering.cv2.polylines",
                 side_effect=lambda image, *_args, **_kwargs: draw_order.append("line") or image,
             ),
             patch(
-                "robocrew.robots.WaypointDrone.map_utils.cv2.fillPoly",
+                "robocrew.core.map_rendering.cv2.arrowedLine",
                 side_effect=lambda image, *_args, **_kwargs: draw_order.append("arrow") or image,
             ),
         ):
@@ -316,7 +316,7 @@ class TestWaypointDroneMapUtils(unittest.TestCase):
                 yaw_rad=0.5,
             )
 
-        self.assertEqual(draw_order, ["line", "line", "arrow"])
+        self.assertEqual(draw_order, ["line", "line", "arrow", "arrow"])
 
 
 class TestWaypointDroneBridge(unittest.TestCase):
