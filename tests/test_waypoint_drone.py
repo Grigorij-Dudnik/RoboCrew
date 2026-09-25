@@ -17,12 +17,12 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 setattr(langchain.chat_models, "init_chat_model", MagicMock())
 
-from robocrew.core.map_rendering import draw_normalized_grid_on_map
 from robocrew.core.tools import finish_task
 from robocrew.robots.WaypointDrone.drone_bridge_common import DroneObservation
 from robocrew.robots.WaypointDrone.drone_bridge_isaac_ros import IsaacRosBridge
 from robocrew.robots.WaypointDrone.map_utils import (
     draw_flight_paths_on_map,
+    draw_normalized_grid_on_map,
     normalized_waypoints_to_gps,
 )
 from robocrew.robots.WaypointDrone.in_flight_monitor_agent import (

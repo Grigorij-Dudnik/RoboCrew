@@ -8,10 +8,12 @@ import numpy as np
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.core.map_rendering import draw_normalized_grid_on_map
 from robocrew.core.utils import basic_augmentation
 from robocrew.robots.WaypointDrone.drone_bridge_common import DroneBridge, DroneObservation
-from robocrew.robots.WaypointDrone.map_utils import FlightMapState
+from robocrew.robots.WaypointDrone.map_utils import (
+    FlightMapState,
+    draw_normalized_grid_on_map,
+)
 
 
 class WaypointDroneAgent(LLMAgent):

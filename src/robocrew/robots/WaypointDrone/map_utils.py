@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import base64
 import math
 from dataclasses import dataclass, field
 
+import cv2
 import numpy as np
 
 from robocrew.core.map_rendering import (
-    decode_map,
     draw_heading_marker,
+    draw_normalized_grid,
     draw_path,
     draw_waypoints,
     encode_map,
@@ -18,6 +20,19 @@ from robocrew.robots.WaypointDrone.drone_bridge_common import DroneObservation
 
 
 METERS_PER_DEGREE_LAT = 111_320.0
+
+
+def _decode_map(map_image_b64):
+    return cv2.imdecode(
+        np.frombuffer(base64.b64decode(map_image_b64), np.uint8),
+        cv2.IMREAD_COLOR,
+    )
+
+
+def draw_normalized_grid_on_map(map_image_b64, grid_color=(255, 255, 255)):
+    map_image = _decode_map(map_image_b64)
+    draw_normalized_grid(map_image, grid_color)
+    return encode_map(map_image)
 
 
 def normalized_waypoints_to_gps(normalized_waypoints, center_gps, map_span_m):
@@ -43,7 +58,7 @@ def draw_flight_paths_on_map(
     planned_route_gps,
     yaw_rad=0.0,
 ):
-    map_image = decode_map(map_image_b64)
+    map_image = _decode_map(map_image_b64)
     meters_per_degree_lon = METERS_PER_DEGREE_LAT * math.cos(
         math.radians(current_gps["lat"])
     )

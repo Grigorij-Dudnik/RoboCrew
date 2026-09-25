@@ -1,4 +1,4 @@
-"""Shared drawing primitives for robot map images."""
+"""Drawing primitives shared by robot map renderers."""
 
 import base64
 import math
@@ -7,18 +7,8 @@ import cv2
 import numpy as np
 
 
-def decode_map(map_image_b64: str) -> np.ndarray:
-    return cv2.imdecode(
-        np.frombuffer(base64.b64decode(map_image_b64), np.uint8),
-        cv2.IMREAD_COLOR,
-    )
-
-
 def encode_map(image: np.ndarray) -> str:
-    encoded, jpeg = cv2.imencode(".jpg", image)
-    if not encoded:
-        raise RuntimeError("failed to encode map as JPEG")
-    return base64.b64encode(jpeg).decode("ascii")
+    return base64.b64encode(cv2.imencode(".jpg", image)[1]).decode()
 
 
 def draw_path(
@@ -45,14 +35,12 @@ def draw_heading_marker(
         int(round(center[0] + length * math.cos(yaw))),
         int(round(center[1] + length * math.sin(yaw))),
     )
-    cv2.circle(image, center, 9, (0, 0, 0), -1, cv2.LINE_AA)
-    cv2.circle(image, center, 7, color, -1, cv2.LINE_AA)
-    cv2.arrowedLine(
-        image, center, tip, (0, 0, 0), 7, cv2.LINE_AA, tipLength=0.35
-    )
-    cv2.arrowedLine(
-        image, center, tip, color, 4, cv2.LINE_AA, tipLength=0.35
-    )
+    for radius, circle_color in ((9, (0, 0, 0)), (7, color)):
+        cv2.circle(image, center, radius, circle_color, -1, cv2.LINE_AA)
+    for line_color, width in (((0, 0, 0), 7), (color, 4)):
+        cv2.arrowedLine(
+            image, center, tip, line_color, width, cv2.LINE_AA, tipLength=0.35
+        )
 
 
 def draw_waypoints(
@@ -74,72 +62,8 @@ def draw_waypoints(
             )
         cv2.putText(
             image, str(index), (point[0] + 7, point[1] - 7),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2, cv2.LINE_AA
+            cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2, cv2.LINE_AA,
         )
-
-
-def draw_semantic_shape(
-    image: np.ndarray,
-    kind: str,
-    points,
-    color: tuple[int, int, int],
-) -> None:
-    points = np.asarray(points, dtype=np.int32)
-    semantic = (*color, 230)
-    if kind == "point":
-        cv2.circle(image, tuple(points[0]), 8, semantic, -1, cv2.LINE_AA)
-    elif kind == "line":
-        cv2.polylines(image, [points], False, semantic, 5, cv2.LINE_AA)
-    elif kind == "area":
-        cv2.fillPoly(image, [points], (*color, 55), cv2.LINE_AA)
-        cv2.polylines(image, [points], True, semantic, 4, cv2.LINE_AA)
-
-
-def draw_label(
-    image: np.ndarray,
-    text: str,
-    anchor: tuple[int, int],
-    occupied,
-    color: tuple[int, int, int],
-) -> None:
-    font = cv2.FONT_HERSHEY_DUPLEX
-    (text_width, text_height), baseline = cv2.getTextSize(text, font, 0.55, 1)
-    box_width, box_height = text_width + 8, text_height + baseline + 8
-    x, y = anchor
-    offsets = (
-        (12, -box_height // 2),
-        (-box_width - 12, -box_height // 2),
-        (-box_width // 2, -box_height - 12),
-        (-box_width // 2, 12),
-        (12, -box_height - 12),
-        (12, 12),
-        (-box_width - 12, -box_height - 12),
-        (-box_width - 12, 12),
-    )
-    candidates = []
-    for dx, dy in offsets:
-        left = min(max(x + dx, 5), max(5, image.shape[1] - box_width - 5))
-        top = min(max(y + dy, 5), max(5, image.shape[0] - box_height - 5))
-        candidates.append((left, top, left + box_width, top + box_height))
-
-    def overlap(box):
-        return sum(
-            max(0, min(box[2], other[2]) - max(box[0], other[0]))
-            * max(0, min(box[3], other[3]) - max(box[1], other[1]))
-            for other in occupied
-        )
-
-    left, top, right, bottom = min(candidates, key=overlap)
-    occupied.append((left - 3, top - 3, right + 3, bottom + 3))
-    origin = (left + 4, top + 4 + text_height)
-    cv2.putText(
-        image, text, origin, font, 0.55,
-        (0, 0, 0, 255), 2, cv2.LINE_AA
-    )
-    cv2.putText(
-        image, text, origin, font, 0.55,
-        (*color, 255), 1, cv2.LINE_AA
-    )
 
 
 def draw_normalized_grid(
@@ -158,20 +82,8 @@ def draw_normalized_grid(
         x = round(index * (width - 1) / 10)
         y = round(index * (height - 1) / 10)
         for origin in ((x + 2, 15), (2, y - 2)):
-            cv2.putText(
-                image, f".{index}", origin, cv2.FONT_HERSHEY_SIMPLEX,
-                0.4, (0, 0, 0), 3, cv2.LINE_AA
-            )
-            cv2.putText(
-                image, f".{index}", origin, cv2.FONT_HERSHEY_SIMPLEX,
-                0.4, (255, 255, 255), 1, cv2.LINE_AA
-            )
-
-
-def draw_normalized_grid_on_map(
-    map_image_b64: str,
-    grid_color: tuple[int, int, int] = (255, 255, 255),
-) -> str:
-    image = decode_map(map_image_b64)
-    draw_normalized_grid(image, grid_color)
-    return encode_map(image)
+            for text_color, thickness in (((0, 0, 0), 3), ((255, 255, 255), 1)):
+                cv2.putText(
+                    image, f".{index}", origin, cv2.FONT_HERSHEY_SIMPLEX,
+                    0.4, text_color, thickness, cv2.LINE_AA,
+                )
