@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
 
-from robocrew.core.tools import finish_task, create_say, create_execute_subtask
+from robocrew.core.tools import create_execute_subtask, finish_task
+from robocrew.robots.XLeRobot.voice_synth import create_say
 
 
 # ---------------------------------------------------------------------------
@@ -36,27 +37,29 @@ class TestFinishTask(unittest.TestCase):
 class TestCreateSay(unittest.TestCase):
 
     def test_say_calls_speak_and_play(self):
-        with patch("robocrew.core.voice_synth.speak_and_play") as mock_speak:
+        with patch(
+            "robocrew.robots.XLeRobot.voice_synth.speak_and_play"
+        ) as mock_speak:
             say = create_say(None)
             say.invoke({"query": "Hello, I am your robot"})
             mock_speak.assert_called_once_with("Hello, I am your robot")
 
     def test_say_with_receiver_stops_and_restarts_listening(self):
         receiver = MagicMock()
-        with patch("robocrew.core.voice_synth.speak_and_play"):
+        with patch("robocrew.robots.XLeRobot.voice_synth.speak_and_play"):
             say = create_say(receiver)
             say.invoke({"query": "Moving forward"})
             receiver.stop_listening.assert_called_once()
             receiver.start_listening.assert_called_once()
 
     def test_say_without_receiver_does_not_crash(self):
-        with patch("robocrew.core.voice_synth.speak_and_play"):
+        with patch("robocrew.robots.XLeRobot.voice_synth.speak_and_play"):
             say = create_say(None)
             result = say.invoke({"query": "Test message"})
             self.assertIsNotNone(result)
 
     def test_say_result_contains_spoken_text(self):
-        with patch("robocrew.core.voice_synth.speak_and_play"):
+        with patch("robocrew.robots.XLeRobot.voice_synth.speak_and_play"):
             say = create_say(None)
             result = say.invoke({"query": "I see the table"})
             self.assertIn("I see the table", result)
@@ -68,8 +71,10 @@ class TestCreateSay(unittest.TestCase):
         receiver.stop_listening.side_effect = lambda: call_order.append("stop")
         receiver.start_listening.side_effect = lambda: call_order.append("start")
 
-        with patch("robocrew.core.voice_synth.speak_and_play",
-                   side_effect=lambda _: call_order.append("speak")):
+        with patch(
+            "robocrew.robots.XLeRobot.voice_synth.speak_and_play",
+            side_effect=lambda _: call_order.append("speak"),
+        ):
             say = create_say(receiver)
             say.invoke({"query": "Hello"})
 

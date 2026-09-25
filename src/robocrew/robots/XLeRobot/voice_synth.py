@@ -6,6 +6,10 @@ import time
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 
+from langchain_core.tools import tool
+
+from robocrew.core.utils import stop_listening_during_tool_execution
+
 
 DATA_DIR = "/home/pi/.cache/robocrew"
 MODEL_PATH = os.path.join(DATA_DIR, "en_amy.onnx")
@@ -47,4 +51,17 @@ def speak_and_play(text):
         time.sleep(0.1)
         
     pygame.mixer.quit()
+
+
+def create_say(sound_receiver=None):
+    """Create the XLeRobot speech tool, muting its microphone during playback."""
+
+    @tool
+    @stop_listening_during_tool_execution(sound_receiver)
+    def say(query: str):
+        """Speak an English sentence aloud to the user."""
+        speak_and_play(query)
+        return f"Said: {query}"
+
+    return say
 

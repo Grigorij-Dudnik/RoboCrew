@@ -7,7 +7,7 @@ and decides whether to chat or delegate a physical subtask to the Executor.
 
 from pathlib import Path
 
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.core.tools import create_execute_subtask, finish_task
 from robocrew.robots.XLeRobot.servo_controls import ServoControler
 from robocrew.robots.XLeRobot.tools import (

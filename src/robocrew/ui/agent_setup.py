@@ -5,7 +5,7 @@ import shlex
 import subprocess
 import sys
 import streamlit as st
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.robots.XLeRobot.servo_controls import ServoControler, _check_calibration_file
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.core.tools import finish_task

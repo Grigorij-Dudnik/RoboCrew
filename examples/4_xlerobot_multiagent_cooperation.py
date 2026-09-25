@@ -6,7 +6,7 @@ to the Controller (fast model) which handles navigation and arm manipulation.
 
 from pathlib import Path
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.core.tools import finish_task, create_execute_subtask
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import \

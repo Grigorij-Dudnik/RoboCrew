@@ -24,7 +24,7 @@ def make_xlerobot_agent(**kwargs):
 class TestXLeRobotListening(unittest.TestCase):
 
     def test_queued_speech_runs_main_loop_with_user_text(self):
-        with patch("robocrew.core.sound_receiver.SoundReceiver"):
+        with patch("robocrew.robots.XLeRobot.sound_receiver.SoundReceiver"):
             agent = make_xlerobot_agent(sounddevice_index_or_alias="mic_main", wakeword="Bob")
 
         agent.speech_queue.put("Bob what do you see?")
@@ -44,7 +44,7 @@ class TestXLeRobotListening(unittest.TestCase):
         self.assertTrue(agent.idle)
 
     def test_queued_speech_continues_without_using_transcript_as_task(self):
-        with patch("robocrew.core.sound_receiver.SoundReceiver"):
+        with patch("robocrew.robots.XLeRobot.sound_receiver.SoundReceiver"):
             agent = make_xlerobot_agent(sounddevice_index_or_alias="mic_main", wakeword="Bob")
 
         agent.speech_queue.put("Bob bring me a tissue")
@@ -79,7 +79,10 @@ class TestXLeRobotListening(unittest.TestCase):
 
     def test_tts_adds_say_tool_with_sound_receiver(self):
         receiver = MagicMock()
-        with patch("robocrew.core.sound_receiver.SoundReceiver", return_value=receiver):
+        with patch(
+            "robocrew.robots.XLeRobot.sound_receiver.SoundReceiver",
+            return_value=receiver,
+        ):
             agent = make_xlerobot_agent(
                 sounddevice_index_or_alias="mic_main",
                 wakeword="Bob",
@@ -87,7 +90,7 @@ class TestXLeRobotListening(unittest.TestCase):
             )
 
         say_tool = agent.tool_name_to_tool["say"]
-        with patch("robocrew.core.voice_synth.speak_and_play"):
+        with patch("robocrew.robots.XLeRobot.voice_synth.speak_and_play"):
             say_tool.invoke({"query": "Hello"})
 
         receiver.stop_listening.assert_called_once()

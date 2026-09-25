@@ -70,7 +70,7 @@ robocrew-gui
 To gain full control over RoboCrew features, you can create your own script. Simplest example:
 
 ```python
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_right, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler

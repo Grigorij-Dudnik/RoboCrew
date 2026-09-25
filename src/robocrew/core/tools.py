@@ -1,5 +1,4 @@
 from langchain_core.tools import tool
-from robocrew.core.utils import stop_listening_during_tool_execution
 
 
 @tool
@@ -11,29 +10,6 @@ def finish_task(report: str = "Task finished"):
     - Task is done
     - You are stuck and cannot make progress after 3+ attempts"""
     return report
-
-
-def create_say(sound_receiver=None):
-    """
-    Factory function to create the 'say' tool with optional sound_receiver integration.
-    Args:
-        sound_receiver: Optional SoundReceiver instance. If provided, listening will be
-                       paused during speech to avoid the robot hearing itself.
-    """
-    from robocrew.core.voice_synth import speak_and_play
-
-    @tool
-    @stop_listening_during_tool_execution(sound_receiver)
-    def say(query: str):
-        """
-        Speak a sentence aloud to the user.
-        Use this to communicate verbally with the user, for example to greet them,
-        answer questions, or provide status updates.
-        Use only English language.
-        """
-        speak_and_play(query)
-        return f"Said: {query}"
-    return say
 
 
 def create_execute_subtask(executor):
