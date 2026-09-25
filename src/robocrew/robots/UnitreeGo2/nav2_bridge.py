@@ -120,7 +120,7 @@ class UnitreeGo2NavBridge:
         )
         self.node.create_subscription(
             CompressedImage,
-            "/camera/rgb_compressed",
+            "/camera/rgb_raw",
             self._on_camera,
             camera_qos,
         )
