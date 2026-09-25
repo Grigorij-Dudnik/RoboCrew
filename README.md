@@ -44,6 +44,7 @@ robocrew-gui
 ## 🎨 Supported Robots
 
 - ✅ **XLeRobot** - Full support for all features
+- ✅ **Unitree Go2** - Autonomous navigation with Nav2, camera, LiDAR, and Telegram control
 - 🥝 **LeKiwi** - Use XLeRobot code (compatible platform)
 - 🚙 **Earth Rover mini plus** - Full support
 - 🔜 More robot platforms coming soon! [Request your platform →](https://github.com/Grigorij-Dudnik/RoboCrew/issues)
