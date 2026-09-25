@@ -61,7 +61,6 @@ go_to_normal_mode = create_go_to_normal_mode(servo_controler)
 
 executor = XLeRobotAgent(
     model="google_genai:gemini-robotics-er-1.6-preview",
-    thinking_level="high",
     tools=[
         move_forward,
         move_backward,
@@ -84,7 +83,6 @@ executor = XLeRobotAgent(
 
 planner = XLeRobotAgent(
     model="google_genai:gemini-3.5-flash",
-    thinking_level="high",
     tools=[
         look_around,
         create_execute_subtask(executor),

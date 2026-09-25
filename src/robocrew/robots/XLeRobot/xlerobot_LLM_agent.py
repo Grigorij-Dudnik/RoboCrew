@@ -11,7 +11,6 @@ class XLeRobotAgent(LLMAgent):
 		tools: list,
 		name: str | None = None,
 		system_prompt: str | None = None,
-		thinking_level: str | None = None,
 		camera_fov: int = 90,
 		history_len: int | None = None,
 		main_camera=None,
@@ -54,7 +53,6 @@ class XLeRobotAgent(LLMAgent):
 			main_camera=main_camera,
 			name=name,
 			system_prompt=system_prompt,
-			thinking_level=thinking_level,
 			camera_fov=camera_fov,
 			servo_controler=servo_controler,
 			history_len=history_len

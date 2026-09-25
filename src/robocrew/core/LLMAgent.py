@@ -17,7 +17,6 @@ class LLMAgent():
             main_camera,
             name: str | None = None,
             system_prompt: str | None = None,
-            thinking_level: str | None = None,
             camera_fov: float = 90,
             servo_controler=None,
             history_len: int | None = None,
@@ -31,8 +30,6 @@ class LLMAgent():
         main_camera: robot front camera object.
         name: optional agent name shown in logs (e.g. 'Planner', 'Controller').
         system_prompt: custom system prompt - optional.
-        thinking_level: Gemini 3.x thinking effort level. Options: 'minimal', 'low', 'medium', 'high'.
-            Gemini 3.1 Pro supports 'low' and 'high' only. Gemini 3 Flash supports all four levels.
         camera_fov: field of view (degrees) of the main camera.
         history_len: number of newest request-response pairs to keep in context.
         skills: optional SKILL.md folder names or paths.
@@ -51,11 +48,7 @@ class LLMAgent():
             system_prompt += "\n\n" + skills_prompt
             tools.extend(skills_tools)
 
-        model_kwargs = {}
-        if thinking_level is not None:
-            model_kwargs["generation_config"] = {"thinking_config": {"thinking_level": thinking_level.upper()}}
-
-        llm = init_chat_model(model, model_kwargs=model_kwargs or {})
+        llm = init_chat_model(model)
         #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self._llm_without_tools = llm
         self.bind_tools(tools)
