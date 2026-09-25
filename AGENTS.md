@@ -6,6 +6,8 @@
 ## Architecture
 
 - Put cross-robot code in `src/robocrew/core/`; keep only robot-specific code under `src/robocrew/robots/<Robot>/`.
+- Extract shared code only when multiple robots already use it; do not design for hypothetical reuse.
+- Keep refactors direct and minimal; avoid one-use wrappers, helpers, and caches, and check the final diff for unnecessary growth.
 - Agent classes under `src/robocrew/robots/` are reusable skeletons. They process observations and events; they do not choose models, tools, schedules, polling intervals, or other agents.
 - Tool factories live in each robot's `tools.py`. Keep tools small and independent of application orchestration.
 - Each agent role has its own prompt and restricted tools. A monitor must not rely on the mission agent's prompt or tool set.
