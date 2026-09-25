@@ -17,7 +17,7 @@ class Waypoint(TypedDict):
     yaw: NotRequired[float]
 
 
-@tool
+@tool(extras={"requires_navigation": True})
 def continue_navigation() -> str:
     """Keep the active Nav2 route running."""
     return "navigation_continues"
@@ -96,7 +96,7 @@ def create_set_waypoints(bridge, mission_state):
 
 
 def create_cancel_navigation(bridge, mission_state):
-    @tool
+    @tool(extras={"requires_navigation": True})
     def cancel_navigation(reason: str) -> str:
         """Cancel the active Nav2 route before starting a different route."""
         if not bridge.cancel_navigation():

@@ -1,5 +1,5 @@
 import os
-from queue import Empty, Queue
+from queue import Queue
 
 from robocrew.core.tools import finish_task
 from robocrew.robots.UnitreeGo2.mission_state import MissionState
@@ -26,8 +26,6 @@ tools = [
     create_plan_tasks(bridge, mission_state),
     create_set_waypoints(bridge, mission_state),
     finish_task,
-]
-active_route_tools = [
     continue_navigation,
     create_cancel_navigation(bridge, mission_state),
 ]
@@ -40,22 +38,4 @@ agent = UnitreeGo2Agent(
     tools=tools,
 )
 
-telegram.start()
-try:
-    while True:
-        # A real event wakes the loop immediately; Empty means five quiet
-        # seconds passed, so it is time for a scheduled observation.
-        try:
-            event = event_queue.get(timeout=5.0)
-        except Empty:
-            if mission_state.active_task is None and not bridge.navigation_active:
-                continue
-            event = {"kind": "scheduled_observation"}
-        agent.bind_tools(
-            tools + active_route_tools if bridge.navigation_active else tools
-        )
-        agent.process_event(event)
-except KeyboardInterrupt:
-    pass
-finally:
-    agent.cleanup()
+agent.go()

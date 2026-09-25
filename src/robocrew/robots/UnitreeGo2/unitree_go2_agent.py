@@ -8,7 +8,7 @@ import json
 from collections import deque
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from typing import Any
 from urllib.request import urlopen
 
@@ -59,6 +59,7 @@ class UnitreeGo2Agent(LLMAgent):
         self.event_queue = event_queue
         self.telegram_gateway = telegram_gateway
         self.battery_url = battery_url
+        self._all_tools = list(self.tools)
         self._current_event: Any = None
         self._camera_history = deque(maxlen=4)
 
@@ -217,6 +218,30 @@ class UnitreeGo2Agent(LLMAgent):
         self.telegram_gateway.stop()
         self.bridge.close()
         super().cleanup()
+
+    def go(self):
+        self.telegram_gateway.start()
+        try:
+            while True:
+                # Queue events wake immediately; five quiet seconds refresh active work.
+                try:
+                    event = self.event_queue.get(timeout=5.0)
+                except Empty:
+                    idle = self.mission_state.active_task is None
+                    if idle and not self.bridge.navigation_active:
+                        continue
+                    event = {"kind": "scheduled_observation"}
+                available_tools = [
+                    tool for tool in self._all_tools
+                    if self.bridge.navigation_active
+                    or not (tool.extras or {}).get("requires_navigation")
+                ]
+                self.bind_tools(available_tools)
+                self.process_event(event)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.cleanup()
 
     def _handle_task_report(self, report: str) -> None:
         """Mirror RoboCrew's completed task into mission state and Telegram."""
