@@ -145,11 +145,7 @@ class UnitreeGo2NavBridge:
     @property
     def navigation_active(self) -> bool:
         with self._state_lock:
-            return self._state.navigation_state in {
-                "submitting",
-                "active",
-                "cancelling",
-            }
+            return self._state.navigation_state == "active"
 
     def submit_waypoints(
         self,
@@ -228,7 +224,7 @@ class UnitreeGo2NavBridge:
                 MapPose(**pose) for pose in travelled_path or []
             ]
             self._state.current_waypoint = 0
-            self._state.navigation_state = "submitting"
+            self._state.navigation_state = "active"
             if (
                 self._state.robot_pose
                 and self._should_record_pose(self._state.robot_pose)
@@ -245,7 +241,6 @@ class UnitreeGo2NavBridge:
             if self._state.navigation_state != "active":
                 return False
             goal_handle = self._goal_handle
-            self._state.navigation_state = "cancelling"
         cancel_future = goal_handle.cancel_goal_async()
         cancel_future.add_done_callback(self._on_cancel_response)
         return True
@@ -355,7 +350,6 @@ class UnitreeGo2NavBridge:
 
         with self._state_lock:
             self._goal_handle = goal_handle
-            self._state.navigation_state = "active"
         result_future = goal_handle.get_result_async()
         result_future.add_done_callback(self._on_navigation_result)
 
@@ -388,8 +382,6 @@ class UnitreeGo2NavBridge:
         try:
             response = future.result()
             if not response.goals_canceling:
-                with self._state_lock:
-                    self._state.navigation_state = "active"
                 self.event_queue.put(
                     NavigationEvent(
                         "failed",
@@ -397,8 +389,6 @@ class UnitreeGo2NavBridge:
                     )
                 )
         except Exception as exc:
-            with self._state_lock:
-                self._state.navigation_state = "active"
             self.event_queue.put(
                 NavigationEvent(
                     "failed",

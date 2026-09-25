@@ -94,8 +94,7 @@ def create_cancel_navigation(bridge, mission_state):
         if not bridge.cancel_navigation():
             return "navigation_not_active"
         remaining_count, travelled_path = bridge.route_progress()
-        if mission_state.active_task is not None:
-            mission_state.save_route_progress(remaining_count, travelled_path)
+        mission_state.save_route_progress(remaining_count, travelled_path)
         return (
             f"navigation_cancellation_requested: reason={reason}, "
             f"remaining_waypoints={remaining_count}"
