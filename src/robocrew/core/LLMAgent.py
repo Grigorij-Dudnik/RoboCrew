@@ -9,19 +9,6 @@ from langchain.chat_models import init_chat_model
 load_dotenv(find_dotenv())
 
 
-base_system_prompt = """
-## ROBOT SPECS
-- Mobile household robot with two arms
-
-## NAVIGATION RULES
-- Check angle grid at top of image - target must be within ±15° of center before moving forward
-- Watch for obstacles in your path - if obstacle blocks the way, navigate around it first
-- Never call move_forward 3+ times if nothing changes
-- If target is off-center: use turn_left or turn_right to align BEFORE moving forward
-- Reference floor meters only if floor visible and scale not on objects
-- Watch for obstacles between you and target - plan path to avoid them
-"""
-
 class LLMAgent():
     def __init__(
             self,
@@ -52,7 +39,7 @@ class LLMAgent():
         skills_dir: base directory for skill names.
         skill_context: object passed to optional skill tool factories.
         """
-        system_prompt = system_prompt or base_system_prompt
+        system_prompt = system_prompt or ""
         self.name = name
         
         self.task = None

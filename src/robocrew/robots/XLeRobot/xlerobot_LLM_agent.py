@@ -1,4 +1,4 @@
-from robocrew.core.LLMAgent import LLMAgent, base_system_prompt
+from robocrew.core.LLMAgent import LLMAgent
 from robocrew.robots.XLeRobot.lidar import init_lidar, run_scanner
 import base64
 import queue
@@ -43,7 +43,7 @@ class XLeRobotAgent(LLMAgent):
 			from robocrew.robots.XLeRobot.voice_synth import create_say
 
 			tools.append(create_say(self.sound_receiver))
-			system_prompt = (system_prompt or base_system_prompt) + (
+			system_prompt = (system_prompt or "") + (
 				" You can speak to the user using the `say` tool. "
 				"Use it to communicate important updates, greet users, or answer their questions verbally."
 			)
