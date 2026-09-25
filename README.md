@@ -46,6 +46,7 @@ robocrew-gui
 - ✅ **XLeRobot** - Full support for all features
 - 🥝 **LeKiwi** - Use XLeRobot code (compatible platform)
 - 🚙 **Earth Rover mini plus** - Full support
+- 🐕 **Unitree Go2** - Autonomous navigation with Nav2, camera, LiDAR, and Telegram control
 - 🔜 More robot platforms coming soon! [Request your platform →](https://github.com/Grigorij-Dudnik/RoboCrew/issues)
 
 ## 🎯 How It Works
@@ -70,7 +71,7 @@ robocrew-gui
 To gain full control over RoboCrew features, you can create your own script. Simplest example:
 
 ```python
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.core.LLMAgent import LLMAgent
 from robocrew.robots.XLeRobot.tools import create_move_forward, create_turn_right, create_turn_left
 from robocrew.robots.XLeRobot.servo_controls import ServoControler

@@ -299,11 +299,11 @@ class TestWaypointDroneMapUtils(unittest.TestCase):
 
         with (
             patch(
-                "robocrew.robots.WaypointDrone.map_utils.cv2.polylines",
+                "robocrew.core.map_rendering.cv2.polylines",
                 side_effect=lambda image, *_args, **_kwargs: draw_order.append("line") or image,
             ),
             patch(
-                "robocrew.robots.WaypointDrone.map_utils.cv2.fillPoly",
+                "robocrew.core.map_rendering.cv2.arrowedLine",
                 side_effect=lambda image, *_args, **_kwargs: draw_order.append("arrow") or image,
             ),
         ):
@@ -316,7 +316,7 @@ class TestWaypointDroneMapUtils(unittest.TestCase):
                 yaw_rad=0.5,
             )
 
-        self.assertEqual(draw_order, ["line", "line", "arrow"])
+        self.assertEqual(draw_order, ["line", "line", "arrow", "arrow"])
 
 
 class TestWaypointDroneBridge(unittest.TestCase):

@@ -5,7 +5,7 @@
  - Strafe movement is for going sideways without turning robot body.
 """
 
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import \
     create_go_to_precision_mode, \

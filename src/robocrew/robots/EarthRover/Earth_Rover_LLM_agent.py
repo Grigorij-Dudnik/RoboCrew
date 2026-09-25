@@ -26,7 +26,6 @@ class EarthRoverAgent(LLMAgent):
         system_prompt=None,
         camera_fov=90,
         history_len=None,
-        use_memory=False,
         use_location_visualizer=False,
     ):
         prompt_path = Path(__file__).parent.parent.resolve() / "EarthRover/earth_rover.prompt"
@@ -42,8 +41,7 @@ class EarthRoverAgent(LLMAgent):
             system_prompt=earth_rover_system_prompt,
             camera_fov=camera_fov,
             servo_controler=None,  # No servo control
-            history_len=history_len,
-            use_memory=use_memory
+            history_len=history_len
         )
         
         # Initialize thread pool executor for concurrent operations

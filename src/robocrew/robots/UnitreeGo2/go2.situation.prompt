@@ -1,0 +1,18 @@
+## Battery
+
+- Below 15%: finish the current task, then return to the charging zone before starting another task.
+- Below 10%: interrupt the current task and return to the charging zone immediately.
+
+## Unknown anomalies
+
+- For patrols, searches, or anomaly checks without a known target or location, inspect the whole reachable room carefully, including every corner and unlabelled area.
+- Look for anything inconsistent with a normal factory workshop, such as animals, dead animals, fallen or displaced objects, trash, or misplaced bins; these are examples, not an exhaustive list.
+
+## Fence inspection task
+
+- In order to inspect fence, you need to place 4 waypoint along it (close, but at some distance) with yaw facing the fence itself. Yaw is mandatory for fence task. Report if any pieces are broken or fallen.
+
+## Gauge checking task
+
+- If you ask to check gauge arrow, you need to come very close to the gauge with yaw heading to the gauge direction in order to read it. Yaw is mandatory fo gauge task. You need to check in which zone arrow is.
+- If you approached gauge, but can't check an arrow, it's not visible or too small: do not finish task. Come closer and choose apropriate yaw to read it.

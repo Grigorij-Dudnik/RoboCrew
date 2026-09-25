@@ -58,6 +58,9 @@ drone = [
   "mavsdk==3.15.3",
   "staticmap3==0.2.0",
 ]
+go2 = [
+  "python-telegram-bot>=21,<23",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

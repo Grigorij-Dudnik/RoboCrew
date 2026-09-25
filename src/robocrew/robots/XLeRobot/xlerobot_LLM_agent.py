@@ -1,6 +1,5 @@
-from robocrew.core.LLMAgent import LLMAgent, base_system_prompt
-from robocrew.core.tools import create_say
-from robocrew.core.lidar import init_lidar, run_scanner
+from robocrew.core.LLMAgent import LLMAgent
+from robocrew.robots.XLeRobot.lidar import init_lidar, run_scanner
 import base64
 import queue
 
@@ -12,10 +11,8 @@ class XLeRobotAgent(LLMAgent):
 		tools: list,
 		name: str | None = None,
 		system_prompt: str | None = None,
-		thinking_level: str | None = None,
 		camera_fov: int = 90,
 		history_len: int | None = None,
-		use_memory: bool = False,
 		main_camera=None,
 		sounddevice_index_or_alias=None,
 		servo_controler=None,
@@ -31,7 +28,7 @@ class XLeRobotAgent(LLMAgent):
 
 		if self.sounddevice_index_or_alias is not None:
 			# import here to avoid importing sounddevice and its dependencies when not needed
-			from robocrew.core.sound_receiver import SoundReceiver
+			from robocrew.robots.XLeRobot.sound_receiver import SoundReceiver
 			self.speech_queue = queue.Queue()
 			self.sound_receiver = SoundReceiver(
 				self.sounddevice_index_or_alias,
@@ -42,8 +39,10 @@ class XLeRobotAgent(LLMAgent):
 			self.lidar, self.lidar_bg, self.lidar_scale = init_lidar(lidar_usb_port)
 
 		if tts:
+			from robocrew.robots.XLeRobot.voice_synth import create_say
+
 			tools.append(create_say(self.sound_receiver))
-			system_prompt = (system_prompt or base_system_prompt) + (
+			system_prompt = (system_prompt or "") + (
 				" You can speak to the user using the `say` tool. "
 				"Use it to communicate important updates, greet users, or answer their questions verbally."
 			)
@@ -54,11 +53,9 @@ class XLeRobotAgent(LLMAgent):
 			main_camera=main_camera,
 			name=name,
 			system_prompt=system_prompt,
-			thinking_level=thinking_level,
 			camera_fov=camera_fov,
 			servo_controler=servo_controler,
-			history_len=history_len,
-			use_memory=use_memory
+			history_len=history_len
 		)
 
 	def check_for_new_speech(self):

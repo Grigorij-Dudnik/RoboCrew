@@ -3,7 +3,7 @@ This example demonstrates how to activate arm manipulation of your XLeRobot.
 vla_single_arm_manipulation tools allow XLeRobot to use its arm for manipulating objects with pretrained VLA policies.
 """
 
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import \
     create_vla_single_arm_manipulation, \

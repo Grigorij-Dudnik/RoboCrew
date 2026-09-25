@@ -5,7 +5,8 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
 
-from robocrew.core.tools import finish_task, remember_thing, recall_thing, create_say, create_execute_subtask
+from robocrew.core.tools import create_execute_subtask, finish_task
+from robocrew.robots.XLeRobot.voice_synth import create_say
 
 
 # ---------------------------------------------------------------------------
@@ -30,75 +31,35 @@ class TestFinishTask(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# remember_thing / recall_thing  (patch the module-level singleton)
-# ---------------------------------------------------------------------------
-
-class TestMemoryTools(unittest.TestCase):
-
-    def test_remember_thing_calls_add_memory_with_correct_text(self):
-        with patch("robocrew.core.tools.robot_memory") as mock_mem:
-            mock_mem.add_memory.return_value = "Memory added: kitchen on first floor"
-            result = remember_thing.invoke({"text": "kitchen on first floor"})
-            mock_mem.add_memory.assert_called_once_with("kitchen on first floor")
-
-    def test_remember_thing_returns_memory_confirmation(self):
-        with patch("robocrew.core.tools.robot_memory") as mock_mem:
-            mock_mem.add_memory.return_value = "Memory added: test"
-            result = remember_thing.invoke({"text": "test"})
-            self.assertEqual(result, "Memory added: test")
-
-    def test_recall_thing_calls_search_memory_with_query(self):
-        with patch("robocrew.core.tools.robot_memory") as mock_mem:
-            mock_mem.search_memory.return_value = "Found memories: kitchen on first floor"
-            recall_thing.invoke({"query": "kitchen"})
-            mock_mem.search_memory.assert_called_once_with("kitchen")
-
-    def test_recall_thing_returns_search_results(self):
-        with patch("robocrew.core.tools.robot_memory") as mock_mem:
-            mock_mem.search_memory.return_value = "No matching memories found."
-            result = recall_thing.invoke({"query": "garage"})
-            self.assertEqual(result, "No matching memories found.")
-
-    def test_remember_and_recall_use_same_memory_instance(self):
-        """Both tools must operate on robot_memory, not separate instances."""
-        with patch("robocrew.core.tools.robot_memory") as mock_mem:
-            mock_mem.add_memory.return_value = "ok"
-            mock_mem.search_memory.return_value = "found"
-            remember_thing.invoke({"text": "bedroom upstairs"})
-            recall_thing.invoke({"query": "bedroom"})
-            # Both should have hit the same mock object
-            mock_mem.add_memory.assert_called_once()
-            mock_mem.search_memory.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
 # create_say
 # ---------------------------------------------------------------------------
 
 class TestCreateSay(unittest.TestCase):
 
     def test_say_calls_speak_and_play(self):
-        with patch("robocrew.core.tools.speak_and_play") as mock_speak:
+        with patch(
+            "robocrew.robots.XLeRobot.voice_synth.speak_and_play"
+        ) as mock_speak:
             say = create_say(None)
             say.invoke({"query": "Hello, I am your robot"})
             mock_speak.assert_called_once_with("Hello, I am your robot")
 
     def test_say_with_receiver_stops_and_restarts_listening(self):
         receiver = MagicMock()
-        with patch("robocrew.core.tools.speak_and_play"):
+        with patch("robocrew.robots.XLeRobot.voice_synth.speak_and_play"):
             say = create_say(receiver)
             say.invoke({"query": "Moving forward"})
             receiver.stop_listening.assert_called_once()
             receiver.start_listening.assert_called_once()
 
     def test_say_without_receiver_does_not_crash(self):
-        with patch("robocrew.core.tools.speak_and_play"):
+        with patch("robocrew.robots.XLeRobot.voice_synth.speak_and_play"):
             say = create_say(None)
             result = say.invoke({"query": "Test message"})
             self.assertIsNotNone(result)
 
     def test_say_result_contains_spoken_text(self):
-        with patch("robocrew.core.tools.speak_and_play"):
+        with patch("robocrew.robots.XLeRobot.voice_synth.speak_and_play"):
             say = create_say(None)
             result = say.invoke({"query": "I see the table"})
             self.assertIn("I see the table", result)
@@ -110,8 +71,10 @@ class TestCreateSay(unittest.TestCase):
         receiver.stop_listening.side_effect = lambda: call_order.append("stop")
         receiver.start_listening.side_effect = lambda: call_order.append("start")
 
-        with patch("robocrew.core.tools.speak_and_play",
-                   side_effect=lambda _: call_order.append("speak")):
+        with patch(
+            "robocrew.robots.XLeRobot.voice_synth.speak_and_play",
+            side_effect=lambda _: call_order.append("speak"),
+        ):
             say = create_say(receiver)
             say.invoke({"query": "Hello"})
 

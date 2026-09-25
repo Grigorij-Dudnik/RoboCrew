@@ -6,7 +6,7 @@ to the Controller (fast model) which handles navigation and arm manipulation.
 
 from pathlib import Path
 from robocrew.core.LLMAgent import LLMAgent
-from robocrew.core.camera import RobotCamera
+from robocrew.robots.XLeRobot.camera import RobotCamera
 from robocrew.core.tools import finish_task, create_execute_subtask
 from robocrew.robots.XLeRobot.xlerobot_LLM_agent import XLeRobotAgent
 from robocrew.robots.XLeRobot.tools import \
@@ -86,7 +86,6 @@ throw_to_trash = create_vla_single_arm_manipulation(
 # init controller agent (fast model, movement + manipulation tools)
 executor = XLeRobotAgent(
     model="google_genai:gemini-3-flash-preview",
-    thinking_level="high",
     tools=[
         move_forward,
         move_backward,
@@ -114,7 +113,6 @@ execute_subtask = create_execute_subtask(executor)
 # init planner agent (smart model, subtask delegation)
 planner = LLMAgent(
     model="google_genai:gemini-3.1-pro-preview",
-    thinking_level="high",
     tools=[
         look_around,
         execute_subtask,

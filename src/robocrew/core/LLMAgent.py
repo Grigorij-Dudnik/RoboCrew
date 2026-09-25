@@ -1,27 +1,13 @@
-from robocrew.core.tools import remember_thing, recall_thing
 from robocrew.core.skills import load_skills
 from dotenv import find_dotenv, load_dotenv
 import time
 import base64
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
 
 
 load_dotenv(find_dotenv())
 
-
-base_system_prompt = """
-## ROBOT SPECS
-- Mobile household robot with two arms
-
-## NAVIGATION RULES
-- Check angle grid at top of image - target must be within ±15° of center before moving forward
-- Watch for obstacles in your path - if obstacle blocks the way, navigate around it first
-- Never call move_forward 3+ times if nothing changes
-- If target is off-center: use turn_left or turn_right to align BEFORE moving forward
-- Reference floor meters only if floor visible and scale not on objects
-- Watch for obstacles between you and target - plan path to avoid them
-"""
 
 class LLMAgent():
     def __init__(
@@ -31,11 +17,9 @@ class LLMAgent():
             main_camera,
             name: str | None = None,
             system_prompt: str | None = None,
-            thinking_level: str | None = None,
             camera_fov: float = 90,
             servo_controler=None,
             history_len: int | None = None,
-            use_memory: bool = False,
             skills: list | None = None,
             skills_dir=None,
             skill_context=None,
@@ -46,29 +30,15 @@ class LLMAgent():
         main_camera: robot front camera object.
         name: optional agent name shown in logs (e.g. 'Planner', 'Controller').
         system_prompt: custom system prompt - optional.
-        thinking_level: Gemini 3.x thinking effort level. Options: 'minimal', 'low', 'medium', 'high'.
-            Gemini 3.1 Pro supports 'low' and 'high' only. Gemini 3 Flash supports all four levels.
         camera_fov: field of view (degrees) of the main camera.
         history_len: number of newest request-response pairs to keep in context.
-        use_memory: set to True to enable long-term memory (requires sqlite3).
         skills: optional SKILL.md folder names or paths.
         skills_dir: base directory for skill names.
         skill_context: object passed to optional skill tool factories.
         """
-        system_prompt = system_prompt or base_system_prompt
+        system_prompt = system_prompt or ""
         self.name = name
         
-        if use_memory:
-            
-            tools.append(remember_thing)
-            tools.append(recall_thing)
-            memory_prompt = (
-                " You have a memory. When you find important things (like a specific room, object, or person) "
-                "or complete a navigation step, use the `remember_thing` tool to save it for later. "
-                "Do not wait for the user to tell you to remember. Be proactive."
-            )
-            system_prompt += memory_prompt
-
         self.task = None
         self.idle = True
         self.navigation_mode = "normal"  # or "precision"
@@ -78,11 +48,7 @@ class LLMAgent():
             system_prompt += "\n\n" + skills_prompt
             tools.extend(skills_tools)
 
-        model_kwargs = {}
-        if thinking_level is not None:
-            model_kwargs["generation_config"] = {"thinking_config": {"thinking_level": thinking_level.upper()}}
-
-        llm = init_chat_model(model, model_kwargs=model_kwargs or {})
+        llm = init_chat_model(model)
         #llm = init_chat_model(model="google/gemini-3-flash-preview", model_provider="openai", base_url="https://openrouter.ai/api/v1", api_key=getenv("OPENROUTER_API_KEY"))
         self._llm_without_tools = llm
         self.bind_tools(tools)
@@ -100,27 +66,19 @@ class LLMAgent():
 
     def bind_tools(self, tools, tool_choice=None):
         self.tools = list(tools)
+        for bound_tool in self.tools:
+            bound_tool.handle_validation_error = (
+                lambda error: f"Invalid tool arguments: {error}"
+            )
         self.tool_name_to_tool = {tool.name: tool for tool in self.tools}
         kwargs = {"tool_choice": tool_choice} if tool_choice else {}
         self.llm = self._llm_without_tools.bind_tools(self.tools, **kwargs)
 
 
     def invoke_tool(self, tool_call):
-        # convert string to real function
         requested_tool = self.tool_name_to_tool[tool_call["name"]]
-        args = tool_call["args"]
         trace_config = self.trace_config(f"{self.name} / {tool_call['name']}")
-        if trace_config:
-            tool_output = requested_tool.invoke(args, config=trace_config)
-        else:
-            tool_output = requested_tool.invoke(args)
-        # f aitional output is present
-        if isinstance(tool_output, tuple) and len(tool_output) == 2:
-            additional_output = HumanMessage(content=tool_output[1])
-            tool_output = tool_output[0]
-        else:
-            additional_output = None
-        return ToolMessage(tool_output, tool_call_id=tool_call["id"]), additional_output
+        return requested_tool.invoke(tool_call, config=trace_config)
 
     def trace_config(self, run_name=None):
         if not self.name:
@@ -193,10 +151,13 @@ class LLMAgent():
     def execute_tool_calls(self, tool_calls):
         result = None
         for tool_call in tool_calls:
-            tool_response, additional_response = self.invoke_tool(tool_call)
+            tool_response = self.invoke_tool(tool_call)
             self.message_history.append(tool_response)
-            if additional_response:
-                self.message_history.append(additional_response)
+            # Artifacts carry non-text tool output, such as images.
+            if tool_response.artifact:
+                self.message_history.append(
+                    HumanMessage(content=tool_response.artifact)
+                )
             if tool_call["name"] == "go_to_precision_mode":
                 self.navigation_mode = "precision"
             elif tool_call["name"] == "go_to_normal_mode":

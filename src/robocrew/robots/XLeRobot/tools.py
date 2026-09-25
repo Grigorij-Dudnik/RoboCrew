@@ -15,9 +15,13 @@ from lerobot.motors.feetech import FeetechMotorsBus
 from robocrew.robots.XLeRobot.groot_client import PolicyClient
 
 from robocrew.core.utils import stop_listening_during_tool_execution
+from robocrew.robots.XLeRobot.lerobot_patch import apply_silent_calibration_patch
 from robocrew.robots.XLeRobot.servo_controls import DEFAULT_ARM_CALIBRATION_DIR
 import time
 import threading
+
+
+apply_silent_calibration_patch()
 
 
 def create_move_forward(servo_controller, sound_receiver=None):
@@ -114,7 +118,7 @@ def create_go_to_normal_mode(servo_controller):
 
 
 def create_look_around(servo_controller, main_camera):
-    @tool
+    @tool(response_format="content_and_artifact")
     def look_around() -> list:
         """Look around yourself to find a thing you looking for or to understand an envinronment."""
         movement_delay = 0.9  # seconds
