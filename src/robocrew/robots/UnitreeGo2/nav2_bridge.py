@@ -145,18 +145,29 @@ class UnitreeGo2NavBridge:
     @property
     def navigation_active(self) -> bool:
         with self._state_lock:
-            return self._state.navigation_state in {"submitting", "active", "cancelling"}
+            return self._state.navigation_state in {
+                "submitting",
+                "active",
+                "cancelling",
+            }
 
-    def normalized_waypoints_to_map(
-        self, waypoints: list[dict[str, Any]]
-    ) -> list[MapPose]:
+    def submit_waypoints(
+        self,
+        waypoints: list[dict[str, Any]],
+        *,
+        travelled_path: list[dict[str, float]] | None = None,
+    ) -> None:
+        if not waypoints:
+            raise ValueError("waypoints must contain at least one waypoint")
+        if self.navigation_active:
+            raise RuntimeError("a Nav2 waypoint goal is already active")
         with self._state_lock:
             metadata = self._state.map_metadata
             robot_pose = self._state.robot_pose
         if metadata is None:
             raise RuntimeError("Nav2 map is not available")
 
-        poses = []
+        map_waypoints = []
         for waypoint in waypoints:
             normalized_x = float(waypoint["x"])
             normalized_y = float(waypoint["y"])
@@ -168,7 +179,7 @@ class UnitreeGo2NavBridge:
                 pixel_x, pixel_y, metadata
             )
             yaw = waypoint.get("yaw")
-            poses.append(
+            map_waypoints.append(
                 MapPose(
                     world_x,
                     world_y,
@@ -176,14 +187,14 @@ class UnitreeGo2NavBridge:
                 )
             )
 
-        for index, pose in enumerate(poses):
+        for index, pose in enumerate(map_waypoints):
             if not math.isnan(pose.yaw):
                 continue
-            if index + 1 < len(poses):
-                next_pose = poses[index + 1]
+            if index + 1 < len(map_waypoints):
+                next_pose = map_waypoints[index + 1]
                 yaw = math.atan2(next_pose.y - pose.y, next_pose.x - pose.x)
             elif index > 0:
-                previous_pose = poses[index - 1]
+                previous_pose = map_waypoints[index - 1]
                 yaw = math.atan2(
                     pose.y - previous_pose.y,
                     pose.x - previous_pose.x,
@@ -194,25 +205,13 @@ class UnitreeGo2NavBridge:
                 raise RuntimeError(
                     "robot pose is unavailable; provide waypoint yaw"
                 )
-            poses[index] = MapPose(pose.x, pose.y, yaw)
-        return poses
-
-    def submit_waypoints(
-        self,
-        waypoints: list[MapPose],
-        *,
-        travelled_path: list[MapPose] | None = None,
-    ) -> None:
-        if not waypoints:
-            raise ValueError("waypoints must contain at least one waypoint")
-        if self.navigation_active:
-            raise RuntimeError("a Nav2 waypoint goal is already active")
+            map_waypoints[index] = MapPose(pose.x, pose.y, yaw)
         if not self._waypoint_client.wait_for_server(timeout_sec=2.0):
             raise RuntimeError("follow_waypoints action server is not available")
 
         goal = FollowWaypoints.Goal()
         now = self.node.get_clock().now().to_msg()
-        for waypoint in waypoints:
+        for waypoint in map_waypoints:
             pose = PoseStamped()
             pose.header.frame_id = "map"
             pose.header.stamp = now
@@ -223,9 +222,11 @@ class UnitreeGo2NavBridge:
             goal.poses.append(pose)
 
         with self._state_lock:
-            self._state.submitted_waypoints = list(waypoints)
+            self._state.submitted_waypoints = map_waypoints
             self._state.global_plan.clear()
-            self._state.travelled_path = list(travelled_path or [])
+            self._state.travelled_path = [
+                MapPose(**pose) for pose in travelled_path or []
+            ]
             self._state.current_waypoint = 0
             self._state.navigation_state = "submitting"
             if (
@@ -251,32 +252,38 @@ class UnitreeGo2NavBridge:
 
     def get_observation(self) -> Go2Observation:
         with self._state_lock:
-            map_image_b64 = self._map_renderer.render(
-                self._state.map_cells,
-                self._state.map_metadata,
-                self._state.travelled_path,
-                self._state.global_plan,
-                self._state.submitted_waypoints,
-                self._state.current_waypoint,
-                self._state.robot_pose,
-            )
-            return Go2Observation(
-                camera_image_b64=self._state.camera_image_b64,
-                map_image_b64=map_image_b64,
-                navigation_state=self._state.navigation_state,
-                current_waypoint=self._state.current_waypoint,
-                waypoint_count=len(self._state.submitted_waypoints),
-            )
+            camera_image = self._state.camera_image_b64
+            map_cells = self._state.map_cells
+            map_metadata = self._state.map_metadata
+            travelled_path = list(self._state.travelled_path)
+            global_plan = list(self._state.global_plan)
+            waypoints = list(self._state.submitted_waypoints)
+            current_waypoint = self._state.current_waypoint
+            robot_pose = self._state.robot_pose
+            navigation_state = self._state.navigation_state
+        map_image = self._map_renderer.render(
+            map_cells,
+            map_metadata,
+            travelled_path,
+            global_plan,
+            waypoints,
+            current_waypoint,
+            robot_pose,
+        )
+        return Go2Observation(
+            camera_image_b64=camera_image,
+            map_image_b64=map_image,
+            navigation_state=navigation_state,
+            current_waypoint=current_waypoint,
+            waypoint_count=len(waypoints),
+        )
 
-    def remaining_waypoints(self) -> list[MapPose]:
+    def route_progress(self) -> tuple[int, list[MapPose]]:
         with self._state_lock:
-            return list(
-                self._state.submitted_waypoints[self._state.current_waypoint :]
+            return (
+                len(self._state.submitted_waypoints) - self._state.current_waypoint,
+                list(self._state.travelled_path),
             )
-
-    def travelled_path(self) -> list[MapPose]:
-        with self._state_lock:
-            return list(self._state.travelled_path)
 
     def close(self) -> None:
         self.executor.shutdown()
@@ -356,8 +363,6 @@ class UnitreeGo2NavBridge:
     def _on_waypoint_feedback(self, feedback_message) -> None:
         current_waypoint = int(feedback_message.feedback.current_waypoint)
         with self._state_lock:
-            if current_waypoint == self._state.current_waypoint:
-                return
             self._state.current_waypoint = current_waypoint
 
     def _on_navigation_result(self, future) -> None:

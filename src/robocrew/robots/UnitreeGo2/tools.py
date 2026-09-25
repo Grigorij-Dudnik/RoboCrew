@@ -7,8 +7,6 @@ from typing import Annotated
 from langchain_core.tools import tool
 from typing_extensions import NotRequired, TypedDict
 
-from robocrew.robots.UnitreeGo2.nav2_bridge import MapPose
-
 
 class Waypoint(TypedDict):
     x: float
@@ -46,9 +44,10 @@ def create_plan_tasks(bridge, mission_state):
             return f"Tasks planned: {summary}"
 
         if bridge.cancel_navigation():
+            remaining_count, travelled_path = bridge.route_progress()
             mission_state.save_route_progress(
-                len(bridge.remaining_waypoints()),
-                bridge.travelled_path(),
+                remaining_count,
+                travelled_path,
             )
             mission_state.request_task_switch_after_cancel()
             return f"Tasks planned; cancelling current route: {summary}"
@@ -84,13 +83,11 @@ def create_set_waypoints(bridge, mission_state):
             return "no_active_task"
         if bridge.navigation_active:
             return "navigation_already_active"
-        map_waypoints = bridge.normalized_waypoints_to_map(waypoints)
-        travelled_path = [MapPose(**pose) for pose in task.travelled_path]
         bridge.submit_waypoints(
-            map_waypoints, travelled_path=travelled_path
+            waypoints, travelled_path=task.travelled_path
         )
         mission_state.save_task_route(strategy, waypoints)
-        return f"navigation_started: waypoint_count={len(map_waypoints)}"
+        return f"navigation_started: waypoint_count={len(waypoints)}"
 
     return set_waypoints
 
@@ -101,10 +98,10 @@ def create_cancel_navigation(bridge, mission_state):
         """Cancel the active Nav2 route before starting a different route."""
         if not bridge.cancel_navigation():
             return "navigation_not_active"
-        remaining_count = len(bridge.remaining_waypoints())
+        remaining_count, travelled_path = bridge.route_progress()
         if mission_state.active_task is not None:
             mission_state.save_route_progress(
-                remaining_count, bridge.travelled_path()
+                remaining_count, travelled_path
             )
         return (
             f"navigation_cancellation_requested: reason={reason}, "
