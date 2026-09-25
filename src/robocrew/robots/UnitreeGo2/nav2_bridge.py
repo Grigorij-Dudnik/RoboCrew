@@ -280,10 +280,9 @@ class UnitreeGo2NavBridge:
 
     def route_progress(self) -> tuple[int, list[MapPose]]:
         with self._state_lock:
-            return (
-                len(self._state.submitted_waypoints) - self._state.current_waypoint,
-                list(self._state.travelled_path),
-            )
+            state = self._state
+            remaining = len(state.submitted_waypoints) - state.current_waypoint
+            return remaining, list(state.travelled_path)
 
     def close(self) -> None:
         self.executor.shutdown()

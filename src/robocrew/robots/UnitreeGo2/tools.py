@@ -45,10 +45,7 @@ def create_plan_tasks(bridge, mission_state):
 
         if bridge.cancel_navigation():
             remaining_count, travelled_path = bridge.route_progress()
-            mission_state.save_route_progress(
-                remaining_count,
-                travelled_path,
-            )
+            mission_state.save_route_progress(remaining_count, travelled_path)
             mission_state.request_task_switch_after_cancel()
             return f"Tasks planned; cancelling current route: {summary}"
 
@@ -83,9 +80,7 @@ def create_set_waypoints(bridge, mission_state):
             return "no_active_task"
         if bridge.navigation_active:
             return "navigation_already_active"
-        bridge.submit_waypoints(
-            waypoints, travelled_path=task.travelled_path
-        )
+        bridge.submit_waypoints(waypoints, travelled_path=task.travelled_path)
         mission_state.save_task_route(strategy, waypoints)
         return f"navigation_started: waypoint_count={len(waypoints)}"
 
@@ -100,9 +95,7 @@ def create_cancel_navigation(bridge, mission_state):
             return "navigation_not_active"
         remaining_count, travelled_path = bridge.route_progress()
         if mission_state.active_task is not None:
-            mission_state.save_route_progress(
-                remaining_count, travelled_path
-            )
+            mission_state.save_route_progress(remaining_count, travelled_path)
         return (
             f"navigation_cancellation_requested: reason={reason}, "
             f"remaining_waypoints={remaining_count}"
