@@ -23,6 +23,7 @@ COLORS = (
 
 class Go2MapRenderer:
     def __init__(self, maps_dir=None, current_map_file=None):
+        """Keep the paths needed to find semantics for the selected Nav2 map."""
         self.maps_dir = Path(maps_dir) if maps_dir else None
         self.current_map_file = Path(current_map_file) if current_map_file else None
 
@@ -30,6 +31,7 @@ class Go2MapRenderer:
         self, cells, metadata, travelled_path, global_plan,
         submitted_waypoints, current_waypoint, robot_pose,
     ) -> str:
+        """Compose the annotated map that gives the vision model navigation context."""
         if cells is None or metadata is None:
             return ""
         image = self._occupancy_image(cells)
@@ -62,6 +64,7 @@ class Go2MapRenderer:
 
     @staticmethod
     def image_to_world(pixel_x, pixel_y, metadata) -> tuple[float, float]:
+        """Convert image pixels into Nav2 coordinates for submitted waypoints."""
         local_x = pixel_x * metadata.resolution
         local_y = (metadata.height - 1 - pixel_y) * metadata.resolution
         cosine = math.cos(metadata.origin_yaw)
@@ -73,6 +76,7 @@ class Go2MapRenderer:
 
     @staticmethod
     def world_to_image(x, y, metadata) -> tuple[int, int]:
+        """Project Nav2 coordinates into image pixels for drawing map overlays."""
         dx, dy = x - metadata.origin_x, y - metadata.origin_y
         cosine = math.cos(metadata.origin_yaw)
         sine = math.sin(metadata.origin_yaw)
@@ -85,6 +89,7 @@ class Go2MapRenderer:
 
     @staticmethod
     def _occupancy_image(cells) -> np.ndarray:
+        """Turn ROS occupancy values into the visible base map."""
         image = np.full(cells.shape, 205, dtype=np.uint8)
         image[cells == 0] = 254
         image[cells >= 65] = 0
@@ -93,9 +98,11 @@ class Go2MapRenderer:
         return cv2.cvtColor(np.flipud(image), cv2.COLOR_GRAY2BGR)
 
     def _pixels(self, poses, metadata) -> list[tuple[int, int]]:
+        """Project a pose sequence so its route can be drawn on the map."""
         return [self.world_to_image(pose.x, pose.y, metadata) for pose in poses]
 
     def _apply_semantics(self, image: np.ndarray, metadata) -> None:
+        """Draw named places so the model can relate instructions to the map."""
         try:
             path = self._places_path()
             if not path or not path.is_file():
@@ -134,6 +141,7 @@ class Go2MapRenderer:
             )
 
     def _places_path(self) -> Path | None:
+        """Resolve the semantic sidecar belonging to the currently selected map."""
         if not self.current_map_file or not self.current_map_file.is_file():
             return None
         content = self.current_map_file.read_text(encoding="utf-8")
@@ -147,6 +155,7 @@ class Go2MapRenderer:
 
     @staticmethod
     def _draw_label(image, text, anchor, occupied, color) -> None:
+        """Place a readable label without covering labels already on the map."""
         font = cv2.FONT_HERSHEY_DUPLEX
         (text_width, text_height), baseline = cv2.getTextSize(text, font, 0.55, 1)
         width, height = text_width + 8, text_height + baseline + 8
