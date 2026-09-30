@@ -25,6 +25,10 @@ Run on your robot:
 ```bash
 pip install robocrew
 ```
+For XLeRobot and the GUI, install the optional dependencies:
+```bash
+pip install "robocrew[xlerobot]"
+```
 Start GUI app with:
 ```bash
 robocrew-gui
